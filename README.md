@@ -17,9 +17,9 @@ Repositori ini digunakan bersama untuk seluruh proyek: frontend, backend, agrega
 
 ## Menjalankan secara lokal
 
-1. Jalankan `npm ci`.
+1. Gunakan Node.js minimal 20.9.0, lalu jalankan `npm ci`.
 2. Buat `.env.local` dari `.env.example` hanya jika belum ada, lalu isi konfigurasi Supabase. Jangan commit kredensial.
 3. Untuk proyek Supabase baru, jalankan SQL di `supabase/migrations/` sesuai urutan nama file.
 4. Jalankan `npm run dev`.
 
-Pemeriksaan backend: `npm run typecheck`, `npm run build`, `npm run check`, dan `npm run check:supabase` untuk integrasi dengan proyek Supabase uji.
+Pemeriksaan backend: `npm run typecheck`, `npm run build`, `npm run check`, dan `npm run check:supabase` untuk integrasi dengan proyek Supabase uji. Kedua skrip pemeriksaan ditulis dalam TypeScript dan dijalankan melalui `tsx`; `npm run typecheck` juga memeriksa keduanya.

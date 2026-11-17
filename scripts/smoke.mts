@@ -1,7 +1,34 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+
+type JsonRecord = Record<string, unknown>;
+
+type CallOptions = {
+  headers?: Record<string, string>;
+  body?: string | JsonRecord;
+};
+
+type CheckResponse = {
+  status: number;
+  json: unknown;
+  text: string;
+  headers: Headers;
+};
+
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function objectAt(value: unknown, label: string): JsonRecord {
+  assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value), label);
+  return value as JsonRecord;
+}
 
 const root = process.cwd();
 const port = process.env.SMOKE_PORT ?? '3417';
@@ -15,7 +42,7 @@ if (!existsSync(path.join(root, '.next', 'BUILD_ID'))) {
   process.exit(1);
 }
 
-const child = spawn(
+const child: ChildProcess = spawn(
   process.execPath,
   [path.join(root, 'node_modules', 'next', 'dist', 'bin', 'next'), 'start', '-p', port, '-H', '127.0.0.1'],
   {
@@ -24,16 +51,18 @@ const child = spawn(
     env: { ...process.env, NODE_ENV: 'production', NEXT_TELEMETRY_DISABLED: '1' },
   },
 );
+assert.ok(child.stdout, 'FAIL: stdout proses Next.js tidak tersedia');
+assert.ok(child.stderr, 'FAIL: stderr proses Next.js tidak tersedia');
 
 let logs = '';
-child.stdout.on('data', (chunk) => {
+child.stdout.on('data', (chunk: Buffer) => {
   logs += chunk.toString();
 });
-child.stderr.on('data', (chunk) => {
+child.stderr.on('data', (chunk: Buffer) => {
   logs += chunk.toString();
 });
 
-async function waitForServer() {
+async function waitForServer(): Promise<void> {
   for (let attempt = 0; attempt < 160; attempt += 1) {
     if (child.exitCode !== null) {
       throw new Error(`Server berhenti dengan kode ${child.exitCode}.`);
@@ -42,14 +71,14 @@ async function waitForServer() {
       const response = await fetch(`${base}/`, { redirect: 'manual' });
       if (response.ok) return;
     } catch {}
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await new Promise<void>((resolve) => setTimeout(resolve, 250));
   }
   throw new Error('Server tidak siap dalam 40 detik.');
 }
 
-async function call(method, route, options = {}) {
-  const headers = { ...(options.headers ?? {}) };
-  const init = { method, headers, redirect: 'manual' };
+async function call(method: string, route: string, options: CallOptions = {}): Promise<CheckResponse> {
+  const headers: Record<string, string> = { ...(options.headers ?? {}) };
+  const init: RequestInit = { method, headers, redirect: 'manual' };
   if (options.body !== undefined) {
     if (typeof options.body === 'string') {
       init.body = options.body;
@@ -62,27 +91,26 @@ async function call(method, route, options = {}) {
   }
   const response = await fetch(`${base}${route}`, init);
   const text = await response.text();
-  let json = null;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    json = null;
-  }
-  return { status: response.status, json, text, headers: response.headers };
+  return { status: response.status, json: parseJson(text), text, headers: response.headers };
 }
 
-async function expectError(label, request, status, code) {
+async function expectError(
+  label: string,
+  request: Promise<CheckResponse>,
+  status: number,
+  code: string,
+): Promise<void> {
   const response = await request;
   assert.equal(response.status, status, `${label}: status ${response.status} != ${status}`);
-  assert.ok(response.json && typeof response.json === 'object', `${label}: body bukan JSON`);
-  assert.ok(response.json.error, `${label}: envelope error tidak ada`);
-  assert.equal(response.json.error.code, code, `${label}: kode ${response.json.error.code}`);
-  assert.equal(typeof response.json.error.message, 'string', `${label}: pesan tidak ada`);
-  assert.ok(!('stack' in response.json.error), `${label}: stack bocor`);
+  const body = objectAt(response.json, `${label}: body bukan JSON`);
+  const error = objectAt(body.error, `${label}: envelope error tidak ada`);
+  assert.equal(error.code, code, `${label}: kode ${String(error.code)}`);
+  assert.equal(typeof error.message, 'string', `${label}: pesan tidak ada`);
+  assert.ok(!('stack' in error), `${label}: stack bocor`);
   console.log(`PASS ${label} -> ${status} ${code}`);
 }
 
-async function main() {
+async function main(): Promise<void> {
   await waitForServer();
   const invalidBearer = `Bearer ${'x'.repeat(24)}`;
   const id = '00000000-0000-4000-8000-000000000000';
@@ -226,7 +254,7 @@ try {
 } finally {
   if (child.exitCode === null) {
     child.kill('SIGTERM');
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await new Promise<void>((resolve) => setTimeout(resolve, 400));
     if (child.exitCode === null) child.kill('SIGKILL');
   }
 }

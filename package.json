@@ -10,8 +10,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "check": "node --env-file-if-exists=.env.local scripts/smoke.mjs",
-    "check:supabase": "node --env-file-if-exists=.env.local scripts/integration-supabase.mjs"
+    "check": "node --env-file-if-exists=.env.local --import tsx scripts/smoke.mts",
+    "check:supabase": "node --env-file-if-exists=.env.local --import tsx scripts/integration-supabase.mts"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
@@ -24,6 +24,7 @@
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "tsx": "4.23.15",
     "typescript": "5.9.3"
   }
 }
