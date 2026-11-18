@@ -83,37 +83,44 @@ export function SiteHeader() {
       <header className="site-header">
         <div className="site-header-top">
           <div className="site-header-top-inner">
-            <span className="font-mono">
+            <span className="font-mono site-header-top-primary">
               SDG 8: PEKERJAAN LAYAK &amp; PERTUMBUHAN EKONOMI · BURSA KERJA INDONESIA
             </span>
-            <span className="font-mono">
+            <span className="font-mono site-header-top-secondary">
               Tanpa Auto-Submit · Lamaran Langsung di Sumber Asli
             </span>
           </div>
         </div>
-        <div className="site-header-inner">
-          <Link href="/" className="brand-link" onClick={() => setMenuOpen(false)}>
-            <span className="brand-mark" aria-hidden="true">
-              {SITE_MONOGRAM}
-            </span>
-            <span className="brand-text-group">
-              <span className="brand-title">
-                <span>{SITE_NAME}</span>
-                <span className="brand-stamp">ID</span>
-              </span>
-              <span className="brand-subtitle">{SITE_TAGLINE}</span>
-            </span>
-          </Link>
 
-          <button
-            type="button"
-            className="nav-menu-toggle"
-            aria-expanded={menuOpen}
-            aria-controls="primary-navigation"
-            onClick={() => setMenuOpen((prev) => !prev)}
-          >
-            {menuOpen ? 'TUTUP [×]' : 'MENU [≡]'}
-          </button>
+        <div className="site-header-inner">
+          <div className="site-header-bar">
+            <Link href="/" className="brand-link" onClick={() => setMenuOpen(false)}>
+              <span className="brand-mark" aria-hidden="true">
+                {SITE_MONOGRAM}
+              </span>
+              <span className="brand-text-group">
+                <span className="brand-title">
+                  <span>{SITE_NAME}</span>
+                  <span className="brand-stamp">ID</span>
+                </span>
+                <span className="brand-subtitle">{SITE_TAGLINE}</span>
+              </span>
+            </Link>
+
+            <button
+              type="button"
+              className={`nav-menu-toggle ${menuOpen ? 'nav-menu-toggle-active' : ''}`}
+              aria-expanded={menuOpen}
+              aria-controls="primary-navigation"
+              aria-label={menuOpen ? 'Tutup menu navigasi' : 'Buka menu navigasi'}
+              onClick={() => setMenuOpen((prev) => !prev)}
+            >
+              <span className="nav-menu-toggle-icon" aria-hidden="true">
+                {menuOpen ? '✕' : '☰'}
+              </span>
+              <span>{menuOpen ? 'Tutup' : 'Menu'}</span>
+            </button>
+          </div>
 
           <div
             id="primary-navigation"
@@ -132,32 +139,34 @@ export function SiteHeader() {
                     className={`nav-link ${isActive ? 'nav-link-active' : ''}`}
                     onClick={() => setMenuOpen(false)}
                   >
-                    {item.label}
+                    <span>{item.label}</span>
                   </Link>
                 );
               })}
             </nav>
 
-            <div className="nav-auth-area">
+            <div className={`nav-auth-area ${session ? 'nav-auth-area-user' : 'nav-auth-area-guest'}`}>
               {checking ? (
                 <span className="font-mono" style={{ fontSize: '0.74rem', color: 'var(--ink-muted)' }}>
                   Memeriksa sesi...
                 </span>
               ) : session ? (
                 <>
-                  {!session.has_profile ? (
-                    <Link
-                      href="/onboarding"
-                      className="badge badge-warning"
-                      style={{ textDecoration: 'none' }}
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Isi Onboarding →
-                    </Link>
-                  ) : null}
-                  <span className="nav-user-pill" title={session.user.email ?? session.user.id}>
-                    {session.user.email ?? 'Pengguna Aktif'}
-                  </span>
+                  <div className="nav-user-meta">
+                    <span className="nav-user-pill" title={session.user.email ?? session.user.id}>
+                      {session.user.email ?? 'Pengguna Aktif'}
+                    </span>
+                    {!session.has_profile ? (
+                      <Link
+                        href="/onboarding"
+                        className="badge badge-warning"
+                        style={{ textDecoration: 'none' }}
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        Isi Onboarding →
+                      </Link>
+                    ) : null}
+                  </div>
                   <Button
                     variant="outline"
                     size="sm"
@@ -171,14 +180,14 @@ export function SiteHeader() {
                 <>
                   <Link
                     href="/login"
-                    className="btn btn-outline btn-sm"
+                    className="btn btn-outline btn-sm nav-auth-btn"
                     onClick={() => setMenuOpen(false)}
                   >
                     Masuk
                   </Link>
                   <Link
                     href="/signup"
-                    className="btn btn-primary btn-sm"
+                    className="btn btn-primary btn-sm nav-auth-btn"
                     onClick={() => setMenuOpen(false)}
                   >
                     Daftar Akun
