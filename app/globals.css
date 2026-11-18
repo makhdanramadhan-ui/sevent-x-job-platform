@@ -1033,6 +1033,118 @@ h4 {
   gap: 24px;
 }
 
+/* Auth Guard Popup Modal */
+@keyframes modal-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.auth-locked-preview {
+  position: relative;
+  min-height: 55vh;
+}
+
+.auth-locked-skeleton-bg {
+  filter: blur(3px);
+  opacity: 0.38;
+  pointer-events: none;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.auth-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  background: rgba(23, 23, 21, 0.52);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+  overflow-y: auto;
+}
+
+.auth-modal-dialog {
+  width: 100%;
+  max-width: 460px;
+  background: var(--bg-surface);
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: 6px 6px 0px var(--ink-primary);
+  padding: 24px 24px 20px;
+  animation: modal-pop-in 0.18s ease-out;
+  margin: auto;
+}
+
+.auth-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.auth-modal-close {
+  background: var(--bg-subtle);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink-primary);
+  text-decoration: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.auth-modal-close:hover {
+  background: var(--ink-primary);
+  color: var(--ink-inverse);
+}
+
+.auth-modal-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  background: var(--bg-paper);
+  padding: 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin-bottom: 18px;
+}
+
+.auth-modal-tab {
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  font-family: var(--font-sans);
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--ink-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.auth-modal-tab-active {
+  background: var(--ink-primary);
+  color: var(--ink-inverse);
+}
+
 /* Responsive Breakpoints */
 @media (max-width: 920px) {
   .jobs-layout {
