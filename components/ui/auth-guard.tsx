@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { type ApiCallError, apiFetch } from './api-client';
+import { type ApiCallError, apiFetch, SITE_NAME } from './api-client';
 import { ErrorState, LoadingState } from './feedback';
-import { SITE_NAME, type SessionInfo } from './navigation';
+import type { SessionInfo } from './navigation';
 
 export function AuthGuard({
   title = 'Area Terproteksi — Wajib Masuk',

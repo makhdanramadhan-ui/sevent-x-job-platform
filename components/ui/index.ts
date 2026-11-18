@@ -9,6 +9,9 @@ export {
   formatDateTimeId,
   JOB_STATUS_LABELS,
   recordToProfileInput,
+  SITE_MONOGRAM,
+  SITE_NAME,
+  SITE_TAGLINE,
   sanitizeProfilePayload,
   WORK_MODE_LABELS,
 } from './api-client';
@@ -37,9 +40,6 @@ export {
 } from './forms';
 export {
   notifyAuthChanged,
-  SITE_MONOGRAM,
-  SITE_NAME,
-  SITE_TAGLINE,
   type SessionInfo,
   SiteFooter,
   SiteHeader,

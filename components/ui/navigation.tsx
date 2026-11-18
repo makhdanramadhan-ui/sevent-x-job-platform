@@ -3,15 +3,8 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { apiFetch } from './api-client';
+import { apiFetch, SITE_MONOGRAM, SITE_NAME, SITE_TAGLINE } from './api-client';
 import { Button } from './forms';
-
-/**
- * Ubah konstanta di bawah ini jika tim ingin mengganti nama website sementara.
- */
-export const SITE_NAME = 'KerjaLoka';
-export const SITE_MONOGRAM = 'KL';
-export const SITE_TAGLINE = 'Bursa & Pemetaan Kerja';
 
 export type SessionInfo = {
   user: { id: string; email: string | null };
