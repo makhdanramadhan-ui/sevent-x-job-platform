@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { type ApiCallError, apiFetch } from './api-client';
 import { ErrorState, LoadingState } from './feedback';
-import type { SessionInfo } from './navigation';
+import { SITE_NAME, type SessionInfo } from './navigation';
 
 export function AuthGuard({
   title = 'Area Terproteksi — Wajib Masuk',
@@ -57,8 +57,9 @@ export function AuthGuard({
             {title}
           </h1>
           <p style={{ margin: '0 0 16px', color: 'var(--ink-secondary)' }}>
-            Sesuai kebijakan platform SEVENT X, pengguna wajib masuk menggunakan akun terautentikasi
-            untuk melihat daftar lowongan, rekomendasi, bookmark, maupun mengelola profil dan CV.
+            Sesuai kebijakan platform {SITE_NAME}, pengguna wajib masuk menggunakan akun
+            terautentikasi untuk melihat daftar lowongan, rekomendasi, bookmark, maupun mengelola
+            profil dan CV.
           </p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <Link href={loginHref} className="btn btn-primary">

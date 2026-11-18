@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Badge } from '@/components/ui';
+import { Badge, SITE_NAME } from '@/components/ui';
 
 const ROUTES = [
   { method: 'POST', path: '/api/auth/signup', note: 'Pendaftaran akun Supabase Auth' },
@@ -65,7 +65,7 @@ export default function HomePage() {
             marginBottom: 14,
           }}
         >
-          <Badge variant="accent">SEVENT X · SDG 8</Badge>
+          <Badge variant="accent">{SITE_NAME} · SDG 8</Badge>
           <Badge variant="neutral">Agregasi Lowongan Indonesia</Badge>
           <Badge variant="open">Akses Terautentikasi</Badge>
         </div>
@@ -90,7 +90,7 @@ export default function HomePage() {
             margin: '0 0 24px',
           }}
         >
-          <strong>SEVENT X</strong> adalah platform agregasi lowongan kerja Indonesia untuk semua
+          <strong>{SITE_NAME}</strong> adalah platform agregasi lowongan kerja Indonesia untuk semua
           bidang dan tingkat pengalaman. Kami menghubungkan profil kandidat dengan data lowongan
           secara transparan—menampilkan alasan rekomendasi, syarat yang belum terpenuhi, waktu
           pengambilan data, dan tautan langsung ke penyelenggara rekrutmen asli.
@@ -173,7 +173,7 @@ export default function HomePage() {
             <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--ink-secondary)' }}>
               Setiap lowongan mencantumkan sumber asli, status pembukaan lowongan, serta waktu
               pengambilan data (<code>fetched_at</code>). Keberadaan lowongan di dalam feed bukan
-              klaim bahwa lowongan tersebut telah diverifikasi aman oleh SEVENT X.
+              klaim bahwa lowongan tersebut telah diverifikasi aman oleh {SITE_NAME}.
             </p>
           </div>
 
@@ -182,7 +182,7 @@ export default function HomePage() {
               2. Tanpa Auto-Submit Lamaran
             </h3>
             <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--ink-secondary)' }}>
-              Tombol melamar mengarahkan Anda langsung ke URL sumber asli. SEVENT X tidak mengirim
+              Tombol melamar mengarahkan Anda langsung ke URL sumber asli. {SITE_NAME} tidak mengirim
               lamaran otomatis dan tidak mengubah status lowongan menjadi &ldquo;terkirim&rdquo;.
             </p>
           </div>
@@ -216,7 +216,7 @@ export default function HomePage() {
           <div>
             <span className="page-kicker">DOKUMENTASI TEKNIS · KONTRAK BACKEND</span>
             <h2 id="heading-api-contract" className="font-editorial" style={{ fontSize: '1.45rem', margin: 0 }}>
-              SEVENT X — Indeks Permukaan Endpoint API
+              {SITE_NAME} — Indeks Permukaan Endpoint API
             </h2>
           </div>
           <span className="font-mono" style={{ fontSize: '0.78rem', color: 'var(--ink-muted)' }}>

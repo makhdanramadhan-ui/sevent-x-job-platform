@@ -11,6 +11,7 @@ import {
   FormField,
   NoticeBanner,
   notifyAuthChanged,
+  SITE_NAME,
   TextInput,
 } from '@/components/ui';
 
@@ -91,7 +92,7 @@ export default function SignupPage() {
   return (
     <div className="container-auth">
       <div className="ledger-card">
-        <span className="page-kicker">REGISTRASI KANDIDAT · SEVENT X</span>
+        <span className="page-kicker">REGISTRASI KANDIDAT · {SITE_NAME.toUpperCase()}</span>
         <h1 className="page-title" style={{ fontSize: '1.75rem', marginBottom: 8 }}>
           Daftar Akun Baru
         </h1>
@@ -188,7 +189,7 @@ export default function SignupPage() {
             gap: 8,
           }}
         >
-          <span style={{ color: 'var(--ink-secondary)' }}>Sudah punya akun SEVENT X?</span>
+          <span style={{ color: 'var(--ink-secondary)' }}>Sudah punya akun {SITE_NAME}?</span>
           <Link href="/login" className="btn btn-outline btn-sm">
             Masuk di Sini →
           </Link>

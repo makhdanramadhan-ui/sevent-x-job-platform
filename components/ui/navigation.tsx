@@ -6,6 +6,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from './api-client';
 import { Button } from './forms';
 
+/**
+ * Ubah konstanta di bawah ini jika tim ingin mengganti nama website sementara.
+ */
+export const SITE_NAME = 'KerjaLoka';
+export const SITE_MONOGRAM = 'KL';
+export const SITE_TAGLINE = 'Bursa & Pemetaan Kerja';
+
 export type SessionInfo = {
   user: { id: string; email: string | null };
   auth_mode: 'cookie' | 'bearer';
@@ -20,10 +27,10 @@ export function notifyAuthChanged(): void {
 
 const NAV_ITEMS = [
   { href: '/', label: 'Beranda', exact: true },
-  { href: '/jobs', label: 'Feed Lowongan', exact: false },
+  { href: '/jobs', label: 'Lowongan', exact: false },
   { href: '/recommendations', label: 'Rekomendasi', exact: false },
   { href: '/bookmarks', label: 'Tersimpan', exact: false },
-  { href: '/profile', label: 'Profil & Preferensi', exact: false },
+  { href: '/profile', label: 'Profil', exact: false },
   { href: '/cv', label: 'Studio CV', exact: false },
 ] as const;
 
@@ -86,12 +93,15 @@ export function SiteHeader() {
         </div>
         <div className="site-header-inner">
           <Link href="/" className="brand-link" onClick={() => setMenuOpen(false)}>
-            <span className="brand-title">
-              <span>SEVENT X</span>
-              <span className="brand-stamp">ID</span>
+            <span className="brand-mark" aria-hidden="true">
+              {SITE_MONOGRAM}
             </span>
-            <span className="brand-subtitle">
-              Agregasi Lowongan &amp; Pemetaan Kecocokan Profil
+            <span className="brand-text-group">
+              <span className="brand-title">
+                <span>{SITE_NAME}</span>
+                <span className="brand-stamp">ID</span>
+              </span>
+              <span className="brand-subtitle">{SITE_TAGLINE}</span>
             </span>
           </Link>
 
@@ -108,15 +118,8 @@ export function SiteHeader() {
           <div
             id="primary-navigation"
             className={`nav-collapsible ${menuOpen ? 'nav-collapsible-open' : ''}`}
-            style={{
-              display: menuOpen ? undefined : undefined,
-              flex: 1,
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 16,
-            }}
           >
-            <nav aria-label="Navigasi Utama" className="nav-links-wrap" style={{ marginLeft: 12 }}>
+            <nav aria-label="Navigasi Utama" className="nav-links-wrap">
               {NAV_ITEMS.map((item) => {
                 const isActive = item.exact
                   ? pathname === item.href
@@ -137,7 +140,7 @@ export function SiteHeader() {
 
             <div className="nav-auth-area">
               {checking ? (
-                <span className="font-mono" style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
+                <span className="font-mono" style={{ fontSize: '0.74rem', color: 'var(--ink-muted)' }}>
                   Memeriksa sesi...
                 </span>
               ) : session ? (
@@ -149,11 +152,11 @@ export function SiteHeader() {
                       style={{ textDecoration: 'none' }}
                       onClick={() => setMenuOpen(false)}
                     >
-                      Profil Belum Lengkap → Isi Onboarding
+                      Isi Onboarding →
                     </Link>
                   ) : null}
                   <span className="nav-user-pill" title={session.user.email ?? session.user.id}>
-                    {session.user.email ?? 'Pengguna Terautentikasi'}
+                    {session.user.email ?? 'Pengguna Aktif'}
                   </span>
                   <Button
                     variant="outline"
@@ -196,12 +199,12 @@ export function SiteFooter() {
       <div className="site-footer-inner">
         <div>
           <div className="brand-title" style={{ marginBottom: 8 }}>
-            <span>SEVENT X — Platform Pencarian Kerja</span>
+            <span>{SITE_NAME} — Platform Pencarian &amp; Pemetaan Kerja</span>
           </div>
           <p style={{ margin: '0 0 12px', fontSize: '0.88rem', color: 'var(--ink-secondary)' }}>
-            Dikembangkan oleh Tim SEVENT X untuk kompetisi Software Development dengan subtema{' '}
-            <strong>SDG 8: Decent Work and Economic Growth</strong>. Menyajikan agregasi lowongan
-            lintas bidang dan tingkat pengalaman di Indonesia secara jujur dan transparan.
+            Dikembangkan untuk kompetisi Software Development <strong>SEVENT X</strong> dengan
+            subtema <strong>SDG 8: Decent Work and Economic Growth</strong>. Menyajikan agregasi
+            lowongan lintas bidang dan tingkat pengalaman di Indonesia secara jujur dan transparan.
           </p>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: '0.82rem' }}>
             <Link href="/">Beranda &amp; Kontrak API</Link>
@@ -220,7 +223,7 @@ export function SiteFooter() {
           <ul>
             <li>
               Pencantuman lowongan dari sumber eksternal bukan klaim bahwa lowongan telah
-              diverifikasi aman oleh SEVENT X.
+              diverifikasi aman oleh {SITE_NAME}.
             </li>
             <li>
               Tombol melamar hanya membuka halaman sumber asli di tab baru, tidak mengubah status

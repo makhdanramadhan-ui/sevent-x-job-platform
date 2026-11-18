@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { SiteFooter, SiteHeader } from '@/components/ui';
+import { SITE_NAME, SiteFooter, SiteHeader } from '@/components/ui';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'SEVENT X — Platform Agregasi Lowongan & Pemetaan Karier Indonesia',
+  title: `${SITE_NAME} — Platform Agregasi Lowongan & Pemetaan Karier Indonesia`,
   description:
     'Platform agregasi lowongan kerja Indonesia lintas bidang dan tingkat pengalaman dengan pemetaan kecocokan profil yang jujur serta studio persiapan CV (SDG 8: Decent Work and Economic Growth).',
 };

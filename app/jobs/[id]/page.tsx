@@ -18,6 +18,7 @@ import {
   JobStatusBadge,
   LoadingState,
   NoticeBanner,
+  SITE_NAME,
   WORK_MODE_LABELS,
 } from '@/components/ui';
 import type { BookmarkRecord, JobDetail } from '@/lib/contracts';
@@ -29,7 +30,7 @@ function buildPosterDataUri(title: string, company: string, location: string | n
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="240" viewBox="0 0 720 240">
     <rect width="720" height="240" fill="#ECE8DE" stroke="#171715" stroke-width="4"/>
     <rect x="20" y="20" width="680" height="200" fill="#FDFCF9" stroke="#171715" stroke-width="1.5"/>
-    <text x="44" y="64" font-family="monospace" font-size="13" font-weight="700" fill="#B84221">ARSIP LOWONGAN SEVENT X · LEMBAR INFORMASI</text>
+    <text x="44" y="64" font-family="monospace" font-size="13" font-weight="700" fill="#B84221">ARSIP LOWONGAN ${SITE_NAME.toUpperCase()} · LEMBAR INFORMASI</text>
     <text x="44" y="114" font-family="Georgia, serif" font-size="24" font-weight="700" fill="#171715">${safeTitle}</text>
     <text x="44" y="152" font-family="sans-serif" font-size="17" font-weight="600" fill="#3F3D37">${safeCompany}</text>
     <text x="44" y="186" font-family="monospace" font-size="13" fill="#6B685F">Lokasi: ${safeLoc} · Detail teks utama tersedia di bawah</text>
@@ -353,7 +354,7 @@ function JobDetailInner() {
             Sumber Asli Lowongan ({job.job_sources?.length ?? 0})
           </h2>
           <p style={{ margin: '0 0 16px', fontSize: '0.86rem', color: 'var(--ink-secondary)' }}>
-            SEVENT X tidak melakukan auto-submit. Klik tombol sumber asli di bawah untuk membuka
+            {SITE_NAME} tidak melakukan auto-submit. Klik tombol sumber asli di bawah untuk membuka
             halaman rekrutmen resmi di tab baru. Tombol ini tidak mengubah status lamaran menjadi
             terkirim.
           </p>

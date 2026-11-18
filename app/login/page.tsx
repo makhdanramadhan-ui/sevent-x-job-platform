@@ -12,6 +12,7 @@ import {
   LoadingState,
   NoticeBanner,
   notifyAuthChanged,
+  SITE_NAME,
   type SessionInfo,
   TextInput,
 } from '@/components/ui';
@@ -81,7 +82,7 @@ function LoginFormContent() {
   return (
     <div className="container-auth">
       <div className="ledger-card">
-        <span className="page-kicker">AUTENTIKASI SESI · SEVENT X</span>
+        <span className="page-kicker">AUTENTIKASI SESI · {SITE_NAME.toUpperCase()}</span>
         <h1 className="page-title" style={{ fontSize: '1.75rem', marginBottom: 8 }}>
           Masuk ke Akun Anda
         </h1>
@@ -154,7 +155,7 @@ function LoginFormContent() {
             gap: 8,
           }}
         >
-          <span style={{ color: 'var(--ink-secondary)' }}>Belum memiliki akun SEVENT X?</span>
+          <span style={{ color: 'var(--ink-secondary)' }}>Belum memiliki akun {SITE_NAME}?</span>
           <Link href="/signup" className="btn btn-outline btn-sm">
             Daftar Akun Baru →
           </Link>

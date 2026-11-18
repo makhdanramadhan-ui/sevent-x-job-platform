@@ -20,6 +20,7 @@ import {
   LoadingState,
   NoticeBanner,
   SelectInput,
+  SITE_NAME,
   TextInput,
   WORK_MODE_LABELS,
 } from '@/components/ui';
@@ -361,7 +362,7 @@ function JobsFeedInner() {
               description={
                 hasActiveFilters
                   ? 'Tidak ditemukan lowongan di basis data yang cocok dengan kombinasi kata kunci atau filter yang Anda pilih. Coba longgarkan kriteria pencarian.'
-                  : 'Saat ini belum ada data lowongan hasil pengambilan (ingestion) di basis data. Sesuai komitmen kejujuran platform, SEVENT X tidak menampilkan data contoh palsu sebagai lowongan hasil scraping.'
+                  : `Saat ini belum ada data lowongan hasil pengambilan (ingestion) di basis data. Sesuai komitmen kejujuran platform, ${SITE_NAME} tidak menampilkan data contoh palsu sebagai lowongan hasil scraping.`
               }
               action={
                 hasActiveFilters ? (

@@ -250,7 +250,7 @@ function RecommendationsInner() {
               </h2>
               <p style={{ margin: '0 0 16px', fontSize: '0.92rem', color: 'var(--ink-secondary)' }}>
                 Permintaan ke <code>GET /api/recommendations</code> mengembalikan status bahwa
-                endpoint belum tersedia di repository saat ini. Sesuai kontrak tim SEVENT X,{' '}
+                endpoint belum tersedia di repository saat ini. Sesuai kontrak tim pengembang,{' '}
                 <strong>
                   halaman ini tidak menampilkan skor contoh atau angka kecocokan buatan sebelum
                   endpoint rekomendasi aktif

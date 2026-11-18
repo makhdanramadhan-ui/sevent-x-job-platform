@@ -37,6 +37,9 @@ export {
 } from './forms';
 export {
   notifyAuthChanged,
+  SITE_MONOGRAM,
+  SITE_NAME,
+  SITE_TAGLINE,
   type SessionInfo,
   SiteFooter,
   SiteHeader,
