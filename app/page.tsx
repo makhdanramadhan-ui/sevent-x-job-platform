@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Badge, HeroCareerIllustration, PillarIllustration, SITE_NAME } from '@/components/ui';
+import { HeroCareerIllustration, PillarIllustration, SITE_NAME } from '@/components/ui';
 
 const PROBLEM_SOLUTIONS = [
   {
@@ -36,7 +36,6 @@ const PROBLEM_SOLUTIONS = [
 
 const FEATURE_PILLARS = [
   {
-    tag: 'Cari Lowongan',
     variant: 'feed' as const,
     title: 'Lowongan untuk Semua Bidang & Jenjang Karier',
     description:
@@ -52,7 +51,6 @@ const FEATURE_PILLARS = [
     secondaryLabel: 'Lowongan Tersimpan',
   },
   {
-    tag: 'Kenali Kesiapanmu',
     variant: 'match' as const,
     title: 'Cek Kecocokan Profil dengan Syarat Lowongan',
     description:
@@ -68,7 +66,6 @@ const FEATURE_PILLARS = [
     secondaryLabel: 'Lengkapi Profil',
   },
   {
-    tag: 'Siapkan Dokumen',
     variant: 'cv' as const,
     title: 'Buat CV Baru atau Perbarui CV Lama',
     description:
@@ -119,22 +116,9 @@ const USER_JOURNEY = [
 export default function HomePage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 48 }}>
-      {/* 1. HERO SECTION */}
+      {/* 1. HERO SECTION (Tanpa badge pill di atas judul) */}
       <section className="hero-split" aria-labelledby="hero-main-heading">
         <div>
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 8,
-              alignItems: 'center',
-              marginBottom: 14,
-            }}
-          >
-            <Badge variant="accent">Semua Bidang &amp; Jenjang Karier</Badge>
-            <Badge variant="open">Fresh Graduate · Magang · Profesional</Badge>
-          </div>
-
           <h1 id="hero-main-heading" className="hero-headline">
             Cari Lowongan yang Tepat, Kenali Kesiapan Dirimu, dan Lamar di Perusahaan Impian.
           </h1>
@@ -177,10 +161,6 @@ export default function HomePage() {
           {FEATURE_PILLARS.map((pillar) => (
             <article key={pillar.title} className="feature-pillar-card">
               <div>
-                <div style={{ marginBottom: 10 }}>
-                  <Badge variant="accent">{pillar.tag}</Badge>
-                </div>
-
                 <h3 className="font-editorial" style={{ fontSize: '1.3rem', marginBottom: 10 }}>
                   {pillar.title}
                 </h3>
