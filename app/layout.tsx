@@ -6,7 +6,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: `${SITE_NAME} — Platform Agregasi Lowongan & Pemetaan Karier Indonesia`,
   description:
-    'Platform agregasi lowongan kerja Indonesia lintas bidang dan tingkat pengalaman dengan pemetaan kecocokan profil yang jujur serta studio persiapan CV (SDG 8: Decent Work and Economic Growth).',
+    'Platform agregasi lowongan kerja Indonesia lintas bidang dan tingkat pengalaman dengan pemetaan kecocokan profil yang jujur serta studio persiapan CV.',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -133,7 +133,8 @@ export default function HomePage() {
               }}
             >
               <Badge variant="accent">{SITE_NAME.toUpperCase()} · INDONESIA</Badge>
-              <Badge variant="neutral">SDG 8: Pekerjaan Layak &amp; Pertumbuhan Ekonomi</Badge>
+              <Badge variant="neutral">Agregasi Lowongan &amp; Pemetaan Profil</Badge>
+              <Badge variant="open">Lamar Langsung di Sumber Asli</Badge>
             </div>
 
             <h1 id="hero-main-heading" className="hero-headline">

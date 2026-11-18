@@ -77,7 +77,7 @@ export function SiteHeader() {
         <div className="site-header-top">
           <div className="site-header-top-inner">
             <span className="font-mono site-header-top-primary">
-              SDG 8: PEKERJAAN LAYAK &amp; PERTUMBUHAN EKONOMI · BURSA KERJA INDONESIA
+              AGREGASI LOWONGAN &amp; PEMETAAN KARIER INDONESIA · LINTAS BIDANG &amp; PENGALAMAN
             </span>
             <span className="font-mono site-header-top-secondary">
               Tanpa Auto-Submit · Lamaran Langsung di Sumber Asli
@@ -204,9 +204,12 @@ export function SiteFooter() {
             <span>{SITE_NAME} — Platform Pencarian &amp; Pemetaan Kerja</span>
           </div>
           <p style={{ margin: '0 0 12px', fontSize: '0.88rem', color: 'var(--ink-secondary)' }}>
-            Dikembangkan untuk kompetisi Software Development <strong>SEVENT X</strong> dengan
-            subtema <strong>SDG 8: Decent Work and Economic Growth</strong>. Menyajikan agregasi
-            lowongan lintas bidang dan tingkat pengalaman di Indonesia secara jujur dan transparan.
+            Platform pencarian kerja yang menyajikan agregasi lowongan lintas bidang dan tingkat
+            pengalaman di Indonesia secara jujur, disertai pemetaan kesiapan profil dan studio
+            penyusunan CV.
+          </p>
+          <p className="font-mono" style={{ margin: '0 0 12px', fontSize: '0.74rem', color: 'var(--ink-muted)' }}>
+            © 2026 {SITE_NAME} · Dirancang oleh Tim SEVENT X
           </p>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: '0.82rem' }}>
             <Link href="/">Beranda</Link>
