@@ -149,11 +149,10 @@ function RecommendationsInner() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div className="page-header">
         <div>
-          <span className="page-kicker">PEMETAAN PROFIL VS LOWONGAN · KONTRAK V1</span>
-          <h1 className="page-title">Rekomendasi &amp; Analisis Kecocokan</h1>
+          <h1 className="page-title">Rekomendasi Lowongan Untukmu</h1>
           <p className="page-subtitle">
-            Menampilkan alasan kecocokan, persyaratan yang belum terpenuhi, serta informasi yang
-            belum dicantumkan antara profil Anda dan lowongan kerja.
+            Lihat peluang kerja yang paling sesuai dengan keahlian, pengalaman, dan preferensi
+            profilmu, beserta persyaratan yang masih perlu kamu lengkapi.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -161,28 +160,27 @@ function RecommendationsInner() {
             Ubah Profil &amp; Preferensi
           </Link>
           <Link href="/jobs" className="btn btn-secondary btn-sm">
-            Buka Feed Lowongan →
+            Cari Semua Lowongan →
           </Link>
         </div>
       </div>
 
-      {/* Honest Disclaimer Banner */}
-      <NoticeBanner variant="info" title="Catatan Penting Mengenai Skor Kecocokan">
-        Skor kecocokan hanya memetakan kesesuaian atribut profil kandidat terhadap data lowongan
-        yang berhasil diambil. <strong>Skor kecocokan bukan peluang diterima bekerja</strong> dan
-        bukan jaminan lolos seleksi HR.
+      {/* Friendly Info Banner */}
+      <NoticeBanner variant="info" title="Cara Membaca Kecocokan Profil">
+        Indikator kecocokan membantu kamu melihat kesesuaian kualifikasi profilmu dengan persyaratan
+        lowongan agar kamu dapat mempersiapkan CV dengan lebih tepat sebelum melamar.
       </NoticeBanner>
 
       {loading ? (
         <LoadingState
-          title="Memeriksa profil dan rekomendasi lowongan..."
-          description="Menghubungi /api/profile dan /api/recommendations."
+          title="Menyiapkan rekomendasi lowongan..."
+          description="Mencocokkan profil kamu dengan daftar lowongan yang tersedia."
           lines={4}
         />
       ) : error ? (
         <ErrorState
           error={error}
-          title="Gagal Memuat Rekomendasi"
+          title="Belum Dapat Memuat Rekomendasi"
           onRetry={loadRecommendations}
           loginRedirectPath="/recommendations"
         />
@@ -191,22 +189,21 @@ function RecommendationsInner() {
           {/* Profile Readiness Bar */}
           {!profileHasContent ? (
             <EmptyState
-              kicker="PROFIL KANDIDAT BELUM LENGKAP"
-              title="Lengkapi Keahlian & Preferensi untuk Rekomendasi Akurat"
-              description="Profil Anda saat ini belum memiliki daftar keahlian, pengalaman, atau preferensi posisi. Tambahkan informasi tersebut agar sistem rekomendasi memiliki dasar pencocokan yang memadai."
+              title="Lengkapi Profilmu untuk Mendapatkan Rekomendasi"
+              description="Tambahkan keahlian, riwayat pendidikan, pengalaman, atau posisi yang kamu minati agar kami dapat mencocokkan profilmu dengan lowongan yang tersedia."
               action={
                 <>
                   <Link href="/onboarding" className="btn btn-primary btn-sm">
-                    Isi Onboarding Profil →
+                    Lengkapi Profil Sekarang →
                   </Link>
                   <Link href="/profile" className="btn btn-outline btn-sm">
-                    Kelola Profil Lengkap
+                    Buka Halaman Profil
                   </Link>
                 </>
               }
             />
           ) : (
-            <section className="surface-card" aria-label="Status data input rekomendasi profil">
+            <section className="surface-card" aria-label="Ringkasan profil kamu">
               <div
                 style={{
                   display: 'flex',
@@ -217,9 +214,7 @@ function RecommendationsInner() {
                   marginBottom: 10,
                 }}
               >
-                <strong style={{ fontSize: '0.95rem' }}>
-                  Data Acuan Profil Kandidat (<code>RecommendationProfileInput</code>)
-                </strong>
+                <strong style={{ fontSize: '0.95rem' }}>Ringkasan Kualifikasi Profilmu</strong>
                 <Link href="/profile" className="font-mono" style={{ fontSize: '0.78rem' }}>
                   Perbarui Profil →
                 </Link>
@@ -230,76 +225,28 @@ function RecommendationsInner() {
                 <Badge variant="neutral">{profile?.experiences.length ?? 0} Pengalaman</Badge>
                 <Badge variant="neutral">{profile?.projects.length ?? 0} Proyek</Badge>
                 <Badge variant="neutral">
-                  {profile?.preferences.positions.length ?? 0} Posisi Preferensi
+                  {profile?.preferences.positions.length ?? 0} Posisi Diminati
                 </Badge>
               </div>
             </section>
           )}
 
-          {/* Case 1: /api/recommendations endpoint is not active yet (404) */}
+          {/* Case 1: Recommendation service not active yet */}
           {endpointMissing ? (
-            <section className="ledger-card" aria-labelledby="heading-endpoint-pending">
-              <span className="page-kicker">STATUS INTEGRASI ENDPOINT · /api/recommendations</span>
-              <h2
-                id="heading-endpoint-pending"
-                className="font-editorial"
-                style={{ fontSize: '1.4rem', marginBottom: 8 }}
-              >
-                Endpoint Rekomendasi Belum Diaktifkan di Server
-              </h2>
-              <p style={{ margin: '0 0 16px', fontSize: '0.92rem', color: 'var(--ink-secondary)' }}>
-                Permintaan ke <code>GET /api/recommendations</code> mengembalikan status bahwa
-                endpoint belum tersedia di repository saat ini. Sesuai kontrak tim pengembang,{' '}
-                <strong>
-                  halaman ini tidak menampilkan skor contoh atau angka kecocokan buatan sebelum
-                  endpoint rekomendasi aktif
-                </strong>
-                .
-              </p>
-
-              <div
-                className="surface-card"
-                style={{ background: 'var(--bg-subtle)', marginBottom: 16 }}
-              >
-                <strong
-                  className="font-mono"
-                  style={{ fontSize: '0.78rem', display: 'block', marginBottom: 6 }}
-                >
-                  KONTRAK TIPE YANG SIAP DIRENDER (lib/recommendation-contract.ts):
-                </strong>
-                <ul
-                  style={{
-                    margin: 0,
-                    paddingLeft: 18,
-                    fontSize: '0.85rem',
-                    color: 'var(--ink-secondary)',
-                  }}
-                >
-                  <li>
-                    <code>contract_version: 1</code> dengan daftar <code>items[]</code>
-                  </li>
-                  <li>
-                    <code>matched: string[]</code> — Alasan dan kualifikasi profil yang cocok
-                  </li>
-                  <li>
-                    <code>missing: string[]</code> — Persyaratan lowongan yang belum terpenuhi di
-                    profil
-                  </li>
-                  <li>
-                    <code>unknown: string[]</code> — Atribut lowongan/profil yang belum diketahui
-                  </li>
-                </ul>
-              </div>
-
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <Button variant="primary" size="sm" onClick={loadRecommendations}>
-                  Periksa Ulang Endpoint /api/recommendations
-                </Button>
-                <Link href="/jobs" className="btn btn-outline btn-sm">
-                  Telusuri Semua Lowongan di Feed →
-                </Link>
-              </div>
-            </section>
+            <EmptyState
+              title="Belum Ada Rekomendasi Lowongan Saat Ini"
+              description="Rekomendasi lowongan yang dicocokkan dengan profilmu sedang disiapkan. Sambil menunggu, kamu tetap dapat mencari dan menyimpan lowongan langsung di halaman Lowongan."
+              action={
+                <>
+                  <Link href="/jobs" className="btn btn-primary btn-sm">
+                    Cari Lowongan Sekarang →
+                  </Link>
+                  <Button variant="outline" size="sm" onClick={loadRecommendations}>
+                    Muat Ulang
+                  </Button>
+                </>
+              }
+            />
           ) : (
             <>
               {/* Filter Bar when recommendations exist */}

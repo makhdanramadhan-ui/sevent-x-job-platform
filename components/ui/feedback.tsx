@@ -8,7 +8,7 @@ import { EmptyArchiveIllustration } from './illustrations';
 
 export function LoadingState({
   title = 'Memuat data...',
-  description = 'Mohon tunggu sebentar, sedang mengambil data terbaru dari server.',
+  description = 'Mohon tunggu sebentar.',
   lines = 3,
 }: {
   title?: string;
@@ -18,12 +18,7 @@ export function LoadingState({
   return (
     <div className="state-panel" role="status" aria-live="polite">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span className="font-mono" style={{ fontSize: '0.8rem', fontWeight: 700 }}>
-            [MEMUAT]
-          </span>
-          <strong>{title}</strong>
-        </div>
+        <strong>{title}</strong>
         <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--ink-secondary)' }}>
           {description}
         </p>
@@ -42,7 +37,7 @@ export function LoadingState({
 }
 
 export function EmptyState({
-  kicker = 'BELUM ADA DATA',
+  kicker,
   title,
   description,
   action,
@@ -55,7 +50,7 @@ export function EmptyState({
   return (
     <div className="state-panel state-panel-empty">
       <EmptyArchiveIllustration />
-      <span className="page-kicker">{kicker}</span>
+      {kicker ? <span className="page-kicker">{kicker}</span> : null}
       <h2 className="font-editorial" style={{ fontSize: '1.3rem', margin: '0 0 8px' }}>
         {title}
       </h2>
@@ -69,7 +64,9 @@ export function EmptyState({
       >
         {description}
       </p>
-      {action ? <div style={{ marginTop: 18, display: 'flex', gap: 10, flexWrap: 'wrap' }}>{action}</div> : null}
+      {action ? (
+        <div style={{ marginTop: 18, display: 'flex', gap: 10, flexWrap: 'wrap' }}>{action}</div>
+      ) : null}
     </div>
   );
 }
@@ -88,22 +85,16 @@ export function ErrorState({
   const isSession = error.kind === 'session_expired';
   const isCsrfOrForbidden = error.kind === 'forbidden_or_csrf';
   const isInvalidRef = error.kind === 'invalid_reference';
-  const isServiceDown = error.kind === 'service_unavailable';
 
   const heading =
     title ??
     (isSession
-      ? 'Sesi Berakhir atau Belum Masuk'
+      ? 'Sesi Kamu Telah Berakhir'
       : isCsrfOrForbidden
-        ? 'Akses atau Verifikasi Keamanan (CSRF) Ditolak'
+        ? 'Akses Tidak Dapat Dilanjutkan'
         : isInvalidRef
-          ? 'Referensi Data Tidak Valid (422)'
-          : isServiceDown
-            ? 'Layanan Autentikasi Belum Dikonfigurasi (503)'
-            : 'Permintaan Gagal Diproses');
-
-  const fieldDetail =
-    error.details && typeof error.details.field === 'string' ? error.details.field : null;
+          ? 'Data Tidak Ditemukan'
+          : 'Belum Dapat Memproses Permintaan');
 
   const loginHref = loginRedirectPath
     ? `/login?next=${encodeURIComponent(loginRedirectPath)}`
@@ -112,55 +103,25 @@ export function ErrorState({
   return (
     <div className="state-panel state-panel-error" role="alert">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span
-            className="font-mono"
-            style={{
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              padding: '2px 8px',
-              background: 'var(--status-danger)',
-              color: '#fff',
-              borderRadius: 3,
-            }}
-          >
-            HTTP {error.status || 'ERR'} · {error.code}
-          </span>
-          {fieldDetail ? (
-            <span className="font-mono" style={{ fontSize: '0.75rem' }}>
-              Field: <code>{fieldDetail}</code>
-            </span>
-          ) : null}
-        </div>
-        <h2 className="font-editorial" style={{ fontSize: '1.25rem', margin: '4px 0 0' }}>
+        <h2 className="font-editorial" style={{ fontSize: '1.2rem', margin: 0 }}>
           {heading}
         </h2>
         <p style={{ margin: 0, fontSize: '0.92rem', color: 'var(--ink-primary)' }}>
           {error.message}
         </p>
-        {isCsrfOrForbidden ? (
-          <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--ink-secondary)' }}>
-            Pastikan Anda mengakses aplikasi dari domain/origin yang sama dan cookie sesi aktif.
-          </p>
-        ) : null}
-        {isInvalidRef ? (
-          <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--ink-secondary)' }}>
-            Data yang dirujuk mungkin sudah dihapus atau ID tidak terdaftar di basis data.
-          </p>
-        ) : null}
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
           {isSession ? (
             <>
-              <Link href={loginHref} className="btn btn-primary">
+              <Link href={loginHref} className="btn btn-primary btn-sm">
                 Masuk ke Akun
               </Link>
-              <Link href="/signup" className="btn btn-outline">
+              <Link href="/signup" className="btn btn-outline btn-sm">
                 Daftar Akun Baru
               </Link>
             </>
           ) : null}
           {onRetry ? (
-            <Button variant="outline" onClick={onRetry}>
+            <Button variant="outline" size="sm" onClick={onRetry}>
               Coba Lagi
             </Button>
           ) : null}

@@ -73,11 +73,10 @@ function ProfileInner({ session }: { session: SessionInfo }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div className="page-header">
         <div>
-          <span className="page-kicker">PROFIL &amp; PREFERENSI KANDIDAT</span>
-          <h1 className="page-title">Arsip Profil &amp; Preferensi Kerja</h1>
+          <h1 className="page-title">Profil &amp; Preferensi Kerja</h1>
           <p className="page-subtitle">
-            Kelola data riwayat pendidikan, pengalaman kerja, keahlian, portofolio, serta
-            preferensi pencarian kerja untuk akun{' '}
+            Kelola riwayat pendidikan, pengalaman kerja, keahlian, portofolio, serta preferensi
+            pencarian kerja untuk akun{' '}
             <strong className="font-mono">{session.user.email ?? session.user.id}</strong>.
           </p>
         </div>
@@ -94,7 +93,7 @@ function ProfileInner({ session }: { session: SessionInfo }) {
       {clearNotice ? (
         <NoticeBanner
           variant="warning"
-          title="Data Profil Dikembalikan ke Kondisi Kosong"
+          title="Data Profil Telah Dikosongkan"
           onDismiss={() => setClearNotice(null)}
         >
           {clearNotice}
@@ -103,14 +102,14 @@ function ProfileInner({ session }: { session: SessionInfo }) {
 
       {loading ? (
         <LoadingState
-          title="Memuat profil kandidat..."
-          description="Mengambil data profil dan preferensi Anda dari /api/profile."
+          title="Memuat profil..."
+          description="Mohon tunggu sebentar."
           lines={4}
         />
       ) : error ? (
         <ErrorState
           error={error}
-          title="Gagal Memuat Profil"
+          title="Belum Dapat Memuat Profil"
           onRetry={loadProfile}
           loginRedirectPath="/profile"
         />
@@ -118,14 +117,8 @@ function ProfileInner({ session }: { session: SessionInfo }) {
         <>
           {!profile ? (
             <EmptyState
-              kicker="STATUS PROFIL · BELUM TERISI"
-              title="Profil Kandidat Masih Kosong"
-              description="Anda belum menyimpan data profil di basis data. Isi formulir di bawah ini atau gunakan panduan Onboarding agar sistem rekomendasi dan pembuat CV memiliki data acuan yang akurat."
-              action={
-                <Link href="/onboarding" className="btn btn-primary btn-sm">
-                  Gunakan Mode Onboarding Cepat →
-                </Link>
-              }
+              title="Profil Kamu Masih Kosong"
+              description="Lengkapi formulir di bawah ini agar kami dapat mencocokkan profilmu dengan lowongan yang relevan dan mempermudah pembuatan CV-mu."
             />
           ) : (
             <section className="surface-card" aria-label="Ringkasan kelengkapan profil">
@@ -208,15 +201,12 @@ function ProfileInner({ session }: { session: SessionInfo }) {
               }}
             >
               <div>
-                <span className="page-kicker" style={{ color: 'var(--status-danger)' }}>
-                  MANAJEMEN PRIVASI DATA
-                </span>
                 <h2 id="danger-zone-heading" style={{ fontSize: '1.1rem', margin: '0 0 4px' }}>
-                  Bersihkan Seluruh Data Profil &amp; Aktivitas
+                  Kosongkan Data Profil &amp; Aktivitas
                 </h2>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--ink-secondary)' }}>
                   Tindakan ini akan menghapus seluruh data profil, daftar lowongan tersimpan, dan
-                  dokumen CV milik akun Anda secara permanen.
+                  dokumen CV milik akunmu.
                 </p>
               </div>
 

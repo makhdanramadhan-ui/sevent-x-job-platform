@@ -138,9 +138,8 @@ export function ProfileEditorForm({
 
       {/* 1. Identitas Dasar */}
       <section className="ledger-card" aria-labelledby="section-identity">
-        <span className="page-kicker">BAGIAN 01 · IDENTITAS KANDIDAT</span>
         <h2 id="section-identity" className="font-editorial" style={{ fontSize: '1.3rem', marginBottom: 16 }}>
-          Informasi Dasar &amp; Ringkasan Profesional
+          Informasi Diri &amp; Ringkasan Singkat
         </h2>
         <div className="form-grid-2">
           <FormField id="profile-full-name" label="Nama Lengkap" hint="Maksimal 120 karakter">
@@ -187,13 +186,12 @@ export function ProfileEditorForm({
 
       {/* 2. Keahlian & Preferensi Kerja */}
       <section className="ledger-card" aria-labelledby="section-skills-prefs">
-        <span className="page-kicker">BAGIAN 02 · KEAHLIAN &amp; PREFERENSI LOWONGAN</span>
         <h2 id="section-skills-prefs" className="font-editorial" style={{ fontSize: '1.3rem', marginBottom: 6 }}>
-          Keahlian &amp; Kriteria Pencarian Kerja
+          Keahlian &amp; Preferensi Pekerjaan
         </h2>
         <p style={{ margin: '0 0 18px', fontSize: '0.88rem', color: 'var(--ink-secondary)' }}>
-          Data ini digunakan langsung oleh modul pencocokan profil untuk menghitung alasan kecocokan
-          (matched) dan persyaratan yang belum terpenuhi (missing) terhadap lowongan.
+          Tambahkan keahlian dan kriteria pekerjaan yang kamu cari agar rekomendasi lowongan lebih
+          sesuai dengan minatmu.
         </p>
 
         <div className="form-stack">
@@ -282,9 +280,8 @@ export function ProfileEditorForm({
       <section className="ledger-card" aria-labelledby="section-education">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
           <div>
-            <span className="page-kicker">BAGIAN 03 · RIWAYAT PENDIDIKAN</span>
             <h2 id="section-education" className="font-editorial" style={{ fontSize: '1.3rem', margin: 0 }}>
-              Pendidikan ({draft.education.length}/20)
+              Riwayat Pendidikan
             </h2>
           </div>
           <Button
@@ -412,9 +409,8 @@ export function ProfileEditorForm({
       <section className="ledger-card" aria-labelledby="section-experiences">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
           <div>
-            <span className="page-kicker">BAGIAN 04 · PENGALAMAN KERJA &amp; MAGANG</span>
             <h2 id="section-experiences" className="font-editorial" style={{ fontSize: '1.3rem', margin: 0 }}>
-              Pengalaman Kerja ({draft.experiences.length}/20)
+              Pengalaman Kerja &amp; Magang
             </h2>
           </div>
           <Button
@@ -577,9 +573,8 @@ export function ProfileEditorForm({
           <section className="ledger-card" aria-labelledby="section-links-projects">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
               <div>
-                <span className="page-kicker">BAGIAN 05 · PORTOFOLIO &amp; PROYEK</span>
                 <h2 id="section-links-projects" className="font-editorial" style={{ fontSize: '1.3rem', margin: 0 }}>
-                  Tautan Portofolio ({draft.links.length}/10) &amp; Proyek ({draft.projects.length}/20)
+                  Tautan Portofolio &amp; Proyek
                 </h2>
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -748,9 +743,8 @@ export function ProfileEditorForm({
           <section className="ledger-card" aria-labelledby="section-org-ach">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
               <div>
-                <span className="page-kicker">BAGIAN 06 · ORGANISASI &amp; PENCAPAIAN</span>
                 <h2 id="section-org-ach" className="font-editorial" style={{ fontSize: '1.3rem', margin: 0 }}>
-                  Organisasi ({draft.organizations.length}/20) &amp; Penghargaan ({draft.achievements.length}/20)
+                  Organisasi &amp; Pencapaian
                 </h2>
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

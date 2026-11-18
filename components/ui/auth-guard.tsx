@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from 'react';
-import { type ApiCallError, apiFetch, SITE_NAME } from './api-client';
+import { apiFetch } from './api-client';
 import { LoadingState, NoticeBanner } from './feedback';
-import { Badge, Button, FormField, TextInput } from './forms';
+import { Button, FormField, TextInput } from './forms';
 import { notifyAuthChanged, type SessionInfo } from './navigation';
 
 type SignupResponse = {
@@ -14,16 +14,14 @@ type SignupResponse = {
 };
 
 export function AuthGuard({
-  title = 'Masuk untuk Mengakses Halaman Ini',
+  title = 'Masuk untuk Melanjutkan',
   children,
 }: {
   title?: string;
   children: (session: SessionInfo) => ReactNode;
 }) {
-  const pathname = usePathname();
   const router = useRouter();
   const [session, setSession] = useState<SessionInfo | null>(null);
-  const [initError, setInitError] = useState<ApiCallError | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Popup modal form state
@@ -37,15 +35,11 @@ export function AuthGuard({
 
   const verify = useCallback(async () => {
     setLoading(true);
-    setInitError(null);
     const res = await apiFetch<SessionInfo>('/api/auth/me');
     if (res.ok) {
       setSession(res.data);
     } else {
       setSession(null);
-      if (res.error.status === 503) {
-        setInitError(res.error);
-      }
     }
     setLoading(false);
   }, []);
@@ -121,7 +115,7 @@ export function AuthGuard({
     if (res.data.requires_email_confirmation) {
       setSubmitting(false);
       setConfirmationMsg(
-        `Akun ${res.data.user.email} berhasil dibuat. Silakan cek email Anda untuk verifikasi sebelum masuk.`,
+        `Akun ${res.data.user.email} berhasil dibuat. Silakan cek kotak masuk email kamu untuk verifikasi sebelum masuk.`,
       );
       setActiveTab('login');
       return;
@@ -136,16 +130,14 @@ export function AuthGuard({
   if (loading) {
     return (
       <LoadingState
-        title="Memverifikasi sesi autentikasi..."
-        description="Memastikan sesi pengguna aktif sebelum memuat halaman."
+        title="Memuat halaman..."
+        description="Mohon tunggu sebentar."
         lines={3}
       />
     );
   }
 
   if (!session) {
-    const loginHref = pathname ? `/login?next=${encodeURIComponent(pathname)}` : '/login';
-
     return (
       <div className="auth-locked-preview">
         {/* Blurred decorative placeholder behind popup */}
@@ -170,39 +162,39 @@ export function AuthGuard({
         </div>
 
         {/* Popup Modal Dialog */}
-        <div className="auth-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+        <div
+          className="auth-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="auth-modal-title"
+        >
           <div className="auth-modal-dialog">
             <div className="auth-modal-header">
-              <div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
-                  <Badge variant="accent">WAJIB LOGIN · {SITE_NAME.toUpperCase()}</Badge>
-                </div>
-                <h1
-                  id="auth-modal-title"
-                  className="font-editorial"
-                  style={{ fontSize: '1.35rem', margin: 0 }}
-                >
-                  {title}
-                </h1>
-              </div>
+              <h1
+                id="auth-modal-title"
+                className="font-editorial"
+                style={{ fontSize: '1.4rem', margin: 0 }}
+              >
+                {title}
+              </h1>
 
               <Link
                 href="/"
                 className="auth-modal-close"
-                aria-label="Tutup popup dan kembali ke Beranda"
+                aria-label="Tutup dan kembali ke Beranda"
                 title="Kembali ke Beranda"
               >
                 ✕
               </Link>
             </div>
 
-            <p style={{ margin: '0 0 16px', fontSize: '0.86rem', color: 'var(--ink-secondary)' }}>
-              Silakan masuk atau daftar akun terlebih dahulu untuk mengakses fitur ini. Setelah
-              masuk, halaman ini akan langsung terbuka otomatis.
+            <p style={{ margin: '0 0 16px', fontSize: '0.88rem', color: 'var(--ink-secondary)' }}>
+              Masuk ke akunmu atau daftar gratis untuk melihat daftar lowongan, rekomendasi yang
+              cocok dengan profilmu, serta menyimpan lowongan pilihan.
             </p>
 
             {/* Tab Switcher: Masuk / Daftar */}
-            <div className="auth-modal-tabs" role="tablist" aria-label="Pilih mode autentikasi">
+            <div className="auth-modal-tabs" role="tablist" aria-label="Pilih masuk atau daftar">
               <button
                 type="button"
                 role="tab"
@@ -213,7 +205,7 @@ export function AuthGuard({
                   setFormError(null);
                 }}
               >
-                Masuk ke Akun
+                Masuk
               </button>
               <button
                 type="button"
@@ -229,17 +221,10 @@ export function AuthGuard({
               </button>
             </div>
 
-            {initError ? (
-              <NoticeBanner variant="warning" title="Konfigurasi Server (503)">
-                {initError.message} Pastikan variabel Supabase di <code>.env.local</code> sudah
-                diisi.
-              </NoticeBanner>
-            ) : null}
-
             {confirmationMsg ? (
               <NoticeBanner
                 variant="success"
-                title="Cek Email Anda"
+                title="Cek Email Kamu"
                 onDismiss={() => setConfirmationMsg(null)}
               >
                 {confirmationMsg}
@@ -249,7 +234,7 @@ export function AuthGuard({
             {formError ? (
               <NoticeBanner
                 variant="error"
-                title={activeTab === 'login' ? 'Gagal Masuk' : 'Gagal Mendaftar'}
+                title={activeTab === 'login' ? 'Belum Berhasil Masuk' : 'Belum Berhasil Mendaftar'}
                 onDismiss={() => setFormError(null)}
               >
                 {formError}
@@ -258,7 +243,7 @@ export function AuthGuard({
 
             <form onSubmit={handleModalSubmit} className="form-stack" noValidate>
               {activeTab === 'signup' ? (
-                <FormField id="modal-fullname" label="Nama Lengkap (Opsional)">
+                <FormField id="modal-fullname" label="Nama Lengkap">
                   <TextInput
                     id="modal-fullname"
                     type="text"
@@ -271,7 +256,7 @@ export function AuthGuard({
                 </FormField>
               ) : null}
 
-              <FormField id="modal-email" label="Alamat Email" required>
+              <FormField id="modal-email" label="Email" required>
                 <TextInput
                   id="modal-email"
                   type="email"
@@ -301,7 +286,7 @@ export function AuthGuard({
               </FormField>
 
               <Button type="submit" variant="primary" size="lg" loading={submitting}>
-                {activeTab === 'login' ? 'Masuk & Buka Halaman' : 'Daftar & Lanjutkan'}
+                {activeTab === 'login' ? 'Masuk Sekarang' : 'Daftar & Lanjutkan'}
               </Button>
             </form>
 
@@ -311,18 +296,12 @@ export function AuthGuard({
                 paddingTop: 12,
                 borderTop: '1px solid var(--border-subtle)',
                 display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: 8,
-                fontSize: '0.8rem',
+                justifyContent: 'center',
+                fontSize: '0.82rem',
               }}
             >
               <Link href="/" style={{ color: 'var(--ink-secondary)', fontWeight: 600 }}>
                 ← Kembali ke Beranda
-              </Link>
-              <Link href={loginHref} style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>
-                Halaman Login Penuh ↗
               </Link>
             </div>
           </div>

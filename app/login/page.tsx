@@ -82,22 +82,15 @@ function LoginFormContent() {
   return (
     <div className="container-auth">
       <div className="ledger-card">
-        <span className="page-kicker">AUTENTIKASI SESI · {SITE_NAME.toUpperCase()}</span>
         <h1 className="page-title" style={{ fontSize: '1.75rem', marginBottom: 8 }}>
-          Masuk ke Akun Anda
+          Masuk ke Akunmu
         </h1>
         <p style={{ margin: '0 0 20px', fontSize: '0.9rem', color: 'var(--ink-secondary)' }}>
-          Pengguna wajib masuk untuk membuka feed lowongan, melihat rekomendasi profil, menyimpan
-          bookmark, dan mengelola CV.
+          Masuk untuk melihat daftar lowongan, mengecek rekomendasi yang sesuai dengan profilmu,
+          dan mengelola CV.
         </p>
 
-        {nextParam ? (
-          <NoticeBanner variant="info" title="Akses Halaman Terproteksi">
-            Setelah berhasil masuk, Anda akan diarahkan ke <code>{safeNext}</code>.
-          </NoticeBanner>
-        ) : null}
-
-        {apiError ? <ErrorState error={apiError} title="Gagal Masuk" /> : null}
+        {apiError ? <ErrorState error={apiError} title="Belum Berhasil Masuk" /> : null}
 
         <form onSubmit={handleSubmit} className="form-stack" noValidate>
           <FormField

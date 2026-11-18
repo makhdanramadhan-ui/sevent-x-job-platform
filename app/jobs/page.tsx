@@ -196,12 +196,9 @@ function JobsFeedInner() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div className="page-header">
         <div>
-          <span className="page-kicker">BURSA LOWONGAN TERAGREGASI · INDONESIA</span>
-          <h1 className="page-title">Feed Lowongan Kerja</h1>
+          <h1 className="page-title">Cari Lowongan Kerja</h1>
           <p className="page-subtitle">
-            Telusuri peluang kerja lintas bidang dan tingkat pengalaman di Indonesia. Pencantuman
-            lowongan bukan klaim verifikasi keamanan; periksa selalu detail dan melamar langsung di
-            sumber asli.
+            Temukan peluang kerja yang sesuai dengan bidang, lokasi, dan sistem kerja pilihanmu.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -226,7 +223,6 @@ function JobsFeedInner() {
       <div className="jobs-layout">
         {/* Sidebar Filter Form */}
         <aside className="ledger-card" aria-label="Filter pencarian lowongan">
-          <span className="page-kicker">PENYARINGAN DATA</span>
           <h2 className="font-editorial" style={{ fontSize: '1.2rem', marginBottom: 14 }}>
             Filter Lowongan
           </h2>
@@ -353,16 +349,15 @@ function JobsFeedInner() {
             />
           ) : !data || data.items.length === 0 ? (
             <EmptyState
-              kicker={hasActiveFilters ? 'HASIL PENCARIAN KOSONG' : 'BASIS DATA LOWONGAN KOSONG'}
               title={
                 hasActiveFilters
                   ? 'Tidak Ada Lowongan yang Sesuai Filter'
-                  : 'Belum Ada Data Lowongan Tersedia'
+                  : 'Belum Ada Lowongan yang Tersedia Saat Ini'
               }
               description={
                 hasActiveFilters
-                  ? 'Tidak ditemukan lowongan di basis data yang cocok dengan kombinasi kata kunci atau filter yang Anda pilih. Coba longgarkan kriteria pencarian.'
-                  : `Saat ini belum ada data lowongan hasil pengambilan (ingestion) di basis data. Sesuai komitmen kejujuran platform, ${SITE_NAME} tidak menampilkan data contoh palsu sebagai lowongan hasil scraping.`
+                  ? 'Tidak ditemukan lowongan yang cocok dengan kata kunci atau filter yang kamu pilih. Coba gunakan kata kunci lain atau longgarkan filter pencarian.'
+                  : 'Daftar lowongan sedang diperbarui. Silakan periksa kembali beberapa saat lagi.'
               }
               action={
                 hasActiveFilters ? (

@@ -3,126 +3,123 @@ import { Badge, HeroCareerIllustration, PillarIllustration, SITE_NAME } from '@/
 
 const PROBLEM_SOLUTIONS = [
   {
-    problemTitle: 'Lowongan Tersebar & Tidak Jelas Kesegarannya',
+    problemTitle: 'Lowongan Tersebar di Banyak Portal',
     problemDesc:
-      'Pencari kerja harus membuka banyak situs satu per satu tanpa mengetahui kapan informasi lowongan tersebut terakhir kali diperbarui.',
-    solutionTitle: 'Agregasi Terpusat Beserta Waktu Pengambilan Data',
-    solutionDesc: `${SITE_NAME} menghimpun lowongan dari sumber berizin di Indonesia lengkap dengan status pembukaan, waktu pengambilan data (fetched_at), dan tautan langsung ke pengumuman aslinya.`,
+      'Harus membuka banyak situs satu per satu untuk mencari info lowongan yang masih aktif dan relevan dengan bidangmu.',
+    solutionTitle: 'Satu Portal dengan Tautan ke Sumber Resmi',
+    solutionDesc: `${SITE_NAME} merangkum lowongan dari berbagai sumber terpercaya di Indonesia, lengkap dengan status pembukaan lowongan, waktu pembaruan terakhir, dan akses langsung ke pengumuman aslinya.`,
   },
   {
-    problemTitle: 'Ragu Apakah Kualifikasi Sudah Memenuhi Syarat',
+    problemTitle: 'Ragu Apakah Kualifikasimu Sudah Cukup',
     problemDesc:
-      'Banyak kandidat batal melamar atau melamar tanpa persiapan karena sulit memetakan keahlian mana yang sudah sesuai dan mana yang masih kurang.',
-    solutionTitle: 'Pemetaan Alasan Cocok & Kekurangan Secara Jujur',
+      'Banyak pelamar ragu mengirim lamaran karena sulit menilai keahlian mana yang sudah cocok dan persyaratan mana yang masih belum terpenuhi.',
+    solutionTitle: 'Rincian Kecocokan & Syarat yang Perlu Dilengkapi',
     solutionDesc:
-      'Sistem membandingkan profil Anda dengan atribut lowongan untuk merinci kualifikasi yang cocok (matched), syarat yang belum ada di profil (missing), dan data yang belum diketahui.',
+      'Lihat perbandingan profilmu dengan syarat lowongan secara terbuka—mulai dari kualifikasi yang sudah cocok hingga keahlian yang sebaiknya kamu tambahkan.',
   },
   {
-    problemTitle: 'Kesulitan Menyusun atau Merapikan CV Lama',
+    problemTitle: 'Repot Menulis Ulang atau Merapikan CV',
     problemDesc:
-      'Menulis ulang riwayat pendidikan, pengalaman, organisasi, dan proyek dari awal sering memakan waktu ketika tenggat lowongan sudah dekat.',
-    solutionTitle: 'Studio Pembuatan CV Baru & Impor CV Lama',
+      'Menyusun CV dari nol atau memperbarui CV lama sering memakan waktu ketika batas pendaftaran lowongan sudah dekat.',
+    solutionTitle: 'Studio CV Baru & Impor CV Lama',
     solutionDesc:
-      'Susun dokumen CV terstruktur dari nol atau impor CV lama Anda untuk ditinjau, disunting kembali oleh Anda sendiri, lalu disiapkan untuk melamar.',
+      'Buat CV baru yang rapi dan terstruktur dari pengalamanmu, atau unggah CV lama untuk ditinjau, diedit kembali, lalu diunduh dalam format PDF siap lamar.',
   },
   {
-    problemTitle: 'Ketidakpastian Lamaran Melalui Pihak Ketiga',
+    problemTitle: 'Khawatir Lamaran Tidak Sampai ke Perusahaan',
     problemDesc:
-      'Fitur kirim lamaran otomatis (auto-submit) sering membuat kandidat kehilangan kendali atas dokumen dan proses pendaftaran di perusahaan tujuan.',
-    solutionTitle: 'Kendali Penuh: Lamar Mandiri di Sumber Asli',
-    solutionDesc: `${SITE_NAME} tidak melakukan auto-submit. Setelah menyiapkan profil dan CV, Anda diarahkan langsung ke portal rekrutmen resmi penyelenggara untuk mengirim lamaran.`,
+      'Mengirim lamaran lewat perantara otomatis sering membuat pelamar tidak tahu apakah dokumennya benar-benar masuk ke sistem perusahaan tujuan.',
+    solutionTitle: 'Lamar Langsung di Situs Resmi Perusahaan',
+    solutionDesc: `Setelah profil dan CV kamu siap di ${SITE_NAME}, kamu diarahkan langsung ke portal rekrutmen resmi perusahaan agar proses pendaftaranmu tetap di bawah kendalimu.`,
   },
 ] as const;
 
 const FEATURE_PILLARS = [
   {
-    number: 'PILAR 01',
-    tag: 'AGREGASI & PENCARIAN',
+    tag: 'Cari Lowongan',
     variant: 'feed' as const,
-    title: 'Bursa Lowongan Lintas Bidang & Pengalaman',
+    title: 'Lowongan untuk Semua Bidang & Jenjang Karier',
     description:
-      'Temukan peluang kerja dari berbagai industri di Indonesia—mulai dari tingkat magang (internship), fresh graduate, hingga profesional berpengalaman.',
+      'Temukan peluang kerja di berbagai industri di Indonesia—mulai dari magang, fresh graduate, hingga profesional berpengalaman.',
     highlights: [
-      'Filter berdasarkan lokasi kota/provinsi, mode kerja (Onsite, Hybrid, Remote), dan jenis kontrak',
-      'Informasi transparan: status lowongan, syarat pendidikan, daftar keahlian, dan tenggat waktu',
-      'Fitur Bookmark untuk menyimpan dan membandingkan lowongan incaran sebelum melamar',
+      'Saring lowongan menurut kota/provinsi, sistem kerja (Onsite, Hybrid, Remote), dan jenis kontrak',
+      'Lihat syarat pendidikan, daftar keahlian yang dibutuhkan, serta batas akhir pendaftaran',
+      'Simpan lowongan incaran ke menu Tersimpan untuk dibandingkan sebelum kamu melamar',
     ],
     primaryHref: '/jobs',
-    primaryLabel: 'Jelajahi Feed Lowongan →',
+    primaryLabel: 'Cari Lowongan →',
     secondaryHref: '/bookmarks',
     secondaryLabel: 'Lowongan Tersimpan',
   },
   {
-    number: 'PILAR 02',
-    tag: 'REKOMENDASI TERUKUR',
+    tag: 'Kenali Kesiapanmu',
     variant: 'match' as const,
-    title: 'Pemetaan Kecocokan Profil Kandidat',
+    title: 'Cek Kecocokan Profil dengan Syarat Lowongan',
     description:
-      'Bukan sekadar angka skor tanpa penjelasan. Lihat secara terbuka mengapa sebuah lowongan direkomendasikan untuk profil Anda.',
+      'Ketahui dengan jelas mengapa sebuah lowongan cocok untukmu dan apa saja yang masih perlu kamu persiapkan.',
     highlights: [
-      'Menampilkan alasan kecocokan (matched) antara keahlian & preferensi Anda dengan lowongan',
-      'Menyoroti persyaratan lowongan yang belum tercantum di profil Anda (missing)',
-      'Memberi tahu atribut yang tidak dicantumkan sumber lowongan (unknown) secara jujur',
+      'Menampilkan daftar keahlian dan pengalamanmu yang sudah sesuai dengan syarat lowongan',
+      'Memberi tahu kualifikasi lowongan yang belum tercantum di profilmu',
+      'Menandai informasi yang belum dicantumkan oleh penyelenggara lowongan secara transparan',
     ],
     primaryHref: '/recommendations',
-    primaryLabel: 'Analisis Kecocokan Profil →',
+    primaryLabel: 'Lihat Rekomendasi →',
     secondaryHref: '/profile',
-    secondaryLabel: 'Atur Profil & Preferensi',
+    secondaryLabel: 'Lengkapi Profil',
   },
   {
-    number: 'PILAR 03',
-    tag: 'DOKUMEN KARIER',
+    tag: 'Siapkan Dokumen',
     variant: 'cv' as const,
-    title: 'Studio CV Baru & Impor CV Lama',
+    title: 'Buat CV Baru atau Perbarui CV Lama',
     description:
-      'Siapkan dokumen CV yang rapi, terstruktur, dan mudah dibaca dari pengalaman nyata, proyek, serta pencapaian Anda.',
+      'Susun CV yang rapi, terstruktur, dan mudah dibaca dari pengalaman kerja, proyek, organisasi, serta pencapaianmu.',
     highlights: [
-      'Buat CV dari awal menggunakan struktur riwayat pendidikan, pengalaman, dan keahlian',
-      'Impor CV lama untuk diekstraksi, diperiksa ulang, dan diedit sebelum digunakan',
-      'Pratinjau langsung dan ekspor ke format PDF siap pakai untuk melamar di sumber asli',
+      'Buat CV dari awal menggunakan panduan pengisian pendidikan, pengalaman, dan keahlian',
+      'Impor CV lama milikmu untuk ditinjau ulang dan diperbarui isinya dengan cepat',
+      'Lihat pratinjau dokumen dan unduh dalam format PDF untuk dilampirkan saat melamar',
     ],
     primaryHref: '/cv',
     primaryLabel: 'Buka Studio CV →',
     secondaryHref: '/onboarding',
-    secondaryLabel: 'Isi Data Onboarding',
+    secondaryLabel: 'Isi Profil Awal',
   },
 ] as const;
 
 const USER_JOURNEY = [
   {
-    step: '01',
-    title: 'Masuk & Isi Profil Awal',
-    desc: 'Buat akun lalu lengkapi keahlian, riwayat pendidikan, pengalaman kerja, dan preferensi posisi maupun lokasi kerja.',
+    step: 'Langkah 1',
+    title: 'Lengkapi Profil & Keahlian',
+    desc: 'Buat akun lalu isi keahlian, riwayat pendidikan, pengalaman, serta posisi dan lokasi kerja yang kamu inginkan.',
     href: '/onboarding',
-    linkText: 'Mulai Onboarding',
+    linkText: 'Isi Profil',
   },
   {
-    step: '02',
-    title: 'Eksplorasi & Simpan Lowongan',
-    desc: 'Cari lowongan yang sesuai di Feed Lowongan menggunakan filter mode kerja dan tingkat pengalaman, lalu simpan ke Bookmark.',
+    step: 'Langkah 2',
+    title: 'Pilih Lowongan Impian',
+    desc: 'Temukan lowongan yang sesuai dengan bidang dan sistem kerja pilihanmu, lalu simpan lowongan yang menarik perhatianmu.',
     href: '/jobs',
-    linkText: 'Buka Feed Lowongan',
+    linkText: 'Cari Lowongan',
   },
   {
-    step: '03',
+    step: 'Langkah 3',
     title: 'Cek Kecocokan & Siapkan CV',
-    desc: 'Tinjau alasan kecocokan serta persyaratan yang belum terpenuhi di halaman Rekomendasi, lalu perbarui CV Anda di Studio CV.',
+    desc: 'Pelajari kualifikasi yang sudah cocok dan yang masih perlu dilengkapi, lalu siapkan dokumen CV terbaikmu.',
     href: '/recommendations',
-    linkText: 'Lihat Rekomendasi',
+    linkText: 'Cek Rekomendasi',
   },
   {
-    step: '04',
-    title: 'Lamar di Sumber Asli',
-    desc: 'Buka detail lowongan untuk memeriksa sumber asli dan waktu pengambilan data, kemudian kirim lamaran langsung di situs resmi.',
+    step: 'Langkah 4',
+    title: 'Lamar di Situs Resmi',
+    desc: 'Buka halaman detail lowongan dan klik tautan menuju portal rekrutmen resmi perusahaan untuk mengirim lamaranmu.',
     href: '/bookmarks',
-    linkText: 'Tinjau Simpanan',
+    linkText: 'Lihat Simpanan',
   },
 ] as const;
 
 export default function HomePage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 48 }}>
-      {/* 1. HERO SECTION: Split Narrative + Product Anatomy Visual */}
+      {/* 1. HERO SECTION */}
       <section className="hero-split" aria-labelledby="hero-main-heading">
         <div>
           <div
@@ -134,89 +131,54 @@ export default function HomePage() {
               marginBottom: 14,
             }}
           >
-            <Badge variant="accent">{SITE_NAME.toUpperCase()} · INDONESIA</Badge>
-            <Badge variant="neutral">Agregasi Lowongan &amp; Pemetaan Profil</Badge>
-            <Badge variant="open">Lamar Langsung di Sumber Asli</Badge>
+            <Badge variant="accent">Semua Bidang &amp; Jenjang Karier</Badge>
+            <Badge variant="open">Fresh Graduate · Magang · Profesional</Badge>
           </div>
 
           <h1 id="hero-main-heading" className="hero-headline">
-            Temukan Lowongan Kerja, Pahami Kesiapan Profil Anda, dan Lamar Langsung di Sumber
-            Resmi.
+            Cari Lowongan yang Tepat, Kenali Kesiapan Dirimu, dan Lamar di Perusahaan Impian.
           </h1>
 
           <p className="hero-lead">
-            <strong>{SITE_NAME}</strong> membantu pencari kerja di Indonesia dari semua bidang dan
-            tingkat pengalaman untuk menelusuri lowongan teragregasi, melihat alasan kecocokan
-            serta kekurangan profil secara jujur, menyiapkan CV terstruktur, lalu melamar mandiri
-            di sumber asli.
+            <strong>{SITE_NAME}</strong> memudahkan kamu menemukan peluang kerja di seluruh
+            Indonesia, mengecek kualifikasi mana yang sudah cocok dengan profilmu, serta merapikan
+            CV sebelum melamar langsung di situs resmi perusahaan.
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            <Link href="/signup" className="btn btn-primary btn-lg">
-              Daftar &amp; Mulai Sekarang →
+            <Link href="/jobs" className="btn btn-primary btn-lg">
+              Mulai Cari Lowongan →
             </Link>
-            <Link href="/jobs" className="btn btn-secondary btn-lg">
-              Jelajahi Lowongan
+            <Link href="/signup" className="btn btn-outline btn-lg">
+              Buat Akun Gratis
             </Link>
           </div>
         </div>
 
-        {/* Right Column: Visual Illustration */}
         <div>
           <HeroCareerIllustration />
         </div>
       </section>
 
-      {/* 2. THREE CORE PILLARS (What You Can Do on This Website) */}
+      {/* 2. THREE CORE FEATURES */}
       <section aria-labelledby="heading-pillars">
         <div className="page-header" style={{ marginBottom: 22 }}>
           <div>
-            <span className="page-kicker">FITUR UTAMA PLATFORM</span>
             <h2 id="heading-pillars" className="page-title" style={{ fontSize: '1.75rem' }}>
-              Apa Saja yang Bisa Anda Lakukan di {SITE_NAME}?
+              Semua Persiapan Melamar Kerja dalam Satu Tempat
             </h2>
+            <p className="page-subtitle" style={{ fontSize: '0.94rem' }}>
+              Mulai dari mencari lowongan, mengecek kesiapan kualifikasi, hingga merapikan CV.
+            </p>
           </div>
-          <p className="page-subtitle" style={{ fontSize: '0.92rem' }}>
-            Dirancang untuk menghubungkan pencarian lowongan, evaluasi kesiapan profil, dan
-            penyusunan CV dalam satu alur kerja yang utuh.
-          </p>
         </div>
 
         <div className="feature-trio-grid">
           {FEATURE_PILLARS.map((pillar) => (
-            <article key={pillar.number} className="feature-pillar-card">
+            <article key={pillar.title} className="feature-pillar-card">
               <div>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: 12,
-                  }}
-                >
-                  <span
-                    className="font-mono"
-                    style={{
-                      fontSize: '0.74rem',
-                      fontWeight: 700,
-                      padding: '3px 8px',
-                      background: 'var(--ink-primary)',
-                      color: 'var(--ink-inverse)',
-                      borderRadius: 3,
-                    }}
-                  >
-                    {pillar.number}
-                  </span>
-                  <span
-                    className="font-mono"
-                    style={{
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      color: 'var(--accent-primary)',
-                    }}
-                  >
-                    {pillar.tag}
-                  </span>
+                <div style={{ marginBottom: 10 }}>
+                  <Badge variant="accent">{pillar.tag}</Badge>
                 </div>
 
                 <h3 className="font-editorial" style={{ fontSize: '1.3rem', marginBottom: 10 }}>
@@ -233,7 +195,7 @@ export default function HomePage() {
                   style={{
                     margin: 0,
                     paddingLeft: 18,
-                    fontSize: '0.84rem',
+                    fontSize: '0.85rem',
                     color: 'var(--ink-primary)',
                     display: 'flex',
                     flexDirection: 'column',
@@ -267,19 +229,18 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. WHY KERJALOKA: Problem vs Solution Ledger */}
+      {/* 3. WHY KERJALOKA */}
       <section aria-labelledby="heading-why">
         <div className="page-header" style={{ marginBottom: 22 }}>
           <div>
-            <span className="page-kicker">LATAR BELAKANG &amp; SOLUSI</span>
             <h2 id="heading-why" className="page-title" style={{ fontSize: '1.75rem' }}>
-              Mengapa {SITE_NAME} Dibangun?
+              Mengapa Mencari Kerja Lewat {SITE_NAME}?
             </h2>
+            <p className="page-subtitle" style={{ fontSize: '0.94rem' }}>
+              Dirancang untuk membantu kamu melamar kerja dengan persiapan yang lebih matang dan
+              terarah.
+            </p>
           </div>
-          <p className="page-subtitle" style={{ fontSize: '0.92rem' }}>
-            Menjawab empat kendala nyata yang sering dihadapi pencari kerja ketika menyaring
-            lowongan dan menyiapkan dokumen lamaran.
-          </p>
         </div>
 
         <div className="comparison-grid">
@@ -292,16 +253,15 @@ export default function HomePage() {
                 }}
               >
                 <span
-                  className="font-mono"
                   style={{
-                    fontSize: '0.72rem',
+                    fontSize: '0.76rem',
                     fontWeight: 700,
                     color: 'var(--status-warning)',
                     display: 'block',
                     marginBottom: 4,
                   }}
                 >
-                  KENDALA UMUM #{idx + 1}
+                  Tantangan Pelamar
                 </span>
                 <h3 style={{ fontSize: '1.02rem', margin: '0 0 4px' }}>{item.problemTitle}</h3>
                 <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--ink-secondary)' }}>
@@ -311,16 +271,15 @@ export default function HomePage() {
 
               <div style={{ paddingTop: 2 }}>
                 <span
-                  className="font-mono"
                   style={{
-                    fontSize: '0.72rem',
+                    fontSize: '0.76rem',
                     fontWeight: 700,
                     color: 'var(--status-open)',
                     display: 'block',
                     marginBottom: 4,
                   }}
                 >
-                  SOLUSI {SITE_NAME.toUpperCase()}
+                  Kemudahan di {SITE_NAME}
                 </span>
                 <h4 style={{ fontSize: '1rem', margin: '0 0 4px' }}>{item.solutionTitle}</h4>
                 <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--ink-primary)' }}>
@@ -336,14 +295,13 @@ export default function HomePage() {
       <section aria-labelledby="heading-journey">
         <div className="page-header" style={{ marginBottom: 22 }}>
           <div>
-            <span className="page-kicker">PANDUAN PENGGUNA BARU</span>
             <h2 id="heading-journey" className="page-title" style={{ fontSize: '1.75rem' }}>
-              Cara Menggunakan {SITE_NAME} dalam 4 Langkah
+              4 Langkah Mudah Memulai Pencarian Kerja
             </h2>
+            <p className="page-subtitle" style={{ fontSize: '0.94rem' }}>
+              Ikuti langkah berikut untuk menemukan lowongan yang paling cocok dengan profilmu.
+            </p>
           </div>
-          <p className="page-subtitle" style={{ fontSize: '0.92rem' }}>
-            Mulai dari pembuatan akun hingga membuka halaman rekrutmen asli.
-          </p>
         </div>
 
         <div className="journey-grid">
@@ -360,7 +318,7 @@ export default function HomePage() {
                     marginBottom: 6,
                   }}
                 >
-                  LANGKAH {item.step}
+                  {item.step}
                 </span>
                 <h3 className="font-editorial" style={{ fontSize: '1.15rem', marginBottom: 8 }}>
                   {item.title}
@@ -379,70 +337,25 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. TRANSPARENCY PRINCIPLES & CLOSING CTA */}
-      <section className="ledger-card" aria-labelledby="heading-ethics">
-        <span className="page-kicker">PRINSIP KEJUJURAN &amp; BATAS TAMPILAN</span>
-        <h2 id="heading-ethics" className="font-editorial" style={{ fontSize: '1.45rem', marginBottom: 14 }}>
-          Transparansi yang Kami Pegang untuk Setiap Kandidat
-        </h2>
-        <div className="form-grid-2">
-          <div className="surface-card">
-            <h3 style={{ fontSize: '0.96rem', marginBottom: 6 }}>
-              Sumber Asli &amp; Status Kesegaran Data
-            </h3>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--ink-secondary)' }}>
-              Setiap lowongan menampilkan sumber asli, status pembukaan, serta waktu pengambilan
-              data. Pencantuman lowongan dari sumber eksternal bukan klaim bahwa lowongan tersebut
-              telah diverifikasi aman oleh {SITE_NAME}.
-            </p>
-          </div>
-
-          <div className="surface-card">
-            <h3 style={{ fontSize: '0.96rem', marginBottom: 6 }}>
-              Makna Skor Kecocokan &amp; Persiapan CV
-            </h3>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--ink-secondary)' }}>
-              Skor rekomendasi mengukur kesesuaian data profil Anda terhadap syarat lowongan, bukan
-              peluang diterima bekerja. Studio CV membantu merapikan struktur pengalaman Anda tanpa
-              klaim bahwa semua HR memakai satu template atau pasti lolos ATS.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. CLOSING CTA BANNER */}
+      {/* 5. CLOSING CTA BANNER */}
       <section className="cta-banner-card" aria-labelledby="heading-final-cta">
         <div style={{ maxWidth: '60ch' }}>
-          <span
-            className="font-mono"
-            style={{
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              color: '#f5b09c',
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              display: 'block',
-              marginBottom: 6,
-            }}
-          >
-            SIAP MEMULAI PENCARIAN KERJA YANG TERARAH?
-          </span>
           <h2
             id="heading-final-cta"
             className="font-editorial"
             style={{ fontSize: '1.65rem', color: 'var(--ink-inverse)', margin: '0 0 8px' }}
           >
-            Bangun Profil Kandidat Anda dan Temukan Peluang Kerja di {SITE_NAME}
+            Siap Menemukan Peluang Karier Berikutnya?
           </h2>
-          <p style={{ margin: 0, fontSize: '0.92rem', color: 'rgba(253, 252, 249, 0.82)' }}>
-            Masuk atau buat akun baru untuk mulai menelusuri feed lowongan Indonesia, melihat
-            pemetaan kecocokan profil, dan menyiapkan CV Anda.
+          <p style={{ margin: 0, fontSize: '0.94rem', color: 'rgba(253, 252, 249, 0.85)' }}>
+            Buat akun sekarang untuk melihat lowongan kerja terbaru, mengecek kecocokan kualifikasi
+            profilmu, dan menyusun CV yang rapi.
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <Link href="/signup" className="btn btn-primary btn-lg">
-            Buat Akun Gratis →
+            Daftar Sekarang →
           </Link>
           <Link
             href="/login"

@@ -92,13 +92,11 @@ export default function SignupPage() {
   return (
     <div className="container-auth">
       <div className="ledger-card">
-        <span className="page-kicker">REGISTRASI KANDIDAT · {SITE_NAME.toUpperCase()}</span>
         <h1 className="page-title" style={{ fontSize: '1.75rem', marginBottom: 8 }}>
           Daftar Akun Baru
         </h1>
         <p style={{ margin: '0 0 20px', fontSize: '0.9rem', color: 'var(--ink-secondary)' }}>
-          Buat akun untuk mengakses agregasi lowongan Indonesia, menyusun profil kandidat, dan
-          melihat pemetaan rekomendasi lowongan.
+          Buat akun untuk mulai mencari lowongan, melengkapi profil, dan menyusun CV.
         </p>
 
         {confirmationNeeded ? (

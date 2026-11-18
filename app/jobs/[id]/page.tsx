@@ -309,7 +309,6 @@ function JobDetailInner() {
       {/* Skills & Description */}
       <div className="form-grid-2" style={{ alignItems: 'start' }}>
         <section className="ledger-card" aria-labelledby="heading-description">
-          <span className="page-kicker">RINCIAN PEKERJAAN</span>
           <h2 id="heading-description" className="font-editorial" style={{ fontSize: '1.3rem', marginBottom: 12 }}>
             Deskripsi &amp; Kualifikasi Lowongan
           </h2>
@@ -326,15 +325,15 @@ function JobDetailInner() {
             </div>
           ) : (
             <p style={{ margin: 0, color: 'var(--ink-secondary)', fontSize: '0.92rem' }}>
-              Deskripsi teks lengkap tidak disertakan pada ringkasan ini. Silakan buka halaman
-              sumber asli di bagian samping untuk membaca pengumuman resmi penyelenggara rekrutmen.
+              Deskripsi lengkap dapat dilihat langsung pada halaman resmi perusahaan di bagian
+              samping.
             </p>
           )}
 
           {job.skills && job.skills.length > 0 ? (
             <div style={{ marginTop: 22, paddingTop: 16, borderTop: '1px solid var(--border-subtle)' }}>
               <h3 style={{ fontSize: '0.92rem', marginBottom: 10 }}>
-                Keahlian Terkait ({job.skills.length})
+                Keahlian yang Dibutuhkan
               </h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {job.skills.map((skill) => (
@@ -349,21 +348,18 @@ function JobDetailInner() {
 
         {/* Original Sources & Application Guidance */}
         <section className="ledger-card" aria-labelledby="heading-sources">
-          <span className="page-kicker">VERIFIKASI SUMBER &amp; PELAMARAN</span>
           <h2 id="heading-sources" className="font-editorial" style={{ fontSize: '1.3rem', marginBottom: 8 }}>
-            Sumber Asli Lowongan ({job.job_sources?.length ?? 0})
+            Tautan Resmi Pelamaran
           </h2>
-          <p style={{ margin: '0 0 16px', fontSize: '0.86rem', color: 'var(--ink-secondary)' }}>
-            {SITE_NAME} tidak melakukan auto-submit. Klik tombol sumber asli di bawah untuk membuka
-            halaman rekrutmen resmi di tab baru. Tombol ini tidak mengubah status lamaran menjadi
-            terkirim.
+          <p style={{ margin: '0 0 16px', fontSize: '0.88rem', color: 'var(--ink-secondary)' }}>
+            Klik tombol di bawah untuk membuka halaman rekrutmen resmi dan mengirim lamaranmu secara
+            langsung.
           </p>
 
           {!job.job_sources || job.job_sources.length === 0 ? (
             <EmptyState
-              kicker="SUMBER TIDAK TERSEDIA"
-              title="Tautan Sumber Asli Belum Tercatat"
-              description="Lowongan ini belum memiliki catatan URL sumber eksternal (job_sources) di basis data."
+              title="Tautan Pendaftaran Belum Tersedia"
+              description="Saat ini tautan menuju halaman pendaftaran resmi untuk lowongan ini belum tersedia."
             />
           ) : (
             <div className="form-stack">

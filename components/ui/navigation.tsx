@@ -77,10 +77,10 @@ export function SiteHeader() {
         <div className="site-header-top">
           <div className="site-header-top-inner">
             <span className="font-mono site-header-top-primary">
-              AGREGASI LOWONGAN &amp; PEMETAAN KARIER INDONESIA · LINTAS BIDANG &amp; PENGALAMAN
+              Cari Lowongan Kerja di Seluruh Indonesia · Semua Bidang &amp; Jenjang Karier
             </span>
             <span className="font-mono site-header-top-secondary">
-              Tanpa Auto-Submit · Lamaran Langsung di Sumber Asli
+              Cek Kecocokan Profil · Siapkan CV · Lamar di Situs Resmi Perusahaan
             </span>
           </div>
         </div>
@@ -221,22 +221,22 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="footer-disclaimer-box" aria-label="Batas tampilan dan transparansi sistem">
+        <div className="footer-disclaimer-box" aria-label="Panduan keamanan melamar kerja">
           <strong className="font-mono" style={{ fontSize: '0.76rem', textTransform: 'uppercase' }}>
-            Batas Tampilan &amp; Prinsip Kejujuran Data
+            Panduan &amp; Tips Aman Melamar Kerja
           </strong>
           <ul>
             <li>
-              Pencantuman lowongan dari sumber eksternal bukan klaim bahwa lowongan telah
-              diverifikasi aman oleh {SITE_NAME}.
+              Selalu periksa kembali informasi lowongan pada situs resmi penyelenggara dan waspadai
+              segala bentuk permintaan biaya rekrutmen.
             </li>
             <li>
-              Tombol melamar hanya membuka halaman sumber asli di tab baru, tidak mengubah status
-              lamaran menjadi terkirim dan tidak melakukan auto-submit.
+              Tombol melamar akan mengarahkan kamu langsung ke portal resmi perusahaan agar proses
+              pendaftaranmu tetap aman dan terkendali.
             </li>
             <li>
-              Skor rekomendasi adalah tingkat kecocokan atribut profil terhadap data lowongan, bukan
-              peluang diterima bekerja atau jaminan lolos ATS/HR.
+              Gunakan fitur analisis kecocokan profil dan Studio CV sebagai panduan untuk
+              menyiapkan kualifikasi terbaikmu sebelum melamar.
             </li>
           </ul>
         </div>

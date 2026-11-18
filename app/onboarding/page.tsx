@@ -42,30 +42,28 @@ function OnboardingInner() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div className="page-header">
         <div>
-          <span className="page-kicker">ONBOARDING KANDIDAT · LANGKAH AWAL</span>
-          <h1 className="page-title">Siapkan Profil &amp; Preferensi Kerja Anda</h1>
+          <h1 className="page-title">Lengkapi Profil &amp; Preferensi Kerjamu</h1>
           <p className="page-subtitle">
-            Lengkapi identitas dasar, keahlian, dan preferensi lowongan. Data ini dipakai sebagai
-            dasar pencocokan rekomendasi lowongan serta pembuatan CV Anda.
+            Isi informasi dasar, keahlian, dan kriteria pekerjaan yang kamu cari agar kami dapat
+            memberikan rekomendasi lowongan yang sesuai serta memudahkan penyusunan CV-mu.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Link href="/jobs" className="btn btn-outline btn-sm">
-            Lewati ke Feed Lowongan →
+            Lihat Lowongan →
           </Link>
         </div>
       </div>
 
       {completed ? (
-        <NoticeBanner variant="success" title="Onboarding Selesai — Profil Tersimpan">
+        <NoticeBanner variant="success" title="Profil Berhasil Disimpan">
           <p style={{ margin: '0 0 12px' }}>
-            Data profil awal Anda telah tersimpan. Anda kini dapat menelusuri feed lowongan,
-            memeriksa kecocokan rekomendasi, atau melengkapi rincian portofolio dan organisasi di
-            halaman Profil.
+            Data profilmu sudah tersimpan. Sekarang kamu bisa mulai mencari lowongan, melihat
+            rekomendasi yang sesuai, atau melengkapi detail portofolio di halaman Profil.
           </p>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <Link href="/jobs" className="btn btn-primary btn-sm">
-              Buka Feed Lowongan →
+              Cari Lowongan →
             </Link>
             <Link href="/recommendations" className="btn btn-secondary btn-sm">
               Lihat Rekomendasi
@@ -79,8 +77,8 @@ function OnboardingInner() {
 
       {loading ? (
         <LoadingState
-          title="Memuat data profil awal..."
-          description="Mengambil status profil Anda dari /api/profile."
+          title="Memuat profil..."
+          description="Mohon tunggu sebentar."
         />
       ) : error ? (
         <ErrorState

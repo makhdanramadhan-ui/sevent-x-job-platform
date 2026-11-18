@@ -71,16 +71,15 @@ function BookmarksInner() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div className="page-header">
         <div>
-          <span className="page-kicker">ARSIP PRIBADI · LOWONGAN FAVORIT</span>
           <h1 className="page-title">Lowongan Tersimpan ({items.length})</h1>
           <p className="page-subtitle">
-            Daftar lowongan yang Anda simpan untuk ditinjau kembali sebelum melamar secara mandiri
-            di sumber asli.
+            Daftar lowongan yang kamu simpan untuk ditinjau kembali sebelum melamar di situs resmi
+            perusahaan.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Link href="/jobs" className="btn btn-primary btn-sm">
-            + Cari Lowongan di Feed
+            + Cari Lowongan Lainnya
           </Link>
           <Link href="/recommendations" className="btn btn-outline btn-sm">
             Lihat Rekomendasi
@@ -97,24 +96,23 @@ function BookmarksInner() {
       {loading ? (
         <LoadingState
           title="Memuat lowongan tersimpan..."
-          description="Mengambil daftar bookmark dari /api/bookmarks."
+          description="Mohon tunggu sebentar."
           lines={4}
         />
       ) : error ? (
         <ErrorState
           error={error}
-          title="Gagal Memuat Lowongan Tersimpan"
+          title="Belum Dapat Memuat Lowongan Tersimpan"
           onRetry={loadBookmarks}
           loginRedirectPath="/bookmarks"
         />
       ) : items.length === 0 ? (
         <EmptyState
-          kicker="DAFTAR TERSIMPAN KOSONG"
           title="Belum Ada Lowongan yang Disimpan"
-          description="Simpan lowongan yang menarik perhatian Anda saat menelusuri Feed Lowongan atau halaman Detail Lowongan agar mudah dibandingkan dan dilamar nanti."
+          description="Simpan lowongan yang menarik perhatianmu saat mencari lowongan agar lebih mudah dibandingkan dan dilamar nanti."
           action={
             <Link href="/jobs" className="btn btn-primary btn-sm">
-              Jelajahi Feed Lowongan →
+              Cari Lowongan Sekarang →
             </Link>
           }
         />
