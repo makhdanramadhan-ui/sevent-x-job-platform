@@ -216,7 +216,7 @@ export function SiteFooter() {
             lowongan lintas bidang dan tingkat pengalaman di Indonesia secara jujur dan transparan.
           </p>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: '0.82rem' }}>
-            <Link href="/">Beranda &amp; Kontrak API</Link>
+            <Link href="/">Beranda</Link>
             <Link href="/jobs">Feed Lowongan</Link>
             <Link href="/recommendations">Rekomendasi</Link>
             <Link href="/bookmarks">Lowongan Tersimpan</Link>

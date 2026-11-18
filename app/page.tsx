@@ -1,137 +1,332 @@
 import Link from 'next/link';
 import { Badge, SITE_NAME } from '@/components/ui';
 
-const ROUTES = [
-  { method: 'POST', path: '/api/auth/signup', note: 'Pendaftaran akun Supabase Auth' },
-  { method: 'POST', path: '/api/auth/login', note: 'Login sesi cookie atau Bearer' },
-  { method: 'POST', path: '/api/auth/logout', note: 'Mengakhiri sesi aktif' },
-  { method: 'GET', path: '/api/auth/me', note: 'Identitas sesi terverifikasi & status profil' },
-  { method: 'GET, PUT, DELETE', path: '/api/profile', note: 'Profil kandidat & preferensi kerja' },
-  { method: 'GET', path: '/api/jobs', note: 'Daftar lowongan dengan filter dan paginasi' },
-  { method: 'GET', path: '/api/jobs/[id]', note: 'Detail lowongan beserta daftar sumber asli (job_sources)' },
-  { method: 'GET, POST', path: '/api/bookmarks', note: 'Lowongan tersimpan milik pengguna' },
-  { method: 'DELETE', path: '/api/bookmarks/[jobId]', note: 'Menghapus lowongan tersimpan' },
-  { method: 'GET, POST', path: '/api/cv', note: 'Dokumen CV terstruktur milik pengguna' },
-  { method: 'GET, PUT, DELETE', path: '/api/cv/[id]', note: 'Satu dokumen CV milik pengguna' },
+const PROBLEM_SOLUTIONS = [
   {
-    method: 'GET (Kontrak)',
-    path: '/api/recommendations',
-    note: 'Rekomendasi berbasis profil (RecommendationOutput v1: matched, missing, unknown)',
+    problemTitle: 'Lowongan Tersebar & Tidak Jelas Kesegarannya',
+    problemDesc:
+      'Pencari kerja harus membuka banyak situs satu per satu tanpa mengetahui kapan informasi lowongan tersebut terakhir kali diperbarui.',
+    solutionTitle: 'Agregasi Terpusat Beserta Waktu Pengambilan Data',
+    solutionDesc: `${SITE_NAME} menghimpun lowongan dari sumber berizin di Indonesia lengkap dengan status pembukaan, waktu pengambilan data (fetched_at), dan tautan langsung ke pengumuman aslinya.`,
+  },
+  {
+    problemTitle: 'Ragu Apakah Kualifikasi Sudah Memenuhi Syarat',
+    problemDesc:
+      'Banyak kandidat batal melamar atau melamar tanpa persiapan karena sulit memetakan keahlian mana yang sudah sesuai dan mana yang masih kurang.',
+    solutionTitle: 'Pemetaan Alasan Cocok & Kekurangan Secara Jujur',
+    solutionDesc:
+      'Sistem membandingkan profil Anda dengan atribut lowongan untuk merinci kualifikasi yang cocok (matched), syarat yang belum ada di profil (missing), dan data yang belum diketahui.',
+  },
+  {
+    problemTitle: 'Kesulitan Menyusun atau Merapikan CV Lama',
+    problemDesc:
+      'Menulis ulang riwayat pendidikan, pengalaman, organisasi, dan proyek dari awal sering memakan waktu ketika tenggat lowongan sudah dekat.',
+    solutionTitle: 'Studio Pembuatan CV Baru & Impor CV Lama',
+    solutionDesc:
+      'Susun dokumen CV terstruktur dari nol atau impor CV lama Anda untuk ditinjau, disunting kembali oleh Anda sendiri, lalu disiapkan untuk melamar.',
+  },
+  {
+    problemTitle: 'Ketidakpastian Lamaran Melalui Pihak Ketiga',
+    problemDesc:
+      'Fitur kirim lamaran otomatis (auto-submit) sering membuat kandidat kehilangan kendali atas dokumen dan proses pendaftaran di perusahaan tujuan.',
+    solutionTitle: 'Kendali Penuh: Lamar Mandiri di Sumber Asli',
+    solutionDesc: `${SITE_NAME} tidak melakukan auto-submit. Setelah menyiapkan profil dan CV, Anda diarahkan langsung ke portal rekrutmen resmi penyelenggara untuk mengirim lamaran.`,
   },
 ] as const;
 
-const WORKFLOW_STEPS = [
+const FEATURE_PILLARS = [
+  {
+    number: 'PILAR 01',
+    tag: 'AGREGASI & PENCARIAN',
+    title: 'Bursa Lowongan Lintas Bidang & Pengalaman',
+    description:
+      'Temukan peluang kerja dari berbagai industri di Indonesia—mulai dari tingkat magang (internship), fresh graduate, hingga profesional berpengalaman.',
+    highlights: [
+      'Filter berdasarkan lokasi kota/provinsi, mode kerja (Onsite, Hybrid, Remote), dan jenis kontrak',
+      'Informasi transparan: status lowongan, syarat pendidikan, daftar keahlian, dan tenggat waktu',
+      'Fitur Bookmark untuk menyimpan dan membandingkan lowongan incaran sebelum melamar',
+    ],
+    primaryHref: '/jobs',
+    primaryLabel: 'Jelajahi Feed Lowongan →',
+    secondaryHref: '/bookmarks',
+    secondaryLabel: 'Lowongan Tersimpan',
+  },
+  {
+    number: 'PILAR 02',
+    tag: 'REKOMENDASI TERUKUR',
+    title: 'Pemetaan Kecocokan Profil Kandidat',
+    description:
+      'Bukan sekadar angka skor tanpa penjelasan. Lihat secara terbuka mengapa sebuah lowongan direkomendasikan untuk profil Anda.',
+    highlights: [
+      'Menampilkan alasan kecocokan (matched) antara keahlian & preferensi Anda dengan lowongan',
+      'Menyoroti persyaratan lowongan yang belum tercantum di profil Anda (missing)',
+      'Memberi tahu atribut yang tidak dicantumkan sumber lowongan (unknown) secara jujur',
+    ],
+    primaryHref: '/recommendations',
+    primaryLabel: 'Analisis Kecocokan Profil →',
+    secondaryHref: '/profile',
+    secondaryLabel: 'Atur Profil & Preferensi',
+  },
+  {
+    number: 'PILAR 03',
+    tag: 'DOKUMEN KARIER',
+    title: 'Studio CV Baru & Impor CV Lama',
+    description:
+      'Siapkan dokumen CV yang rapi, terstruktur, dan mudah dibaca dari pengalaman nyata, proyek, serta pencapaian Anda.',
+    highlights: [
+      'Buat CV dari awal menggunakan struktur riwayat pendidikan, pengalaman, dan keahlian',
+      'Impor CV lama untuk diekstraksi, diperiksa ulang, dan diedit sebelum digunakan',
+      'Pratinjau langsung dan ekspor ke format PDF siap pakai untuk melamar di sumber asli',
+    ],
+    primaryHref: '/cv',
+    primaryLabel: 'Buka Studio CV →',
+    secondaryHref: '/onboarding',
+    secondaryLabel: 'Isi Data Onboarding',
+  },
+] as const;
+
+const USER_JOURNEY = [
   {
     step: '01',
-    title: 'Autentikasi & Profil Terstruktur',
-    desc: 'Pengguna wajib masuk terlebih dahulu. Isi keahlian, pendidikan, pengalaman, proyek, dan preferensi kerja melalui halaman Onboarding atau Profil.',
+    title: 'Masuk & Isi Profil Awal',
+    desc: 'Buat akun lalu lengkapi keahlian, riwayat pendidikan, pengalaman kerja, dan preferensi posisi maupun lokasi kerja.',
     href: '/onboarding',
-    cta: 'Mulai Isi Profil',
+    linkText: 'Mulai Onboarding',
   },
   {
     step: '02',
-    title: 'Eksplorasi Feed Lowongan Lintas Bidang',
-    desc: 'Telusuri lowongan hasil agregasi dari berbagai sumber berizin di Indonesia. Saring menurut lokasi, mode kerja, jenis kontrak, dan tingkat pengalaman.',
+    title: 'Eksplorasi & Simpan Lowongan',
+    desc: 'Cari lowongan yang sesuai di Feed Lowongan menggunakan filter mode kerja dan tingkat pengalaman, lalu simpan ke Bookmark.',
     href: '/jobs',
-    cta: 'Buka Feed Lowongan',
+    linkText: 'Buka Feed Lowongan',
   },
   {
     step: '03',
-    title: 'Pemetaan Kecocokan & Kekurangan',
-    desc: 'Lihat alasan kecocokan (matched), persyaratan yang belum terpenuhi (missing), serta atribut yang belum diketahui pada lowongan terhadap profil Anda.',
+    title: 'Cek Kecocokan & Siapkan CV',
+    desc: 'Tinjau alasan kecocokan serta persyaratan yang belum terpenuhi di halaman Rekomendasi, lalu perbarui CV Anda di Studio CV.',
     href: '/recommendations',
-    cta: 'Lihat Rekomendasi',
+    linkText: 'Lihat Rekomendasi',
   },
   {
     step: '04',
-    title: 'Persiapan CV & Lamaran di Sumber Asli',
-    desc: 'Susun atau impor CV Anda, simpan lowongan incaran, lalu buka tautan sumber asli untuk mengirim lamaran secara mandiri tanpa auto-submit.',
+    title: 'Lamar di Sumber Asli',
+    desc: 'Buka detail lowongan untuk memeriksa sumber asli dan waktu pengambilan data, kemudian kirim lamaran langsung di situs resmi.',
     href: '/bookmarks',
-    cta: 'Lowongan Tersimpan',
+    linkText: 'Tinjau Simpanan',
   },
 ] as const;
 
 export default function HomePage() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
-      {/* Hero Ledger Section */}
-      <section className="ledger-card" style={{ padding: '36px 28px' }}>
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 8,
-            alignItems: 'center',
-            marginBottom: 14,
-          }}
-        >
-          <Badge variant="accent">{SITE_NAME} · SDG 8</Badge>
-          <Badge variant="neutral">Agregasi Lowongan Indonesia</Badge>
-          <Badge variant="open">Akses Terautentikasi</Badge>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 48 }}>
+      {/* 1. HERO SECTION: Split Narrative + Product Anatomy Visual */}
+      <section className="hero-split" aria-labelledby="hero-main-heading">
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 8,
+                alignItems: 'center',
+                marginBottom: 16,
+              }}
+            >
+              <Badge variant="accent">{SITE_NAME.toUpperCase()} · INDONESIA</Badge>
+              <Badge variant="neutral">SDG 8: Pekerjaan Layak &amp; Pertumbuhan Ekonomi</Badge>
+            </div>
+
+            <h1 id="hero-main-heading" className="hero-headline">
+              Temukan Lowongan Kerja, Pahami Kesiapan Profil Anda, dan Lamar Langsung di Sumber
+              Resmi.
+            </h1>
+
+            <p className="hero-lead">
+              <strong>{SITE_NAME}</strong> membantu pencari kerja di Indonesia dari semua bidang dan
+              tingkat pengalaman untuk menelusuri lowongan teragregasi, melihat alasan kecocokan
+              serta kekurangan profil secara jujur, menyiapkan CV terstruktur, lalu melamar mandiri
+              di sumber asli.
+            </p>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+              <Link href="/signup" className="btn btn-primary btn-lg">
+                Daftar &amp; Mulai Sekarang →
+              </Link>
+              <Link href="/jobs" className="btn btn-secondary btn-lg">
+                Jelajahi Feed Lowongan
+              </Link>
+              <Link href="/login" className="btn btn-outline btn-lg">
+                Masuk Akun
+              </Link>
+            </div>
+          </div>
+
+          <div className="hero-pillars-mini">
+            <div>
+              <strong
+                className="font-mono"
+                style={{ fontSize: '0.74rem', color: 'var(--accent-primary)', display: 'block' }}
+              >
+                01 · LINTAS BIDANG
+              </strong>
+              <span style={{ fontSize: '0.84rem', color: 'var(--ink-secondary)' }}>
+                Terbuka untuk seluruh disiplin ilmu, dari magang hingga level senior.
+              </span>
+            </div>
+            <div>
+              <strong
+                className="font-mono"
+                style={{ fontSize: '0.74rem', color: 'var(--status-open)', display: 'block' }}
+              >
+                02 · PEMETAAN JUJUR
+              </strong>
+              <span style={{ fontSize: '0.84rem', color: 'var(--ink-secondary)' }}>
+                Merinci syarat yang sudah cocok, yang masih kurang, dan waktu ambil data.
+              </span>
+            </div>
+            <div>
+              <strong
+                className="font-mono"
+                style={{ fontSize: '0.74rem', color: 'var(--ink-primary)', display: 'block' }}
+              >
+                03 · TANPA AUTO-SUBMIT
+              </strong>
+              <span style={{ fontSize: '0.84rem', color: 'var(--ink-secondary)' }}>
+                Pelamaran dilakukan langsung oleh Anda di laman resmi penyelenggara.
+              </span>
+            </div>
+          </div>
         </div>
 
-        <h1
-          className="font-editorial"
-          style={{
-            fontSize: 'clamp(2rem, 4vw, 3rem)',
-            fontWeight: 800,
-            maxWidth: '24ch',
-            marginBottom: 14,
-          }}
-        >
-          Temukan Lowongan Relevan, Pahami Kecocokan Profil, dan Lamar di Sumber Asli.
-        </h1>
+        {/* Right Column: Visual Anatomy of How KerjaLoka Works */}
+        <aside className="hero-anatomy-card" aria-label="Ilustrasi cara kerja pemetaan KerjaLoka">
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 8,
+                marginBottom: 12,
+              }}
+            >
+              <span className="page-kicker" style={{ margin: 0 }}>
+                CARA KERJA SISTEM
+              </span>
+              <span
+                className="font-mono"
+                style={{
+                  fontSize: '0.68rem',
+                  padding: '2px 7px',
+                  background: 'var(--bg-subtle)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 3,
+                }}
+              >
+                Diagram Alur Produk
+              </span>
+            </div>
 
-        <p
-          style={{
-            fontSize: '1.04rem',
-            color: 'var(--ink-secondary)',
-            maxWidth: '72ch',
-            margin: '0 0 24px',
-          }}
-        >
-          <strong>{SITE_NAME}</strong> adalah platform agregasi lowongan kerja Indonesia untuk semua
-          bidang dan tingkat pengalaman. Kami menghubungkan profil kandidat dengan data lowongan
-          secara transparan—menampilkan alasan rekomendasi, syarat yang belum terpenuhi, waktu
-          pengambilan data, dan tautan langsung ke penyelenggara rekrutmen asli.
-        </p>
+            <h2 className="font-editorial" style={{ fontSize: '1.2rem', margin: '0 0 12px' }}>
+              Dari Profil Kandidat ke Sumber Lowongan Asli
+            </h2>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-          <Link href="/jobs" className="btn btn-primary btn-lg">
-            Jelajahi Feed Lowongan
-          </Link>
-          <Link href="/recommendations" className="btn btn-secondary btn-lg">
-            Cek Rekomendasi Profil
-          </Link>
-          <Link href="/login" className="btn btn-outline btn-lg">
-            Masuk / Daftar Akun
-          </Link>
-        </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div className="anatomy-step-box">
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <strong style={{ fontSize: '0.85rem' }}>1. Profil &amp; Preferensi Anda</strong>
+                  <span className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--ink-muted)' }}>
+                    /profile
+                  </span>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--ink-secondary)' }}>
+                  Keahlian, pendidikan, pengalaman kerja, proyek, serta preferensi posisi, lokasi,
+                  dan mode kerja.
+                </p>
+              </div>
+
+              <div
+                className="anatomy-step-box"
+                style={{ borderLeftColor: 'var(--accent-primary)' }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <strong style={{ fontSize: '0.85rem' }}>
+                    2. Pemetaan Transparan Terhadap Lowongan
+                  </strong>
+                  <span className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--ink-muted)' }}>
+                    /recommendations
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                  <Badge variant="matched">✓ Alasan Cocok</Badge>
+                  <Badge variant="missing">! Syarat Belum Terpenuhi</Badge>
+                  <Badge variant="neutral">? Data Belum Diketahui</Badge>
+                </div>
+              </div>
+
+              <div className="anatomy-step-box" style={{ borderLeftColor: 'var(--status-open)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <strong style={{ fontSize: '0.85rem' }}>
+                    3. Siapkan CV &amp; Lamar di Sumber Asli
+                  </strong>
+                  <span className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--ink-muted)' }}>
+                    /cv &amp; /jobs/[id]
+                  </span>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--ink-secondary)' }}>
+                  Rapikan atau impor CV Anda, periksa waktu ambil data lowongan, lalu buka tautan
+                  sumber asli untuk melamar.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              padding: '10px 12px',
+              background: 'var(--bg-subtle)',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.77rem',
+              color: 'var(--ink-secondary)',
+            }}
+          >
+            <strong>Akses Terproteksi:</strong> Pengguna wajib login untuk membuka feed lowongan,
+            rekomendasi, bookmark, dan studio CV demi menjaga keamanan sesi dan privasi profil.
+          </div>
+        </aside>
       </section>
 
-      {/* 4-Step Honest Workflow */}
-      <section aria-labelledby="heading-workflow">
-        <div className="page-header" style={{ marginBottom: 20 }}>
+      {/* 2. THREE CORE PILLARS (What You Can Do on This Website) */}
+      <section aria-labelledby="heading-pillars">
+        <div className="page-header" style={{ marginBottom: 22 }}>
           <div>
-            <span className="page-kicker">ALUR PENGGUNAAN PLATFORM</span>
-            <h2 id="heading-workflow" className="page-title" style={{ fontSize: '1.65rem' }}>
-              Empat Tahap Pencarian Kerja yang Terukur
+            <span className="page-kicker">FITUR UTAMA PLATFORM</span>
+            <h2 id="heading-pillars" className="page-title" style={{ fontSize: '1.75rem' }}>
+              Apa Saja yang Bisa Anda Lakukan di {SITE_NAME}?
             </h2>
           </div>
-          <p className="page-subtitle" style={{ fontSize: '0.9rem' }}>
-            Seluruh halaman lowongan, rekomendasi, profil, dan CV memerlukan sesi login aktif.
+          <p className="page-subtitle" style={{ fontSize: '0.92rem' }}>
+            Dirancang untuk menghubungkan pencarian lowongan, evaluasi kesiapan profil, dan
+            penyusunan CV dalam satu alur kerja yang utuh.
           </p>
         </div>
 
-        <div className="form-grid-2">
-          {WORKFLOW_STEPS.map((item) => (
-            <article key={item.step} className="surface-card-interactive" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 16 }}>
+        <div className="feature-trio-grid">
+          {FEATURE_PILLARS.map((pillar) => (
+            <article key={pillar.number} className="feature-pillar-card">
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 12,
+                  }}
+                >
                   <span
                     className="font-mono"
                     style={{
-                      fontSize: '0.78rem',
+                      fontSize: '0.74rem',
                       fontWeight: 700,
                       padding: '3px 8px',
                       background: 'var(--ink-primary)',
@@ -139,19 +334,58 @@ export default function HomePage() {
                       borderRadius: 3,
                     }}
                   >
-                    TAHAP {item.step}
+                    {pillar.number}
+                  </span>
+                  <span
+                    className="font-mono"
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      color: 'var(--accent-primary)',
+                    }}
+                  >
+                    {pillar.tag}
                   </span>
                 </div>
-                <h3 className="font-editorial" style={{ fontSize: '1.22rem', marginBottom: 8 }}>
-                  {item.title}
+
+                <h3 className="font-editorial" style={{ fontSize: '1.3rem', marginBottom: 8 }}>
+                  {pillar.title}
                 </h3>
-                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--ink-secondary)' }}>
-                  {item.desc}
+                <p style={{ margin: '0 0 14px', fontSize: '0.9rem', color: 'var(--ink-secondary)' }}>
+                  {pillar.description}
                 </p>
+
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: 18,
+                    fontSize: '0.84rem',
+                    color: 'var(--ink-primary)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6,
+                  }}
+                >
+                  {pillar.highlights.map((pt) => (
+                    <li key={pt}>{pt}</li>
+                  ))}
+                </ul>
               </div>
-              <div>
-                <Link href={item.href} className="btn btn-outline btn-sm">
-                  {item.cta} →
+
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                  paddingTop: 14,
+                  borderTop: '1px solid var(--border-subtle)',
+                }}
+              >
+                <Link href={pillar.primaryHref} className="btn btn-primary btn-sm">
+                  {pillar.primaryLabel}
+                </Link>
+                <Link href={pillar.secondaryHref} className="btn btn-outline btn-sm">
+                  {pillar.secondaryLabel}
                 </Link>
               </div>
             </article>
@@ -159,94 +393,194 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Transparency & Guardrails Section */}
-      <section className="ledger-card" aria-labelledby="heading-boundaries">
-        <span className="page-kicker">PRINSIP TRANSPARANSI &amp; BATAS TAMPILAN</span>
-        <h2 id="heading-boundaries" className="font-editorial" style={{ fontSize: '1.5rem', marginBottom: 14 }}>
-          Komitmen Kejujuran Informasi untuk Pencari Kerja
+      {/* 3. WHY KERJALOKA: Problem vs Solution Ledger */}
+      <section aria-labelledby="heading-why">
+        <div className="page-header" style={{ marginBottom: 22 }}>
+          <div>
+            <span className="page-kicker">LATAR BELAKANG &amp; SOLUSI</span>
+            <h2 id="heading-why" className="page-title" style={{ fontSize: '1.75rem' }}>
+              Mengapa {SITE_NAME} Dibangun?
+            </h2>
+          </div>
+          <p className="page-subtitle" style={{ fontSize: '0.92rem' }}>
+            Menjawab empat kendala nyata yang sering dihadapi pencari kerja ketika menyaring
+            lowongan dan menyiapkan dokumen lamaran.
+          </p>
+        </div>
+
+        <div className="comparison-grid">
+          {PROBLEM_SOLUTIONS.map((item, idx) => (
+            <article key={idx} className="comparison-card">
+              <div
+                style={{
+                  paddingBottom: 12,
+                  borderBottom: '1px dashed var(--border-subtle)',
+                }}
+              >
+                <span
+                  className="font-mono"
+                  style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    color: 'var(--status-warning)',
+                    display: 'block',
+                    marginBottom: 4,
+                  }}
+                >
+                  KENDALA UMUM #{idx + 1}
+                </span>
+                <h3 style={{ fontSize: '1.02rem', margin: '0 0 4px' }}>{item.problemTitle}</h3>
+                <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--ink-secondary)' }}>
+                  {item.problemDesc}
+                </p>
+              </div>
+
+              <div style={{ paddingTop: 2 }}>
+                <span
+                  className="font-mono"
+                  style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    color: 'var(--status-open)',
+                    display: 'block',
+                    marginBottom: 4,
+                  }}
+                >
+                  SOLUSI {SITE_NAME.toUpperCase()}
+                </span>
+                <h4 style={{ fontSize: '1rem', margin: '0 0 4px' }}>{item.solutionTitle}</h4>
+                <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--ink-primary)' }}>
+                  {item.solutionDesc}
+                </p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* 4. 4-STEP USER JOURNEY */}
+      <section aria-labelledby="heading-journey">
+        <div className="page-header" style={{ marginBottom: 22 }}>
+          <div>
+            <span className="page-kicker">PANDUAN PENGGUNA BARU</span>
+            <h2 id="heading-journey" className="page-title" style={{ fontSize: '1.75rem' }}>
+              Cara Menggunakan {SITE_NAME} dalam 4 Langkah
+            </h2>
+          </div>
+          <p className="page-subtitle" style={{ fontSize: '0.92rem' }}>
+            Mulai dari pembuatan akun hingga membuka halaman rekrutmen asli.
+          </p>
+        </div>
+
+        <div className="journey-grid">
+          {USER_JOURNEY.map((item) => (
+            <article key={item.step} className="journey-card">
+              <div>
+                <span
+                  className="font-mono"
+                  style={{
+                    fontSize: '0.76rem',
+                    fontWeight: 700,
+                    color: 'var(--accent-primary)',
+                    display: 'block',
+                    marginBottom: 6,
+                  }}
+                >
+                  LANGKAH {item.step}
+                </span>
+                <h3 className="font-editorial" style={{ fontSize: '1.15rem', marginBottom: 8 }}>
+                  {item.title}
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.87rem', color: 'var(--ink-secondary)' }}>
+                  {item.desc}
+                </p>
+              </div>
+              <div>
+                <Link href={item.href} className="btn btn-outline btn-sm" style={{ width: '100%' }}>
+                  {item.linkText} →
+                </Link>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* 5. TRANSPARENCY PRINCIPLES & CLOSING CTA */}
+      <section className="ledger-card" aria-labelledby="heading-ethics">
+        <span className="page-kicker">PRINSIP KEJUJURAN &amp; BATAS TAMPILAN</span>
+        <h2 id="heading-ethics" className="font-editorial" style={{ fontSize: '1.45rem', marginBottom: 14 }}>
+          Transparansi yang Kami Pegang untuk Setiap Kandidat
         </h2>
         <div className="form-grid-2">
           <div className="surface-card">
-            <h3 style={{ fontSize: '1rem', marginBottom: 6 }}>
-              1. Sumber Asli &amp; Kesegaran Data
+            <h3 style={{ fontSize: '0.96rem', marginBottom: 6 }}>
+              Sumber Asli &amp; Status Kesegaran Data
             </h3>
-            <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--ink-secondary)' }}>
-              Setiap lowongan mencantumkan sumber asli, status pembukaan lowongan, serta waktu
-              pengambilan data (<code>fetched_at</code>). Keberadaan lowongan di dalam feed bukan
-              klaim bahwa lowongan tersebut telah diverifikasi aman oleh {SITE_NAME}.
+            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--ink-secondary)' }}>
+              Setiap lowongan menampilkan sumber asli, status pembukaan, serta waktu pengambilan
+              data. Pencantuman lowongan dari sumber eksternal bukan klaim bahwa lowongan tersebut
+              telah diverifikasi aman oleh {SITE_NAME}.
             </p>
           </div>
 
           <div className="surface-card">
-            <h3 style={{ fontSize: '1rem', marginBottom: 6 }}>
-              2. Tanpa Auto-Submit Lamaran
+            <h3 style={{ fontSize: '0.96rem', marginBottom: 6 }}>
+              Makna Skor Kecocokan &amp; Persiapan CV
             </h3>
-            <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--ink-secondary)' }}>
-              Tombol melamar mengarahkan Anda langsung ke URL sumber asli. {SITE_NAME} tidak mengirim
-              lamaran otomatis dan tidak mengubah status lowongan menjadi &ldquo;terkirim&rdquo;.
-            </p>
-          </div>
-
-          <div className="surface-card">
-            <h3 style={{ fontSize: '1rem', marginBottom: 6 }}>
-              3. Arti Skor Kecocokan Rekomendasi
-            </h3>
-            <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--ink-secondary)' }}>
-              Rekomendasi membandingkan atribut profil Anda dengan syarat lowongan untuk menampilkan
-              alasan cocok, kekurangan, dan data yang tidak diketahui. Skor kecocokan bukan peluang
-              diterima bekerja.
-            </p>
-          </div>
-
-          <div className="surface-card">
-            <h3 style={{ fontSize: '1rem', marginBottom: 6 }}>
-              4. Persiapan CV yang Realistis
-            </h3>
-            <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--ink-secondary)' }}>
-              Fitur pembuatan CV baru dan impor CV lama membantu merapikan struktur pengalaman Anda,
-              tanpa klaim bahwa seluruh HR menggunakan satu format tunggal atau pasti lolos ATS.
+            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--ink-secondary)' }}>
+              Skor rekomendasi mengukur kesesuaian data profil Anda terhadap syarat lowongan, bukan
+              peluang diterima bekerja. Studio CV membantu merapikan struktur pengalaman Anda tanpa
+              klaim bahwa semua HR memakai satu template atau pasti lolos ATS.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Preserved Backend API Route Documentation (Shared with Anggota 2) */}
-      <section aria-labelledby="heading-api-contract">
-        <div className="page-header" style={{ marginBottom: 16 }}>
-          <div>
-            <span className="page-kicker">DOKUMENTASI TEKNIS · KONTRAK BACKEND</span>
-            <h2 id="heading-api-contract" className="font-editorial" style={{ fontSize: '1.45rem', margin: 0 }}>
-              {SITE_NAME} — Indeks Permukaan Endpoint API
-            </h2>
-          </div>
-          <span className="font-mono" style={{ fontSize: '0.78rem', color: 'var(--ink-muted)' }}>
-            Format Respons: &#123; &quot;data&quot;: ... &#125; | &#123; &quot;error&quot;: &#123; &quot;code&quot;, &quot;message&quot; &#125; &#125;
+      {/* 6. CLOSING CTA BANNER */}
+      <section className="cta-banner-card" aria-labelledby="heading-final-cta">
+        <div style={{ maxWidth: '60ch' }}>
+          <span
+            className="font-mono"
+            style={{
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              color: '#f5b09c',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              display: 'block',
+              marginBottom: 6,
+            }}
+          >
+            SIAP MEMULAI PENCARIAN KERJA YANG TERARAH?
           </span>
+          <h2
+            id="heading-final-cta"
+            className="font-editorial"
+            style={{ fontSize: '1.65rem', color: 'var(--ink-inverse)', margin: '0 0 8px' }}
+          >
+            Bangun Profil Kandidat Anda dan Temukan Peluang Kerja di {SITE_NAME}
+          </h2>
+          <p style={{ margin: 0, fontSize: '0.92rem', color: 'rgba(253, 252, 249, 0.82)' }}>
+            Masuk atau buat akun baru untuk mulai menelusuri feed lowongan Indonesia, melihat
+            pemetaan kecocokan profil, dan menyiapkan CV Anda.
+          </p>
         </div>
 
-        <div className="ledger-table-wrap">
-          <table className="ledger-table">
-            <thead>
-              <tr>
-                <th style={{ width: '180px' }}>Metode HTTP</th>
-                <th style={{ width: '240px' }}>Path Endpoint</th>
-                <th>Keterangan &amp; Kontrak Akses</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ROUTES.map((route) => (
-                <tr key={route.path}>
-                  <td className="font-mono" style={{ fontWeight: 600 }}>
-                    {route.method}
-                  </td>
-                  <td className="font-mono" style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>
-                    {route.path}
-                  </td>
-                  <td style={{ color: 'var(--ink-secondary)' }}>{route.note}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <Link href="/signup" className="btn btn-primary btn-lg">
+            Buat Akun Gratis →
+          </Link>
+          <Link
+            href="/login"
+            className="btn btn-outline btn-lg"
+            style={{
+              background: 'transparent',
+              color: 'var(--ink-inverse)',
+              borderColor: 'var(--ink-inverse)',
+            }}
+          >
+            Masuk ke Akun
+          </Link>
         </div>
       </section>
     </div>
