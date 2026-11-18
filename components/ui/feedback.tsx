@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import type { ApiCallError } from './api-client';
 import { Button } from './forms';
+import { EmptyArchiveIllustration } from './illustrations';
 
 export function LoadingState({
   title = 'Memuat data...',
@@ -53,6 +54,7 @@ export function EmptyState({
 }) {
   return (
     <div className="state-panel state-panel-empty">
+      <EmptyArchiveIllustration />
       <span className="page-kicker">{kicker}</span>
       <h2 className="font-editorial" style={{ fontSize: '1.3rem', margin: '0 0 8px' }}>
         {title}

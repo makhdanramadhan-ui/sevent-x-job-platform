@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Badge, SITE_NAME } from '@/components/ui';
+import { Badge, HeroCareerIllustration, PillarIllustration, SITE_NAME } from '@/components/ui';
 
 const PROBLEM_SOLUTIONS = [
   {
@@ -38,6 +38,7 @@ const FEATURE_PILLARS = [
   {
     number: 'PILAR 01',
     tag: 'AGREGASI & PENCARIAN',
+    variant: 'feed' as const,
     title: 'Bursa Lowongan Lintas Bidang & Pengalaman',
     description:
       'Temukan peluang kerja dari berbagai industri di Indonesia—mulai dari tingkat magang (internship), fresh graduate, hingga profesional berpengalaman.',
@@ -54,6 +55,7 @@ const FEATURE_PILLARS = [
   {
     number: 'PILAR 02',
     tag: 'REKOMENDASI TERUKUR',
+    variant: 'match' as const,
     title: 'Pemetaan Kecocokan Profil Kandidat',
     description:
       'Bukan sekadar angka skor tanpa penjelasan. Lihat secara terbuka mengapa sebuah lowongan direkomendasikan untuk profil Anda.',
@@ -70,6 +72,7 @@ const FEATURE_PILLARS = [
   {
     number: 'PILAR 03',
     tag: 'DOKUMEN KARIER',
+    variant: 'cv' as const,
     title: 'Studio CV Baru & Impor CV Lama',
     description:
       'Siapkan dokumen CV yang rapi, terstruktur, dan mudah dibaca dari pengalaman nyata, proyek, serta pencapaian Anda.',
@@ -232,6 +235,10 @@ export default function HomePage() {
               Dari Profil Kandidat ke Sumber Lowongan Asli
             </h2>
 
+            <div style={{ marginBottom: 12 }}>
+              <HeroCareerIllustration />
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div className="anatomy-step-box">
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -349,9 +356,12 @@ export default function HomePage() {
                   </span>
                 </div>
 
-                <h3 className="font-editorial" style={{ fontSize: '1.3rem', marginBottom: 8 }}>
+                <h3 className="font-editorial" style={{ fontSize: '1.3rem', marginBottom: 10 }}>
                   {pillar.title}
                 </h3>
+
+                <PillarIllustration variant={pillar.variant} />
+
                 <p style={{ margin: '0 0 14px', fontSize: '0.9rem', color: 'var(--ink-secondary)' }}>
                   {pillar.description}
                 </p>

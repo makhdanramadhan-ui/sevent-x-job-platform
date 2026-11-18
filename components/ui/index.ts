@@ -18,6 +18,11 @@ export {
 export { AuthGuard } from './auth-guard';
 export { EmptyState, ErrorState, LoadingState, NoticeBanner } from './feedback';
 export {
+  EmptyArchiveIllustration,
+  HeroCareerIllustration,
+  PillarIllustration,
+} from './illustrations';
+export {
   Badge,
   type BadgeVariant,
   Button,
