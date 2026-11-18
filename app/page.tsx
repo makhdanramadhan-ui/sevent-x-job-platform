@@ -124,78 +124,90 @@ export default function HomePage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 48 }}>
       {/* 1. HERO SECTION: Split Narrative + Product Anatomy Visual */}
       <section className="hero-split" aria-labelledby="hero-main-heading">
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div>
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 8,
-                alignItems: 'center',
-                marginBottom: 16,
-              }}
-            >
-              <Badge variant="accent">{SITE_NAME.toUpperCase()} · INDONESIA</Badge>
-              <Badge variant="neutral">Agregasi Lowongan &amp; Pemetaan Profil</Badge>
-              <Badge variant="open">Lamar Langsung di Sumber Asli</Badge>
-            </div>
+        <div>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 8,
+              alignItems: 'center',
+              marginBottom: 14,
+            }}
+          >
+            <Badge variant="accent">{SITE_NAME.toUpperCase()} · INDONESIA</Badge>
+            <Badge variant="neutral">Agregasi Lowongan &amp; Pemetaan Profil</Badge>
+            <Badge variant="open">Lamar Langsung di Sumber Asli</Badge>
+          </div>
 
-            <h1 id="hero-main-heading" className="hero-headline">
-              Temukan Lowongan Kerja, Pahami Kesiapan Profil Anda, dan Lamar Langsung di Sumber
-              Resmi.
-            </h1>
+          <h1 id="hero-main-heading" className="hero-headline">
+            Temukan Lowongan Kerja, Pahami Kesiapan Profil Anda, dan Lamar Langsung di Sumber
+            Resmi.
+          </h1>
 
-            <p className="hero-lead">
-              <strong>{SITE_NAME}</strong> membantu pencari kerja di Indonesia dari semua bidang dan
-              tingkat pengalaman untuk menelusuri lowongan teragregasi, melihat alasan kecocokan
-              serta kekurangan profil secara jujur, menyiapkan CV terstruktur, lalu melamar mandiri
-              di sumber asli.
-            </p>
+          <p className="hero-lead">
+            <strong>{SITE_NAME}</strong> membantu pencari kerja di Indonesia dari semua bidang dan
+            tingkat pengalaman untuk menelusuri lowongan teragregasi, melihat alasan kecocokan
+            serta kekurangan profil secara jujur, menyiapkan CV terstruktur, lalu melamar mandiri
+            di sumber asli.
+          </p>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              <Link href="/signup" className="btn btn-primary btn-lg">
-                Daftar &amp; Mulai Sekarang →
-              </Link>
-              <Link href="/jobs" className="btn btn-secondary btn-lg">
-                Jelajahi Feed Lowongan
-              </Link>
-              <Link href="/login" className="btn btn-outline btn-lg">
-                Masuk Akun
-              </Link>
-            </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            <Link href="/signup" className="btn btn-primary btn-lg">
+              Daftar &amp; Mulai Sekarang →
+            </Link>
+            <Link href="/jobs" className="btn btn-secondary btn-lg">
+              Jelajahi Lowongan
+            </Link>
           </div>
 
           <div className="hero-pillars-mini">
-            <div>
+            <div className="hero-mini-card" style={{ borderTopColor: 'var(--accent-primary)' }}>
               <strong
                 className="font-mono"
-                style={{ fontSize: '0.74rem', color: 'var(--accent-primary)', display: 'block' }}
+                style={{
+                  fontSize: '0.73rem',
+                  color: 'var(--accent-primary)',
+                  display: 'block',
+                  marginBottom: 4,
+                }}
               >
                 01 · LINTAS BIDANG
               </strong>
-              <span style={{ fontSize: '0.84rem', color: 'var(--ink-secondary)' }}>
+              <span style={{ fontSize: '0.82rem', color: 'var(--ink-secondary)', display: 'block', lineHeight: 1.45 }}>
                 Terbuka untuk seluruh disiplin ilmu, dari magang hingga level senior.
               </span>
             </div>
-            <div>
+
+            <div className="hero-mini-card" style={{ borderTopColor: 'var(--status-open)' }}>
               <strong
                 className="font-mono"
-                style={{ fontSize: '0.74rem', color: 'var(--status-open)', display: 'block' }}
+                style={{
+                  fontSize: '0.73rem',
+                  color: 'var(--status-open)',
+                  display: 'block',
+                  marginBottom: 4,
+                }}
               >
                 02 · PEMETAAN JUJUR
               </strong>
-              <span style={{ fontSize: '0.84rem', color: 'var(--ink-secondary)' }}>
+              <span style={{ fontSize: '0.82rem', color: 'var(--ink-secondary)', display: 'block', lineHeight: 1.45 }}>
                 Merinci syarat yang sudah cocok, yang masih kurang, dan waktu ambil data.
               </span>
             </div>
-            <div>
+
+            <div className="hero-mini-card" style={{ borderTopColor: 'var(--ink-primary)' }}>
               <strong
                 className="font-mono"
-                style={{ fontSize: '0.74rem', color: 'var(--ink-primary)', display: 'block' }}
+                style={{
+                  fontSize: '0.73rem',
+                  color: 'var(--ink-primary)',
+                  display: 'block',
+                  marginBottom: 4,
+                }}
               >
-                03 · TANPA AUTO-SUBMIT
+                03 · SUMBER RESMI
               </strong>
-              <span style={{ fontSize: '0.84rem', color: 'var(--ink-secondary)' }}>
+              <span style={{ fontSize: '0.82rem', color: 'var(--ink-secondary)', display: 'block', lineHeight: 1.45 }}>
                 Pelamaran dilakukan langsung oleh Anda di laman resmi penyelenggara.
               </span>
             </div>
@@ -204,102 +216,87 @@ export default function HomePage() {
 
         {/* Right Column: Visual Anatomy of How KerjaLoka Works */}
         <aside className="hero-anatomy-card" aria-label="Ilustrasi cara kerja pemetaan KerjaLoka">
-          <div>
-            <div
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <span className="page-kicker" style={{ margin: 0 }}>
+              ALUR KERJA TERINTEGRASI
+            </span>
+            <span
+              className="font-mono"
               style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 8,
-                marginBottom: 12,
+                fontSize: '0.68rem',
+                padding: '2px 7px',
+                background: 'var(--bg-subtle)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 3,
               }}
             >
-              <span className="page-kicker" style={{ margin: 0 }}>
-                CARA KERJA SISTEM
-              </span>
-              <span
-                className="font-mono"
-                style={{
-                  fontSize: '0.68rem',
-                  padding: '2px 7px',
-                  background: 'var(--bg-subtle)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: 3,
-                }}
-              >
-                Diagram Alur Produk
-              </span>
-            </div>
-
-            <h2 className="font-editorial" style={{ fontSize: '1.2rem', margin: '0 0 12px' }}>
-              Dari Profil Kandidat ke Sumber Lowongan Asli
-            </h2>
-
-            <div style={{ marginBottom: 12 }}>
-              <HeroCareerIllustration />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div className="anatomy-step-box">
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <strong style={{ fontSize: '0.85rem' }}>1. Profil &amp; Preferensi Anda</strong>
-                  <span className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--ink-muted)' }}>
-                    /profile
-                  </span>
-                </div>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--ink-secondary)' }}>
-                  Keahlian, pendidikan, pengalaman kerja, proyek, serta preferensi posisi, lokasi,
-                  dan mode kerja.
-                </p>
-              </div>
-
-              <div
-                className="anatomy-step-box"
-                style={{ borderLeftColor: 'var(--accent-primary)' }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <strong style={{ fontSize: '0.85rem' }}>
-                    2. Pemetaan Transparan Terhadap Lowongan
-                  </strong>
-                  <span className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--ink-muted)' }}>
-                    /recommendations
-                  </span>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                  <Badge variant="matched">✓ Alasan Cocok</Badge>
-                  <Badge variant="missing">! Syarat Belum Terpenuhi</Badge>
-                  <Badge variant="neutral">? Data Belum Diketahui</Badge>
-                </div>
-              </div>
-
-              <div className="anatomy-step-box" style={{ borderLeftColor: 'var(--status-open)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <strong style={{ fontSize: '0.85rem' }}>
-                    3. Siapkan CV &amp; Lamar di Sumber Asli
-                  </strong>
-                  <span className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--ink-muted)' }}>
-                    /cv &amp; /jobs/[id]
-                  </span>
-                </div>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--ink-secondary)' }}>
-                  Rapikan atau impor CV Anda, periksa waktu ambil data lowongan, lalu buka tautan
-                  sumber asli untuk melamar.
-                </p>
-              </div>
-            </div>
+              Profil → Kecocokan → Sumber Resmi
+            </span>
           </div>
+
+          <HeroCareerIllustration />
 
           <div
             style={{
-              padding: '10px 12px',
-              background: 'var(--bg-subtle)',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: '0.77rem',
-              color: 'var(--ink-secondary)',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gap: 8,
             }}
           >
-            <strong>Akses Terproteksi:</strong> Pengguna wajib login untuk membuka feed lowongan,
-            rekomendasi, bookmark, dan studio CV demi menjaga keamanan sesi dan privasi profil.
+            <div
+              style={{
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '8px 10px',
+              }}
+            >
+              <strong style={{ fontSize: '0.76rem', display: 'block', color: 'var(--ink-primary)' }}>
+                1. Profil &amp; CV
+              </strong>
+              <span style={{ fontSize: '0.73rem', color: 'var(--ink-secondary)' }}>
+                Isi keahlian, pengalaman, &amp; preferensi kerja.
+              </span>
+            </div>
+
+            <div
+              style={{
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '8px 10px',
+              }}
+            >
+              <strong style={{ fontSize: '0.76rem', display: 'block', color: 'var(--accent-primary)' }}>
+                2. Cek Kecocokan
+              </strong>
+              <span style={{ fontSize: '0.73rem', color: 'var(--ink-secondary)' }}>
+                Tinjau syarat yang cocok &amp; yang belum terpenuhi.
+              </span>
+            </div>
+
+            <div
+              style={{
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '8px 10px',
+              }}
+            >
+              <strong style={{ fontSize: '0.76rem', display: 'block', color: 'var(--status-open)' }}>
+                3. Sumber Asli
+              </strong>
+              <span style={{ fontSize: '0.73rem', color: 'var(--ink-secondary)' }}>
+                Lamar mandiri langsung di situs penyelenggara.
+              </span>
+            </div>
           </div>
         </aside>
       </section>

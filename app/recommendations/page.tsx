@@ -152,9 +152,8 @@ function RecommendationsInner() {
           <span className="page-kicker">PEMETAAN PROFIL VS LOWONGAN · KONTRAK V1</span>
           <h1 className="page-title">Rekomendasi &amp; Analisis Kecocokan</h1>
           <p className="page-subtitle">
-            Menampilkan alasan kecocokan (<code>matched</code>), persyaratan yang belum terpenuhi (
-            <code>missing</code>), serta data yang tidak diketahui (<code>unknown</code>) antara
-            profil Anda dan lowongan kerja.
+            Menampilkan alasan kecocokan, persyaratan yang belum terpenuhi, serta informasi yang
+            belum dicantumkan antara profil Anda dan lowongan kerja.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>

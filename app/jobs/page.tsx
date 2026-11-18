@@ -199,7 +199,7 @@ function JobsFeedInner() {
           <span className="page-kicker">BURSA LOWONGAN TERAGREGASI · INDONESIA</span>
           <h1 className="page-title">Feed Lowongan Kerja</h1>
           <p className="page-subtitle">
-            Menampilkan data lowongan nyata dari basis data <code>/api/jobs</code>. Pencantuman
+            Telusuri peluang kerja lintas bidang dan tingkat pengalaman di Indonesia. Pencantuman
             lowongan bukan klaim verifikasi keamanan; periksa selalu detail dan melamar langsung di
             sumber asli.
           </p>

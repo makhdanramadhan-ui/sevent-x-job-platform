@@ -215,8 +215,8 @@ function ProfileInner({ session }: { session: SessionInfo }) {
                   Bersihkan Seluruh Data Profil &amp; Aktivitas
                 </h2>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--ink-secondary)' }}>
-                  Memanggil <code>DELETE /api/profile</code> untuk menghapus profil, lowongan
-                  tersimpan, dan dokumen CV milik akun Anda.
+                  Tindakan ini akan menghapus seluruh data profil, daftar lowongan tersimpan, dan
+                  dokumen CV milik akun Anda secara permanen.
                 </p>
               </div>
 

@@ -45,9 +45,8 @@ function OnboardingInner() {
           <span className="page-kicker">ONBOARDING KANDIDAT · LANGKAH AWAL</span>
           <h1 className="page-title">Siapkan Profil &amp; Preferensi Kerja Anda</h1>
           <p className="page-subtitle">
-            Lengkapi identitas dasar, keahlian, dan preferensi lowongan. Data ini disimpan ke{' '}
-            <code>/api/profile</code> dan dipakai sebagai dasar pencocokan rekomendasi lowongan
-            serta pembuatan CV.
+            Lengkapi identitas dasar, keahlian, dan preferensi lowongan. Data ini dipakai sebagai
+            dasar pencocokan rekomendasi lowongan serta pembuatan CV Anda.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
