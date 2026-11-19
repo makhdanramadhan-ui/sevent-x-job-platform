@@ -362,20 +362,6 @@ function JobDetailInner() {
               })}
             </div>
           )}
-
-          <div
-            className="footer-disclaimer-box"
-            style={{ marginTop: 18 }}
-            role="note"
-            aria-label="Catatan keamanan pelamaran"
-          >
-            <strong>Catatan Keamanan Pencari Kerja:</strong>
-            <p style={{ margin: '4px 0 0' }}>
-              Keberadaan lowongan di dalam sistem agregasi bukan pernyataan bahwa lowongan telah
-              diverifikasi aman. Waspadai permintaan biaya dalam bentuk apa pun saat melamar di
-              situs eksternal.
-            </p>
-          </div>
         </section>
       </div>
     </div>
