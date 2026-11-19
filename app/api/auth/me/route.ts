@@ -1,19 +1,11 @@
 import type { NextRequest } from 'next/server';
+import { resolveAvatar } from '@/lib/avatar';
 import { requireAuth } from '@/lib/auth';
 import { throwDb } from '@/lib/db';
+import { readSupabaseAdminEnv } from '@/lib/env';
 import { ok, run } from '@/lib/http';
 
 export const dynamic = 'force-dynamic';
-
-function readHttpsUrl(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' ? value : null;
-  } catch {
-    return null;
-  }
-}
 
 export async function GET(req: NextRequest) {
   return run(async () => {
@@ -28,10 +20,10 @@ export async function GET(req: NextRequest) {
     const meta = (auth.user.user_metadata ?? {}) as Record<string, unknown>;
     const nameRaw = meta.full_name ?? meta.name;
     const name = typeof nameRaw === 'string' && nameRaw.trim() ? nameRaw.trim() : null;
-    const avatar_url = readHttpsUrl(meta.avatar_url ?? meta.picture);
+    const { avatar_url, avatar_source } = resolveAvatar(readSupabaseAdminEnv(), auth.user);
 
     return ok({
-      user: { id: auth.user.id, email: auth.user.email ?? null, name, avatar_url },
+      user: { id: auth.user.id, email: auth.user.email ?? null, name, avatar_url, avatar_source },
       auth_mode: auth.mode,
       has_profile: Boolean(data),
     });

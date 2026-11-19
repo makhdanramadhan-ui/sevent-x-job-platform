@@ -15,6 +15,10 @@ Next.js, TypeScript, dan Supabase untuk website, autentikasi, serta database; Py
 
 Repositori ini digunakan bersama untuk seluruh proyek: frontend, backend, agregasi lowongan, rekomendasi, dan fitur CV. Saat ini backend dan migrasi database sudah tersedia; frontend produk, pipeline lowongan, rekomendasi, serta impor dan ekspor CV belum diimplementasikan. Akses LinkedIn belum tersedia dan tetap memerlukan jalur berizin.
 
+## Unggahan berkas
+
+- Foto profil pengguna adalah satu-satunya unggahan berkas yang diterima.
+
 ## Menjalankan secara lokal
 
 1. Gunakan Node.js minimal 20.9.0, lalu jalankan `npm ci`.

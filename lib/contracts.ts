@@ -166,6 +166,7 @@ export type AuthUser = {
   email: string | null;
   name: string | null;
   avatar_url: string | null;
+  avatar_source?: 'custom' | 'provider' | null;
 };
 
 export type AuthMeData = {

@@ -1,6 +1,8 @@
 import type { NextRequest } from 'next/server';
+import { readAvatarPath, removeAllUserAvatarObjects, setAvatarPath } from '@/lib/avatar';
 import { requireAuth } from '@/lib/auth';
 import { throwDb } from '@/lib/db';
+import { readSupabaseAdminEnv } from '@/lib/env';
 import { ok, readJson, run } from '@/lib/http';
 import { parseProfile } from '@/lib/profile';
 
@@ -39,6 +41,14 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   return run(async () => {
     const auth = await requireAuth(req);
+    const adminEnv = readSupabaseAdminEnv();
+    if (adminEnv) {
+      await removeAllUserAvatarObjects(adminEnv, auth.user.id);
+      if (readAvatarPath(auth.user)) {
+        const appMeta = (auth.user.app_metadata ?? {}) as Record<string, unknown>;
+        await setAvatarPath(adminEnv, auth.user.id, appMeta, null);
+      }
+    }
     const { data, error } = await auth.supabase.rpc('delete_my_data');
     if (error) throwDb(error);
     return ok({ cleared: data, auth_account_deleted: false });
