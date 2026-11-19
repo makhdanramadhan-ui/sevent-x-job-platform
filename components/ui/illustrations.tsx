@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 /**
- * Koleksi Ilustrasi Editorial KerjaLoka (Anti-AI-Slop Custom Vector Art)
+ * Koleksi Ilustrasi Editorial RakitKarier (Anti-AI-Slop Custom Vector Art)
  * Dirancang khusus dengan palet kertas hangat (#F6F4EF), tinta karbon (#171715),
  * terracotta (#B84221), dan zamrud (#1B5E43).
  */
@@ -28,7 +28,7 @@ export function HeroCareerIllustration() {
         style={{ display: 'block', borderRadius: '4px', background: '#FDFCF9' }}
       >
         <title id="hero-illus-title">
-          Ilustrasi Ekosistem Pencarian Kerja dan Pemetaan Profil KerjaLoka
+          Ilustrasi Ekosistem Pencarian Kerja dan Pemetaan Profil RakitKarier
         </title>
         <desc id="hero-illus-desc">
           Visualisasi kandidat profesional Indonesia yang memetakan profil dan CV terhadap lowongan

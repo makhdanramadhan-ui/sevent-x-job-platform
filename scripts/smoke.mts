@@ -118,7 +118,7 @@ async function main(): Promise<void> {
 
   const home = await call('GET', '/');
   assert.equal(home.status, 200, 'root: status');
-  assert.match(home.text, /SEVENT X/, 'root: judul');
+  assert.match(home.text, /RakitKarier/, 'root: judul');
   assert.equal(home.headers.get('x-powered-by'), null, 'root: x-powered-by harus kosong');
   console.log('PASS GET / -> 200');
 
