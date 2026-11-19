@@ -65,6 +65,55 @@ function isRecommendationOutput(val: unknown): val is RecommendationOutput {
   return obj.contract_version === 1 && Array.isArray(obj.items);
 }
 
+function getCompanyInitials(company: string): string {
+  const words = company
+    .replace(/\b(PT|CV|Tbk|Indonesia|Persero)\b\.?/gi, '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (words.length === 0) return company.slice(0, 2).toUpperCase() || 'RK';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return `${words[0][0]}${words[1][0]}`.toUpperCase();
+}
+
+function RecommendationCompanyLogo({
+  company,
+  logoUrl,
+}: {
+  company: string;
+  logoUrl?: string | null;
+}) {
+  const [imgFailed, setImgFailed] = useState(false);
+
+  return (
+    <div
+      className="job-feed-card__logo"
+      aria-hidden="true"
+      title={company}
+      style={{ overflow: 'hidden', flexShrink: 0 }}
+    >
+      {logoUrl && !imgFailed ? (
+        <img
+          src={logoUrl}
+          alt={company}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setImgFailed(true)}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            padding: 4,
+            backgroundColor: '#ffffff',
+          }}
+        />
+      ) : (
+        getCompanyInitials(company)
+      )}
+    </div>
+  );
+}
+
 function parseCommaListLine(text: string): { prefix: string; items: string[] } | null {
   const colonIdx = text.indexOf(':');
   if (colonIdx === -1) return null;
@@ -421,18 +470,28 @@ function RecommendationsInner() {
                               ) : null}
                             </div>
 
-                            <h2 className="rec-card-title">
-                              <Link href={`/jobs/${item.job_id}`}>
-                                {job ? job.title : `Lowongan #${item.job_id}`}
-                              </Link>
-                            </h2>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+                              {job ? (
+                                <RecommendationCompanyLogo
+                                  company={job.company}
+                                  logoUrl={job.company_logo_url}
+                                />
+                              ) : null}
+                              <div style={{ minWidth: 0 }}>
+                                <h2 className="rec-card-title" style={{ marginTop: 0 }}>
+                                  <Link href={`/jobs/${item.job_id}`}>
+                                    {job ? job.title : `Lowongan #${item.job_id}`}
+                                  </Link>
+                                </h2>
 
-                            {job ? (
-                              <p className="rec-card-company">
-                                {job.company} ·{' '}
-                                <span>{job.location || 'Lokasi tidak dicantumkan'}</span>
-                              </p>
-                            ) : null}
+                                {job ? (
+                                  <p className="rec-card-company">
+                                    {job.company} ·{' '}
+                                    <span>{job.location || 'Lokasi tidak dicantumkan'}</span>
+                                  </p>
+                                ) : null}
+                              </div>
+                            </div>
                           </div>
 
                           <div className="rec-card-cta">
