@@ -199,99 +199,100 @@ function RecommendationsInner() {
                   <Link href="/profile" className="btn btn-outline btn-sm">
                     Buka Halaman Profil
                   </Link>
-                </>
-              }
-            />
-          ) : (
-            <section className="surface-card" aria-label="Ringkasan profil kamu">
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: 10,
-                  marginBottom: 10,
-                }}
-              >
-                <strong style={{ fontSize: '0.95rem' }}>Ringkasan Kualifikasi Profilmu</strong>
-                <Link href="/profile" className="font-mono" style={{ fontSize: '0.78rem' }}>
-                  Perbarui Profil
-                </Link>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                <Badge variant="open">{profile?.skills.length ?? 0} Keahlian</Badge>
-                <Badge variant="neutral">{profile?.education.length ?? 0} Pendidikan</Badge>
-                <Badge variant="neutral">{profile?.experiences.length ?? 0} Pengalaman</Badge>
-                <Badge variant="neutral">{profile?.projects.length ?? 0} Proyek</Badge>
-                <Badge variant="neutral">
-                  {profile?.preferences.positions.length ?? 0} Posisi Diminati
-                </Badge>
-              </div>
-            </section>
-          )}
-
-          {/* Case 1: Recommendation service not active yet */}
-          {endpointMissing ? (
-            <EmptyState
-              title="Belum Ada Rekomendasi Lowongan Saat Ini"
-              description="Rekomendasi lowongan yang dicocokkan dengan profilmu sedang disiapkan. Sambil menunggu, kamu tetap dapat mencari dan menyimpan lowongan langsung di halaman Lowongan."
-              action={
-                <>
-                  <Link href="/jobs" className="btn btn-primary btn-sm">
-                    Cari Lowongan Sekarang
+                  <Link href="/jobs" className="btn btn-secondary btn-sm">
+                    Cari Semua Lowongan
                   </Link>
-                  <Button variant="outline" size="sm" onClick={loadRecommendations}>
-                    Muat Ulang
-                  </Button>
                 </>
               }
             />
           ) : (
             <>
-              {/* Filter Bar when recommendations exist */}
-              <section className="surface-card" aria-label="Filter daftar rekomendasi">
-                <div className="form-stack">
-                  <CheckboxGroup
-                    legend="Filter Mode Kerja"
-                    options={WORK_MODE_FILTER_OPTS}
-                    selected={filters.work_modes}
-                    onChange={(work_modes) => setFilters({ ...filters, work_modes })}
-                  />
-                  <CheckboxGroup
-                    legend="Filter Jenis Kontrak"
-                    options={EMPLOYMENT_FILTER_OPTS}
-                    selected={filters.employment_types}
-                    onChange={(employment_types) => setFilters({ ...filters, employment_types })}
-                  />
-                  <CheckboxGroup
-                    legend="Filter Tingkat Pengalaman"
-                    options={LEVEL_FILTER_OPTS}
-                    selected={filters.levels}
-                    onChange={(levels) => setFilters({ ...filters, levels })}
-                  />
+              <section className="surface-card" aria-label="Ringkasan profil kamu">
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 10,
+                    marginBottom: 10,
+                  }}
+                >
+                  <strong style={{ fontSize: '0.95rem' }}>Ringkasan Kualifikasi Profilmu</strong>
+                  <Link href="/profile" className="font-mono" style={{ fontSize: '0.78rem' }}>
+                    Perbarui Profil
+                  </Link>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <Badge variant="open">{profile?.skills.length ?? 0} Keahlian</Badge>
+                  <Badge variant="neutral">{profile?.education.length ?? 0} Pendidikan</Badge>
+                  <Badge variant="neutral">{profile?.experiences.length ?? 0} Pengalaman</Badge>
+                  <Badge variant="neutral">{profile?.projects.length ?? 0} Proyek</Badge>
+                  <Badge variant="neutral">
+                    {profile?.preferences.positions.length ?? 0} Posisi Diminati
+                  </Badge>
                 </div>
               </section>
 
-              {filteredItems.length === 0 ? (
+              {/* Case 1: Recommendation service not active yet */}
+              {endpointMissing ? (
                 <EmptyState
-                  kicker="BELUM ADA HASIL REKOMENDASI"
-                  title="Tidak Ada Item Rekomendasi untuk Ditampilkan"
-                  description="Endpoint rekomendasi tidak mengembalikan lowongan yang sesuai dengan profil atau filter yang dipilih saat ini."
+                  title="Belum Ada Rekomendasi Lowongan Saat Ini"
+                  description="Rekomendasi lowongan yang dicocokkan dengan profilmu sedang disiapkan. Sambil menunggu, kamu tetap dapat mencari dan menyimpan lowongan langsung di halaman Lowongan."
                   action={
-                    <Link href="/jobs" className="btn btn-primary btn-sm">
-                      Lihat Semua Lowongan di Feed
-                    </Link>
+                    <>
+                      <Link href="/jobs" className="btn btn-primary btn-sm">
+                        Cari Lowongan Sekarang
+                      </Link>
+                      <Button variant="outline" size="sm" onClick={loadRecommendations}>
+                        Muat Ulang
+                      </Button>
+                    </>
                   }
                 />
               ) : (
-                <div className="jobs-list">
-                  {filteredItems.map((item: RecommendationItem) => {
-                    const job = jobsMap[item.job_id];
-                    const displayScore =
-                      item.score <= 1 && item.score >= 0
-                        ? `${Math.round(item.score * 100)}%`
-                        : `${Math.round(item.score)}`;
+                <>
+                  {/* Filter Bar when recommendations exist */}
+                  <section className="surface-card" aria-label="Filter daftar rekomendasi">
+                    <div className="form-stack">
+                      <CheckboxGroup
+                        legend="Filter Mode Kerja"
+                        options={WORK_MODE_FILTER_OPTS}
+                        selected={filters.work_modes}
+                        onChange={(work_modes) => setFilters({ ...filters, work_modes })}
+                      />
+                      <CheckboxGroup
+                        legend="Filter Jenis Kontrak"
+                        options={EMPLOYMENT_FILTER_OPTS}
+                        selected={filters.employment_types}
+                        onChange={(employment_types) => setFilters({ ...filters, employment_types })}
+                      />
+                      <CheckboxGroup
+                        legend="Filter Tingkat Pengalaman"
+                        options={LEVEL_FILTER_OPTS}
+                        selected={filters.levels}
+                        onChange={(levels) => setFilters({ ...filters, levels })}
+                      />
+                    </div>
+                  </section>
+
+                  {filteredItems.length === 0 ? (
+                    <EmptyState
+                      kicker="BELUM ADA HASIL REKOMENDASI"
+                      title="Tidak Ada Item Rekomendasi untuk Ditampilkan"
+                      description="Endpoint rekomendasi tidak mengembalikan lowongan yang sesuai dengan profil atau filter yang dipilih saat ini."
+                      action={
+                        <Link href="/jobs" className="btn btn-primary btn-sm">
+                          Lihat Semua Lowongan di Feed
+                        </Link>
+                      }
+                    />
+                  ) : (
+                    <div className="jobs-list">
+                      {filteredItems.map((item: RecommendationItem) => {
+                        const job = jobsMap[item.job_id];
+                        const clampedScore = Math.max(0, Math.min(100, Math.round(item.score)));
+                        const displayScore = `${clampedScore}%`;
 
                     return (
                       <article key={item.job_id} className="ledger-card">
@@ -440,6 +441,8 @@ function RecommendationsInner() {
                     );
                   })}
                 </div>
+                  )}
+                </>
               )}
             </>
           )}
