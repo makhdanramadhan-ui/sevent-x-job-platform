@@ -90,7 +90,7 @@ function BookmarksInner() {
         actions={
           <>
             <Link href="/jobs" className="btn btn-primary btn-sm">
-              + Cari Lowongan Lainnya
+              Cari Lowongan Lainnya
             </Link>
             <Link href="/recommendations" className="btn btn-outline btn-sm">
               Lihat Rekomendasi
