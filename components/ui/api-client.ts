@@ -67,6 +67,7 @@ export async function apiFetch<T>(
   options: {
     method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
     body?: unknown;
+    formData?: FormData;
     signal?: AbortSignal;
   } = {},
 ): Promise<ApiResult<T>> {
@@ -75,8 +76,10 @@ export async function apiFetch<T>(
     Accept: 'application/json',
   };
 
-  let serializedBody: string | undefined;
-  if (options.body !== undefined) {
+  let serializedBody: string | FormData | undefined;
+  if (options.formData) {
+    serializedBody = options.formData;
+  } else if (options.body !== undefined) {
     headers['Content-Type'] = 'application/json';
     serializedBody = JSON.stringify(options.body);
   }

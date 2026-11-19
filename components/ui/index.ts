@@ -45,6 +45,7 @@ export {
   type TextInputProps,
 } from './forms';
 export {
+  getInitials,
   notifyAuthChanged,
   type SessionInfo,
   SiteFooter,

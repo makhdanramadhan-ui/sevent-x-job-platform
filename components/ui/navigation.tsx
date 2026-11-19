@@ -8,7 +8,13 @@ import { Button } from './forms';
 import { ScrollProgressBar } from './scroll-motion';
 
 export type SessionInfo = {
-  user: { id: string; email: string | null; name: string | null; avatar_url: string | null };
+  user: {
+    id: string;
+    email: string | null;
+    name: string | null;
+    avatar_url: string | null;
+    avatar_source?: 'custom' | 'provider' | null;
+  };
   auth_mode: 'cookie' | 'bearer';
   has_profile: boolean;
 };
@@ -28,7 +34,7 @@ const NAV_ITEMS = [
   { href: '/cv', label: 'Studio CV', exact: false },
 ] as const;
 
-function getInitials(label: string): string {
+export function getInitials(label: string): string {
   const base = label.includes('@') ? label.split('@')[0] : label;
   const parts = base.split(/[\s._-]+/).filter(Boolean);
   if (parts.length === 0) return '?';

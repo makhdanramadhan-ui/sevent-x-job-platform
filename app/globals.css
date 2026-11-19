@@ -471,6 +471,111 @@ h4 {
   background: var(--border-subtle);
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.profile-avatar-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.profile-avatar-figure {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex: 0 0 96px;
+  border: 1px solid var(--border-strong);
+  background: var(--p-surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.profile-avatar-initials {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--p-ink);
+  letter-spacing: 0.02em;
+}
+
+.profile-avatar-controls {
+  flex: 1 1 260px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-avatar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-avatar-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--p-muted);
+}
+
+.profile-avatar-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 320px;
+}
+
+.profile-avatar-progress-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--p-surface);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+
+.profile-avatar-progress-bar {
+  height: 100%;
+  background: var(--p-action);
+  transition: width 0.12s ease;
+}
+
+.profile-avatar-progress-text {
+  font-size: 0.8125rem;
+  color: var(--p-muted);
+}
+
+@media (max-width: 390px) {
+  .profile-avatar-row {
+    align-items: flex-start;
+  }
+}
+
 /* ============================================================
    BUTTONS (44px standard, arrow style, flat, hover step + press)
    ============================================================ */
