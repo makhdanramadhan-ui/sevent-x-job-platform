@@ -11,6 +11,7 @@ import {
   LoadingState,
   NoticeBanner,
   notifyAuthChanged,
+  PageBanner,
   ProfileEditorForm,
 } from '@/components/ui';
 import type { ProfileRecord } from '@/lib/contracts';
@@ -40,23 +41,26 @@ function OnboardingInner() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Lengkapi Profil &amp; Preferensi Kerjamu</h1>
-          <p className="page-subtitle">
-            Isi informasi dasar, keahlian, dan kriteria pekerjaan yang kamu cari agar kami dapat
-            memberikan rekomendasi lowongan yang sesuai serta memudahkan penyusunan CV-mu.
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+      <PageBanner
+        kicker="Langkah Awal"
+        title="Lengkapi Profil & Preferensi Kerjamu"
+        subtitle="Isi informasi dasar, keahlian, dan kriteria pekerjaan yang kamu cari agar kami dapat memberikan rekomendasi lowongan yang sesuai serta memudahkan penyusunan CV-mu."
+        tone="sand"
+        imageSrc="/images/banner-profile.jpg"
+        imageAlt="Ilustrasi melengkapi profil dan preferensi kerja"
+        actions={
           <Link href="/jobs" className="btn btn-outline btn-sm">
             Lihat Lowongan
           </Link>
-        </div>
-      </div>
+        }
+      />
 
       {completed ? (
-        <NoticeBanner variant="success" title="Profil Berhasil Disimpan">
+        <NoticeBanner
+          variant="success"
+          title="Profil Berhasil Disimpan"
+          onDismiss={() => setCompleted(false)}
+        >
           <p style={{ margin: '0 0 12px' }}>
             Data profilmu sudah tersimpan. Sekarang kamu bisa mulai mencari lowongan, melihat
             rekomendasi yang sesuai, atau melengkapi detail portofolio di halaman Profil.

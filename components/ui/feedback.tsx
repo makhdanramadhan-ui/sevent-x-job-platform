@@ -1,7 +1,9 @@
 'use client';
 
+import { motion, useReducedMotion } from 'motion/react';
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { ApiCallError } from './api-client';
 import { Button } from './forms';
 
@@ -123,17 +125,171 @@ export function ErrorState({
   );
 }
 
+export type NoticeVariant = 'success' | 'warning' | 'error' | 'info';
+
+const DEFAULT_POPUP_TITLES: Record<NoticeVariant, string> = {
+  success: 'Berhasil',
+  warning: 'Perhatian',
+  error: 'Terjadi Kesalahan',
+  info: 'Informasi',
+};
+
+function NoticeIcon({ variant }: { variant: NoticeVariant }) {
+  if (variant === 'success') {
+    return (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+    );
+  }
+  if (variant === 'warning') {
+    return (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+        <line x1="12" y1="9" x2="12" y2="13" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+    );
+  }
+  if (variant === 'error') {
+    return (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="15" y1="9" x2="9" y2="15" />
+        <line x1="9" y1="9" x2="15" y2="15" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="16" x2="12" y2="12" />
+      <line x1="12" y1="8" x2="12.01" y2="8" />
+    </svg>
+  );
+}
+
+export function NoticePopup({
+  variant = 'info',
+  title,
+  children,
+  onDismiss,
+  confirmLabel = 'Mengerti',
+}: {
+  variant?: NoticeVariant;
+  title?: string;
+  children: ReactNode;
+  onDismiss: () => void;
+  confirmLabel?: string;
+}) {
+  const [mounted, setMounted] = useState(false);
+  const titleId = useId();
+  const confirmRef = useRef<HTMLButtonElement | null>(null);
+  const prefersReducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    confirmRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onDismiss();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mounted, onDismiss]);
+
+  if (!mounted) return null;
+
+  const heading = title ?? DEFAULT_POPUP_TITLES[variant];
+
+  return createPortal(
+    <motion.div
+      className="notice-popup-backdrop"
+      initial={prefersReducedMotion ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.18 }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          onDismiss();
+        }
+      }}
+    >
+      <motion.div
+        className={`notice-popup-box notice-popup-${variant}`}
+        role={variant === 'error' || variant === 'warning' ? 'alertdialog' : 'dialog'}
+        aria-modal="true"
+        aria-labelledby={titleId}
+        initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.95, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="notice-popup-top">
+          <div className={`notice-popup-icon notice-popup-icon-${variant}`}>
+            <NoticeIcon variant={variant} />
+          </div>
+          <button
+            type="button"
+            className="notice-popup-close"
+            onClick={onDismiss}
+            aria-label="Tutup pesan"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        <h2 id={titleId} className="notice-popup-title">
+          {heading}
+        </h2>
+        <div className="notice-popup-body">{children}</div>
+
+        <div className="notice-popup-footer">
+          <button
+            ref={confirmRef}
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={onDismiss}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>,
+    document.body,
+  );
+}
+
 export function NoticeBanner({
   variant = 'info',
   title,
   children,
   onDismiss,
+  display,
 }: {
-  variant?: 'success' | 'warning' | 'error' | 'info';
+  variant?: NoticeVariant;
   title?: string;
   children: ReactNode;
   onDismiss?: () => void;
+  display?: 'inline' | 'popup';
 }) {
+  const mode = display ?? (onDismiss ? 'popup' : 'inline');
+
+  if (mode === 'popup' && onDismiss) {
+    return (
+      <NoticePopup variant={variant} title={title} onDismiss={onDismiss}>
+        {children}
+      </NoticePopup>
+    );
+  }
+
   return (
     <div
       className={`notice-banner notice-${variant}`}

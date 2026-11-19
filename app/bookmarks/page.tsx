@@ -17,6 +17,7 @@ import {
   JobStatusBadge,
   LoadingState,
   NoticeBanner,
+  PageBanner,
   WORK_MODE_LABELS,
 } from '@/components/ui';
 import type { BookmarkRecord } from '@/lib/contracts';
@@ -69,23 +70,24 @@ function BookmarksInner() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Lowongan Tersimpan ({items.length})</h1>
-          <p className="page-subtitle">
-            Daftar lowongan yang kamu simpan untuk ditinjau kembali sebelum melamar di situs resmi
-            perusahaan.
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <Link href="/jobs" className="btn btn-primary btn-sm">
-            + Cari Lowongan Lainnya
-          </Link>
-          <Link href="/recommendations" className="btn btn-outline btn-sm">
-            Lihat Rekomendasi
-          </Link>
-        </div>
-      </div>
+      <PageBanner
+        kicker="Daftar Pilihan"
+        title={`Lowongan Tersimpan (${items.length})`}
+        subtitle="Daftar lowongan yang kamu simpan untuk ditinjau kembali sebelum melamar di situs resmi perusahaan."
+        tone="sage"
+        imageSrc="/images/banner-bookmarks.jpg"
+        imageAlt="Ilustrasi lowongan tersimpan"
+        actions={
+          <>
+            <Link href="/jobs" className="btn btn-primary btn-sm">
+              + Cari Lowongan Lainnya
+            </Link>
+            <Link href="/recommendations" className="btn btn-outline btn-sm">
+              Lihat Rekomendasi
+            </Link>
+          </>
+        }
+      />
 
       {notice ? (
         <NoticeBanner variant={notice.type} onDismiss={() => setNotice(null)}>
