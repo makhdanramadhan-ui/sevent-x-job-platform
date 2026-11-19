@@ -326,24 +326,35 @@ def normalize_location(raw: Optional[str]) -> Optional[str]:
     return cleaned
 
 
-def normalize_work_mode(raw: Optional[str], location_hint: Optional[str] = None, title_hint: Optional[str] = None) -> str:
-    combined = " ".join(
+def normalize_work_mode(
+    raw: Optional[str],
+    location_hint: Optional[str] = None,
+    title_hint: Optional[str] = None,
+    description_hint: Optional[str] = None,
+) -> str:
+    raw_lower = (raw or "").strip().lower()
+    if raw_lower in VALID_WORK_MODES and raw_lower != "unknown":
+        return raw_lower
+
+    primary = " ".join(
         part for part in [raw or "", location_hint or "", title_hint or ""] if part
     ).lower()
 
-    if not combined.strip():
-        return "unknown"
-
-    raw_lower = (raw or "").strip().lower()
-    if raw_lower in VALID_WORK_MODES:
-        return raw_lower
-
-    if re.search(r"\b(hybrid|campuran|wfo\s*/\s*wfh|kombinasi)\b", combined):
-        return "hybrid"
-    if re.search(r"\b(remote|wfh|work from home|work from anywhere|wfa|jarak jauh|anywhere)\b", combined):
-        return "remote"
-    if re.search(r"\b(onsite|on-site|on site|wfo|work from office|tatap muka|di kantor)\b", combined):
-        return "onsite"
+    for text_block in (primary, (description_hint or "").lower()):
+        if not text_block.strip():
+            continue
+        if re.search(r"\b(hybrid|campuran|wfo\s*/\s*wfh|kombinasi)\b", text_block):
+            return "hybrid"
+        if re.search(
+            r"\b(remote|wfh|work from home|work from anywhere|wfa|jarak jauh|anywhere)\b",
+            text_block,
+        ):
+            return "remote"
+        if re.search(
+            r"\b(onsite|on-site|on site|wfo|work from office|tatap muka|di kantor)\b",
+            text_block,
+        ):
+            return "onsite"
 
     return "unknown"
 
@@ -605,7 +616,12 @@ def build_ingest_payload(
 
     norm_description = clean_whitespace(strip_html(description), max_len=20000)
     norm_location = normalize_location(location)
-    norm_work_mode = normalize_work_mode(work_mode, location_hint=norm_location, title_hint=norm_title)
+    norm_work_mode = normalize_work_mode(
+        work_mode,
+        location_hint=norm_location,
+        title_hint=norm_title,
+        description_hint=norm_description,
+    )
     norm_employment_type = normalize_employment_type(employment_type, title_hint=norm_title)
     norm_level = normalize_level(level, title_hint=norm_title)
     norm_education = normalize_education(education, description_hint=norm_description)
