@@ -51,6 +51,7 @@ export {
   TextInput,
   type TextInputProps,
 } from './forms';
+export { SkillComboboxInput, type SkillComboboxInputProps } from './skill-combobox';
 export {
   getInitials,
   notifyAuthChanged,

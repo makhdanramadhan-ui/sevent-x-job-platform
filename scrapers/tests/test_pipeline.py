@@ -1,0 +1,334 @@
+"""
+Pemeriksaan deterministik untuk pipeline normalisasi, deduplikasi konservatif,
+pemisahan timestamp published_at vs fetched_at, dan ketahanan kegagalan sumber (Anggota 3).
+
+Dapat dijalankan langsung dengan:
+  py -3 -m unittest scrapers/tests/test_pipeline.py -v
+"""
+
+from __future__ import annotations
+
+import unittest
+from typing import Any, Dict
+
+from scrapers.dedup import (
+    build_conservative_cross_source_key,
+)
+from scrapers.ingest_client import SupabaseIngestClient, execute_ingest_pipeline
+from scrapers.normalizer import (
+    VALID_EMPLOYMENT_TYPES,
+    VALID_LEVELS,
+    VALID_STATUSES,
+    VALID_WORK_MODES,
+    build_ingest_payload,
+    normalize_employment_type,
+    normalize_level,
+    normalize_location,
+    normalize_skills,
+    normalize_work_mode,
+)
+from scrapers.sources import (
+    SourceFetchResult,
+    fetch_verified_partner_feed,
+    parse_linkedin_guest_detail_html,
+    parse_linkedin_guest_search_html,
+)
+
+
+class TestNormalizerAndContract(unittest.TestCase):
+    def test_enum_normalization_strictly_matches_db_contract(self) -> None:
+        self.assertEqual(normalize_work_mode("WFH / Remote"), "remote")
+        self.assertEqual(normalize_work_mode("Hybrid (2 hari WFO)"), "hybrid")
+        self.assertEqual(normalize_work_mode("WFO / Tatap Muka"), "onsite")
+        self.assertEqual(normalize_work_mode(""), "unknown")
+        self.assertIn(normalize_work_mode("random-text"), VALID_WORK_MODES)
+
+        self.assertEqual(normalize_employment_type("Penuh Waktu (PKWTT)"), "full_time")
+        self.assertEqual(normalize_employment_type("Program Magang"), "internship")
+        self.assertEqual(normalize_employment_type("Kontrak PKWT"), "contract")
+        self.assertEqual(normalize_employment_type("Paruh Waktu"), "part_time")
+        self.assertEqual(normalize_employment_type("Pekerja Lepas / Freelancer"), "freelance")
+        self.assertIn(normalize_employment_type("tidak jelas"), VALID_EMPLOYMENT_TYPES)
+
+        self.assertEqual(normalize_level("Fresh Graduate / Entry Level"), "entry")
+        self.assertEqual(normalize_level("Sr. Backend Developer"), "senior")
+        self.assertEqual(normalize_level("Engineering Manager"), "lead")
+        self.assertEqual(normalize_level("Mahasiswa Magang"), "intern")
+        self.assertIn(normalize_level("lainnya"), VALID_LEVELS)
+
+    def test_published_at_is_strictly_separated_from_fetched_at(self) -> None:
+        payload_no_pub = build_ingest_payload(
+            source_name="themuse_api",
+            source_job_id="job-1",
+            source_url="https://example.com/jobs/1",
+            title="Staf Administrasi",
+            company="PT Contoh",
+            fetched_at="2026-11-18T10:00:00Z",
+            published_at=None,
+        )
+        self.assertEqual(payload_no_pub["source"]["fetched_at"], "2026-11-18T10:00:00Z")
+        self.assertNotIn(
+            "published_at",
+            payload_no_pub["source"],
+            "Waktu scraper tidak boleh dipakai sebagai published_at ketika waktu terbit tidak diketahui",
+        )
+
+        payload_with_pub = build_ingest_payload(
+            source_name="themuse_api",
+            source_job_id="job-2",
+            source_url="https://example.com/jobs/2",
+            title="Staf Akuntansi",
+            company="PT Contoh",
+            fetched_at="2026-11-18T10:00:00Z",
+            published_at="2026-11-10T08:00:00Z",
+        )
+        self.assertEqual(payload_with_pub["source"]["published_at"], "2026-11-10T08:00:00Z")
+        self.assertEqual(payload_with_pub["source"]["fetched_at"], "2026-11-18T10:00:00Z")
+
+    def test_expired_deadline_sets_status_closed_and_no_deadline_stays_open(self) -> None:
+        expired_payload = build_ingest_payload(
+            source_name="jobicy_api",
+            source_job_id="job-expired",
+            source_url="https://example.com/jobs/expired",
+            title="Junior Developer",
+            company="PT Lama",
+            deadline="2026-10-01",
+            status="open",
+            reference_date="2026-11-18",
+        )
+        self.assertEqual(expired_payload["job"]["status"], "closed")
+        self.assertEqual(expired_payload["job"]["deadline"], "2026-10-01")
+
+        no_deadline_payload = build_ingest_payload(
+            source_name="remotive_api",
+            source_job_id="job-nodeadline",
+            source_url="https://example.com/jobs/nodeadline",
+            title="Marketing Executive",
+            company="PT Baru",
+            deadline=None,
+            status="open",
+            reference_date="2026-11-18",
+        )
+        self.assertEqual(no_deadline_payload["job"]["status"], "open")
+        self.assertIsNone(no_deadline_payload["job"]["deadline"])
+
+    def test_cross_domain_skill_synonym_normalization(self) -> None:
+        skills = normalize_skills(["React.js", "TS", "Akuntansi", "Brevet Pajak", "Ms Excel"])
+        self.assertIn("React", skills)
+        self.assertIn("TypeScript", skills)
+        self.assertIn("Accounting", skills)
+        self.assertIn("Taxation", skills)
+        self.assertIn("Microsoft Excel", skills)
+
+    def test_location_normalization_country_city_format(self) -> None:
+        self.assertEqual(normalize_location("Jakarta, Jakarta, Indonesia"), "Indonesia, Jakarta")
+        self.assertEqual(normalize_location("Jakarta Selatan"), "Indonesia, Jakarta Selatan")
+        self.assertEqual(normalize_location("Yogyakarta, Indonesia"), "Indonesia, Yogyakarta")
+        self.assertEqual(normalize_location("Bandung"), "Indonesia, Bandung")
+        self.assertEqual(normalize_location("London, United Kingdom"), "United Kingdom, London")
+        self.assertEqual(normalize_location("Indonesia, Surabaya"), "Indonesia, Surabaya")
+        self.assertEqual(normalize_location("Worldwide"), "Global, Remote")
+        self.assertIsNone(normalize_location(""))
+
+    def test_linkedin_guest_html_parser_deterministic(self) -> None:
+        sample_search_html = """
+        <li>
+          <div class="base-card base-search-card job-search-card" data-entity-urn="urn:li:jobPosting:4098765432">
+            <a class="base-card__full-link" href="https://id.linkedin.com/jobs/view/frontend-developer-at-pt-maju-4098765432?trk=public_jobs_topcard-title">
+              <span class="sr-only">Frontend Developer</span>
+            </a>
+            <div class="base-search-card__info">
+              <h3 class="base-search-card__title">Frontend Developer (React)</h3>
+              <h4 class="base-search-card__subtitle">
+                <a class="hidden-nested-link">PT Maju Bersama</a>
+              </h4>
+              <div class="base-search-card__metadata">
+                <span class="job-search-card__location">Jakarta, Indonesia</span>
+                <time class="job-search-card__listdate" datetime="2026-11-15">3 days ago</time>
+              </div>
+            </div>
+          </div>
+        </li>
+        """
+        cards = parse_linkedin_guest_search_html(sample_search_html)
+        self.assertEqual(len(cards), 1)
+        self.assertEqual(cards[0]["job_id"], "4098765432")
+        self.assertEqual(cards[0]["title"], "Frontend Developer (React)")
+        self.assertEqual(cards[0]["company"], "PT Maju Bersama")
+        self.assertEqual(cards[0]["location"], "Jakarta, Indonesia")
+        self.assertEqual(cards[0]["published_at"], "2026-11-15")
+        self.assertEqual(
+            cards[0]["url"],
+            "https://id.linkedin.com/jobs/view/frontend-developer-at-pt-maju-4098765432",
+        )
+
+        sample_detail_html = """
+        <div class="show-more-less-html__markup">
+          <p>Kami membutuhkan Frontend Developer yang menguasai React dan TypeScript.</p>
+        </div>
+        <ul class="description__job-criteria-list">
+          <li class="description__job-criteria-item">
+            <h3 class="description__job-criteria-subheader">Seniority level</h3>
+            <span class="description__job-criteria-text">Entry level</span>
+          </li>
+          <li class="description__job-criteria-item">
+            <h3 class="description__job-criteria-subheader">Employment type</h3>
+            <span class="description__job-criteria-text">Full-time</span>
+          </li>
+        </ul>
+        """
+        detail = parse_linkedin_guest_detail_html(sample_detail_html)
+        self.assertEqual(detail["level"], "Entry level")
+        self.assertEqual(detail["employment_type"], "Full-time")
+        self.assertIn("React", detail["description"] or "")
+
+
+class TestConservativeDeduplication(unittest.TestCase):
+    def test_same_title_and_company_with_different_or_unknown_attributes_are_not_merged(self) -> None:
+        job_jakarta = build_ingest_payload(
+            source_name="themuse_api",
+            source_job_id="a-1",
+            source_url="https://example.com/a/1",
+            title="Software Engineer",
+            company="PT Nusantara",
+            location="Jakarta",
+            work_mode="onsite",
+            employment_type="full_time",
+            level="junior",
+        )
+        job_bandung = build_ingest_payload(
+            source_name="arbeitnow_api",
+            source_job_id="b-1",
+            source_url="https://example.com/b/1",
+            title="Software Engineer",
+            company="PT Nusantara",
+            location="Bandung",
+            work_mode="onsite",
+            employment_type="full_time",
+            level="junior",
+        )
+        job_unknown_level = build_ingest_payload(
+            source_name="remotive_api",
+            source_job_id="c-1",
+            source_url="https://example.com/c/1",
+            title="Software Engineer",
+            company="PT Nusantara",
+            location="Jakarta",
+            work_mode="onsite",
+            employment_type="full_time",
+            level="unknown",
+        )
+
+        key_jkt = build_conservative_cross_source_key(job_jakarta)
+        key_bdg = build_conservative_cross_source_key(job_bandung)
+        key_unk = build_conservative_cross_source_key(job_unknown_level)
+
+        self.assertIsNotNone(key_jkt)
+        self.assertIsNotNone(key_bdg)
+        self.assertNotEqual(key_jkt, key_bdg)
+        self.assertIsNone(
+            key_unk,
+            "Lowongan dengan atribut level/mode kerja unknown tidak boleh digabung lintas sumber secara spekulatif",
+        )
+
+    def test_cross_source_exact_match_preserves_both_sources_under_same_job_uuid(self) -> None:
+        job_src1 = build_ingest_payload(
+            source_name="themuse_api",
+            source_job_id="a-100",
+            source_url="https://example.com/a/100",
+            title="Staf Akuntansi",
+            company="PT Niaga",
+            location="Surabaya",
+            work_mode="onsite",
+            employment_type="full_time",
+            level="entry",
+            deadline="2026-12-15",
+        )
+        job_src2 = build_ingest_payload(
+            source_name="jobicy_api",
+            source_job_id="b-200",
+            source_url="https://example.org/b/200",
+            title="Staf Akuntansi",
+            company="PT Niaga",
+            location="Surabaya",
+            work_mode="onsite",
+            employment_type="full_time",
+            level="entry",
+            deadline="2026-12-15",
+        )
+
+        res1 = SourceFetchResult(source_name="themuse_api", status="OK", payloads=[job_src1])
+        res2 = SourceFetchResult(source_name="jobicy_api", status="OK", payloads=[job_src2])
+
+        report = execute_ingest_pipeline([res1, res2], dry_run=True)
+        self.assertEqual(len(report.ingested_records), 2)
+        self.assertEqual(
+            report.ingested_records[0].job_uuid,
+            report.ingested_records[1].job_uuid,
+            "Lowongan lintas sumber yang 100% terverifikasi identik harus ditautkan ke job_uuid yang sama",
+        )
+        self.assertTrue(report.ingested_records[1].linked_existing_job)
+
+
+class TestFailedSourceResilienceAndIdempotency(unittest.TestCase):
+    def test_failed_source_does_not_corrupt_or_drop_valid_sources(self) -> None:
+        valid_feed = fetch_verified_partner_feed(reference_date="2026-11-18")
+        self.assertEqual(valid_feed.status, "OK")
+        self.assertGreaterEqual(len(valid_feed.payloads), 5)
+
+        failed_source = SourceFetchResult(
+            source_name="workingnomads_api",
+            status="FAILED",
+            payloads=[],
+            reason="HTTP 503 Service Unavailable",
+        )
+
+        rpc_db_store: Dict[str, str] = {}
+
+        def mock_rpc_transport(payload: Dict[str, Any]) -> str:
+            src = payload["source"]
+            job = payload["job"]
+            self.assertIn(job["work_mode"], VALID_WORK_MODES)
+            self.assertIn(job["employment_type"], VALID_EMPLOYMENT_TYPES)
+            self.assertIn(job["level"], VALID_LEVELS)
+            self.assertIn(job["status"], VALID_STATUSES)
+
+            identity_key = f"{src['name']}::{src['job_id']}"
+            if identity_key not in rpc_db_store:
+                rpc_db_store[identity_key] = (
+                    job.get("id") or f"00000000-0000-4000-8000-{len(rpc_db_store) + 1:012d}"
+                )
+            return rpc_db_store[identity_key]
+
+        client = SupabaseIngestClient(rpc_Transport=mock_rpc_transport)
+
+        # Run pertama
+        report1 = execute_ingest_pipeline(
+            [failed_source, valid_feed],
+            client=client,
+            dry_run=False,
+        )
+        self.assertEqual(len(report1.sources_failed), 1)
+        self.assertEqual(len(report1.sources_succeeded), 1)
+        count_after_first_run = len(rpc_db_store)
+        self.assertEqual(count_after_first_run, len(valid_feed.payloads))
+
+        # Run kedua (menguji idempotensi: menjalankan ulang tidak menggandakan data di DB)
+        report2 = execute_ingest_pipeline(
+            [failed_source, valid_feed],
+            client=client,
+            dry_run=False,
+        )
+        self.assertEqual(
+            len(rpc_db_store),
+            count_after_first_run,
+            "Menjalankan ulang ingest dengan sumber yang sama tidak boleh menggandakan lowongan",
+        )
+        self.assertEqual(
+            [r.job_uuid for r in report1.ingested_records],
+            [r.job_uuid for r in report2.ingested_records],
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

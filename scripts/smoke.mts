@@ -253,6 +253,32 @@ async function main(): Promise<void> {
     loginCode,
   );
 
+  await expectError(
+    'GET /api/skills q kosong',
+    call('GET', '/api/skills?q='),
+    400,
+    'validation_error',
+  );
+
+  if (hasSupabase) {
+    const skills = await call('GET', '/api/skills?q=py&limit=5');
+    assert.equal(skills.status, 200, 'GET /api/skills: status');
+    const body = objectAt(skills.json, 'GET /api/skills: body bukan JSON');
+    assert.ok(Array.isArray(body.data), 'GET /api/skills: data bukan array');
+    for (const item of body.data as unknown[]) {
+      const row = objectAt(item, 'GET /api/skills: item bukan objek');
+      assert.equal(typeof row.id, 'number', 'GET /api/skills: id bukan number');
+      assert.equal(typeof row.name, 'string', 'GET /api/skills: name bukan string');
+      assert.equal(typeof row.category, 'string', 'GET /api/skills: category bukan string');
+    }
+    assert.equal(
+      skills.headers.get('cache-control'),
+      'public, s-maxage=3600, stale-while-revalidate=86400',
+      'GET /api/skills: cache-control',
+    );
+    console.log('PASS GET /api/skills -> 200 (cache-control)');
+  }
+
   console.log(`PASS smoke selesai (${hasSupabase ? 'Supabase env terdeteksi' : 'tanpa Supabase env'})`);
 }
 

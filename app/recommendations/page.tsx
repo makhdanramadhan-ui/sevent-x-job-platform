@@ -193,60 +193,60 @@ function RecommendationsInner() {
           onRetry={loadRecommendations}
           loginRedirectPath="/recommendations"
         />
+      ) : !profileHasContent ? (
+        <EmptyState
+          title="Lengkapi Profilmu untuk Mendapatkan Rekomendasi"
+          description="Tambahkan keahlian, riwayat pendidikan, pengalaman, atau posisi yang kamu minati agar kami dapat mencocokkan profilmu dengan lowongan yang tersedia."
+          action={
+            <>
+              <Link href="/onboarding" className="btn btn-primary btn-sm">
+                Lengkapi Profil Sekarang
+              </Link>
+              <Link href="/profile" className="btn btn-outline btn-sm">
+                Buka Halaman Profil
+              </Link>
+              <Link href="/jobs" className="btn btn-secondary btn-sm">
+                Cari Semua Lowongan
+              </Link>
+            </>
+          }
+        />
       ) : (
         <>
-          {/* Profile Readiness Bar */}
-          {!profileHasContent ? (
-            <EmptyState
-              title="Lengkapi Profilmu untuk Mendapatkan Rekomendasi"
-              description="Tambahkan keahlian, riwayat pendidikan, pengalaman, atau posisi yang kamu minati agar kami dapat mencocokkan profilmu dengan lowongan yang tersedia."
-              action={
-                <>
-                  <Link href="/onboarding" className="btn btn-primary btn-sm">
-                    Lengkapi Profil Sekarang
-                  </Link>
-                  <Link href="/profile" className="btn btn-outline btn-sm">
-                    Buka Halaman Profil
-                  </Link>
-                </>
-              }
-            />
-          ) : (
-            <section className="rec-profile-card" aria-label="Ringkasan profil kamu">
-              <div className="rec-profile-header">
-                <h2 className="rec-profile-title">Ringkasan Kualifikasi Profilmu</h2>
-                <Link href="/profile" className="rec-profile-link">
-                  Perbarui Profil →
-                </Link>
+          <section className="rec-profile-card" aria-label="Ringkasan profil kamu">
+            <div className="rec-profile-header">
+              <h2 className="rec-profile-title">Ringkasan Kualifikasi Profilmu</h2>
+              <Link href="/profile" className="rec-profile-link">
+                Perbarui Profil →
+              </Link>
+            </div>
+            <div className="rec-stats-grid">
+              <div className="rec-stat-box">
+                <span className="rec-stat-value rec-stat-value--accent">
+                  {profile?.skills.length ?? 0}
+                </span>
+                <span className="rec-stat-label">Keahlian</span>
               </div>
-              <div className="rec-stats-grid">
-                <div className="rec-stat-box">
-                  <span className="rec-stat-value rec-stat-value--accent">
-                    {profile?.skills.length ?? 0}
-                  </span>
-                  <span className="rec-stat-label">Keahlian</span>
-                </div>
-                <div className="rec-stat-box">
-                  <span className="rec-stat-value">{profile?.education.length ?? 0}</span>
-                  <span className="rec-stat-label">Pendidikan</span>
-                </div>
-                <div className="rec-stat-box">
-                  <span className="rec-stat-value">{profile?.experiences.length ?? 0}</span>
-                  <span className="rec-stat-label">Pengalaman</span>
-                </div>
-                <div className="rec-stat-box">
-                  <span className="rec-stat-value">{profile?.projects.length ?? 0}</span>
-                  <span className="rec-stat-label">Proyek</span>
-                </div>
-                <div className="rec-stat-box">
-                  <span className="rec-stat-value">
-                    {profile?.preferences.positions.length ?? 0}
-                  </span>
-                  <span className="rec-stat-label">Posisi Diminati</span>
-                </div>
+              <div className="rec-stat-box">
+                <span className="rec-stat-value">{profile?.education.length ?? 0}</span>
+                <span className="rec-stat-label">Pendidikan</span>
               </div>
-            </section>
-          )}
+              <div className="rec-stat-box">
+                <span className="rec-stat-value">{profile?.experiences.length ?? 0}</span>
+                <span className="rec-stat-label">Pengalaman</span>
+              </div>
+              <div className="rec-stat-box">
+                <span className="rec-stat-value">{profile?.projects.length ?? 0}</span>
+                <span className="rec-stat-label">Proyek</span>
+              </div>
+              <div className="rec-stat-box">
+                <span className="rec-stat-value">
+                  {profile?.preferences.positions.length ?? 0}
+                </span>
+                <span className="rec-stat-label">Posisi Diminati</span>
+              </div>
+            </div>
+          </section>
 
           {/* Case 1: Recommendation service not active yet */}
           {endpointMissing ? (
@@ -352,10 +352,7 @@ function RecommendationsInner() {
                 <div className="jobs-list">
                   {filteredItems.map((item: RecommendationItem) => {
                     const job = jobsMap[item.job_id];
-                    const pct =
-                      item.score <= 1 && item.score >= 0
-                        ? Math.round(item.score * 100)
-                        : Math.max(0, Math.min(100, Math.round(item.score)));
+                    const pct = Math.max(0, Math.min(100, Math.round(item.score)));
                     const isHighMatch = pct >= 70;
 
                     return (
@@ -388,7 +385,10 @@ function RecommendationsInner() {
                           </div>
 
                           <div className="rec-card-side">
-                            <div className="rec-score-box" aria-label={`Indeks kecocokan ${pct} persen`}>
+                            <div
+                              className="rec-score-box"
+                              aria-label={`Indeks kecocokan ${pct} persen`}
+                            >
                               <div className="rec-score-row">
                                 <span className="rec-score-label">Kecocokan</span>
                                 <span
@@ -419,7 +419,17 @@ function RecommendationsInner() {
                           <div className="rec-panel rec-panel--matched">
                             <div className="rec-panel-head">
                               <span className="rec-panel-label">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <svg
+                                  width="15"
+                                  height="15"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.4"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden="true"
+                                >
                                   <polyline points="20 6 9 17 4 12" />
                                 </svg>
                                 Alasan Cocok
@@ -442,7 +452,17 @@ function RecommendationsInner() {
                           <div className="rec-panel rec-panel--missing">
                             <div className="rec-panel-head">
                               <span className="rec-panel-label">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <svg
+                                  width="15"
+                                  height="15"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden="true"
+                                >
                                   <circle cx="12" cy="12" r="10" />
                                   <line x1="12" y1="8" x2="12" y2="12" />
                                   <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -469,7 +489,17 @@ function RecommendationsInner() {
                           <div className="rec-panel rec-panel--unknown">
                             <div className="rec-panel-head">
                               <span className="rec-panel-label">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <svg
+                                  width="15"
+                                  height="15"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden="true"
+                                >
                                   <circle cx="12" cy="12" r="10" />
                                   <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
                                   <line x1="12" y1="17" x2="12.01" y2="17" />

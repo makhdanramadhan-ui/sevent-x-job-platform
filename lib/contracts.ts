@@ -131,6 +131,12 @@ export type ProfileRecord = {
   updated_at: string;
 };
 
+export type SkillSuggestion = {
+  id: number;
+  name: string;
+  category: string;
+};
+
 export type BookmarkRecord = {
   job_id: string;
   created_at: string;
