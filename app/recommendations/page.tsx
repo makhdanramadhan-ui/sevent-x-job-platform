@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   type ApiCallError,
   AuthGuard,
@@ -64,7 +65,21 @@ function isRecommendationOutput(val: unknown): val is RecommendationOutput {
   return obj.contract_version === 1 && Array.isArray(obj.items);
 }
 
+function parseCommaListLine(text: string): { prefix: string; items: string[] } | null {
+  const colonIdx = text.indexOf(':');
+  if (colonIdx === -1) return null;
+  const prefix = text.slice(0, colonIdx).trim();
+  const rest = text.slice(colonIdx + 1).trim();
+  const parts = rest
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.length < 4) return null;
+  return { prefix, items: parts };
+}
+
 function RecommendationsInner() {
+  const router = useRouter();
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
   const [recOutput, setRecOutput] = useState<RecommendationOutput | null>(null);
   const [jobsMap, setJobsMap] = useState<Record<string, Job>>({});
@@ -72,8 +87,24 @@ function RecommendationsInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiCallError | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(true);
+  const [expandedMissingKeys, setExpandedMissingKeys] = useState<Set<string>>(new Set());
 
   const [filters, setFilters] = useState<RecommendationFilters>(EMPTY_FILTERS);
+
+  function toggleExpandedMissing(key: string) {
+    setExpandedMissingKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function handleCardClick(event: ReactMouseEvent<HTMLElement>, jobId: string) {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('a, button')) return;
+    router.push(`/jobs/${jobId}`);
+  }
 
   const loadRecommendations = useCallback(async () => {
     setLoading(true);
@@ -356,10 +387,32 @@ function RecommendationsInner() {
                     const isHighMatch = pct >= 70;
 
                     return (
-                      <article key={item.job_id} className="rec-card">
+                      <article
+                        key={item.job_id}
+                        className="rec-card"
+                        onClick={(event) => handleCardClick(event, item.job_id)}
+                      >
                         <div className="rec-card-top">
                           <div className="rec-card-main">
-                            <div className="rec-card-badges">
+                            <div className="rec-card-meta-top">
+                              <span
+                                className="rec-match-inline"
+                                aria-label={`Indeks kecocokan ${pct} persen`}
+                              >
+                                <span
+                                  className={`rec-match-pct${isHighMatch ? ' rec-match-pct--high' : ''}`}
+                                >
+                                  {pct}%
+                                </span>
+                                <span className="rec-match-bar" aria-hidden="true">
+                                  <span
+                                    className={`rec-match-bar-fill${isHighMatch ? ' rec-match-bar-fill--high' : ''}`}
+                                    style={{ width: `${pct}%`, display: 'block' }}
+                                  />
+                                </span>
+                                <span className="rec-match-caption">kecocokan</span>
+                              </span>
+
                               {job ? <JobStatusBadge status={job.status} /> : null}
                               {job ? (
                                 <span className="job-timestamp">
@@ -377,34 +430,12 @@ function RecommendationsInner() {
                             {job ? (
                               <p className="rec-card-company">
                                 {job.company} ·{' '}
-                                <span style={{ fontWeight: 400 }}>
-                                  {job.location || 'Lokasi tidak dicantumkan'}
-                                </span>
+                                <span>{job.location || 'Lokasi tidak dicantumkan'}</span>
                               </p>
                             ) : null}
                           </div>
 
-                          <div className="rec-card-side">
-                            <div
-                              className="rec-score-box"
-                              aria-label={`Indeks kecocokan ${pct} persen`}
-                            >
-                              <div className="rec-score-row">
-                                <span className="rec-score-label">Kecocokan</span>
-                                <span
-                                  className={`rec-score-value${isHighMatch ? ' rec-score-value--high' : ''}`}
-                                >
-                                  {pct}%
-                                </span>
-                              </div>
-                              <div className="rec-score-track" aria-hidden="true">
-                                <div
-                                  className={`rec-score-fill${isHighMatch ? ' rec-score-fill--high' : ''}`}
-                                  style={{ width: `${pct}%` }}
-                                />
-                              </div>
-                            </div>
-
+                          <div className="rec-card-cta">
                             <Link
                               href={`/jobs/${item.job_id}`}
                               className="btn btn-primary btn-sm"
@@ -414,115 +445,143 @@ function RecommendationsInner() {
                           </div>
                         </div>
 
-                        {/* Matched, Missing, Unknown Breakdown */}
-                        <div className="rec-breakdown-grid">
-                          <div className="rec-panel rec-panel--matched">
-                            <div className="rec-panel-head">
-                              <span className="rec-panel-label">
-                                <svg
-                                  width="15"
-                                  height="15"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2.4"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  aria-hidden="true"
-                                >
-                                  <polyline points="20 6 9 17 4 12" />
-                                </svg>
-                                Alasan Cocok
-                              </span>
-                              <span className="rec-panel-count">{item.matched.length}</span>
+                        {/* Editorial 2-Column Breakdown */}
+                        <div className="rec-ledger">
+                          <div className="rec-col">
+                            <div className="rec-col-head">
+                              <span className="rec-col-dot rec-col-dot--matched" aria-hidden="true" />
+                              <span>Cocok dengan profilmu</span>
+                              <span className="rec-col-count">({item.matched.length})</span>
                             </div>
+
                             {item.matched.length > 0 ? (
-                              <div className="rec-chip-list">
+                              <ul className="rec-list">
                                 {item.matched.map((m, i) => (
-                                  <span key={`${m}-${i}`} className="rec-chip rec-chip--matched">
-                                    {m}
-                                  </span>
+                                  <li key={`${m}-${i}`} className="rec-list-item">
+                                    <svg
+                                      className="rec-list-icon rec-list-icon--matched"
+                                      width="15"
+                                      height="15"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2.4"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      aria-hidden="true"
+                                    >
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                    <span>{m}</span>
+                                  </li>
                                 ))}
-                              </div>
+                              </ul>
                             ) : (
-                              <p className="rec-panel-empty">Tidak ada poin kecocokan tercatat.</p>
+                              <p className="rec-empty-note">Belum ada poin kecocokan tercatat.</p>
                             )}
                           </div>
 
-                          <div className="rec-panel rec-panel--missing">
-                            <div className="rec-panel-head">
-                              <span className="rec-panel-label">
-                                <svg
-                                  width="15"
-                                  height="15"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2.2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  aria-hidden="true"
-                                >
-                                  <circle cx="12" cy="12" r="10" />
-                                  <line x1="12" y1="8" x2="12" y2="12" />
-                                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                                </svg>
-                                Perlu Dilengkapi
-                              </span>
-                              <span className="rec-panel-count">{item.missing.length}</span>
+                          <div className="rec-col">
+                            <div className="rec-col-head">
+                              <span className="rec-col-dot rec-col-dot--missing" aria-hidden="true" />
+                              <span>Perlu dilengkapi</span>
+                              <span className="rec-col-count">({item.missing.length})</span>
                             </div>
+
                             {item.missing.length > 0 ? (
-                              <div className="rec-chip-list">
-                                {item.missing.map((ms, i) => (
-                                  <span key={`${ms}-${i}`} className="rec-chip rec-chip--missing">
-                                    {ms}
-                                  </span>
-                                ))}
-                              </div>
+                              <ul className="rec-list">
+                                {item.missing.map((ms, i) => {
+                                  const parsed = parseCommaListLine(ms);
+                                  const expandKey = `${item.job_id}-${i}`;
+                                  const isExpanded = expandedMissingKeys.has(expandKey);
+                                  const maxVisible = 6;
+
+                                  if (parsed) {
+                                    const shown = isExpanded
+                                      ? parsed.items
+                                      : parsed.items.slice(0, maxVisible);
+                                    const remaining = parsed.items.length - maxVisible;
+
+                                    return (
+                                      <li key={`${expandKey}`} className="rec-list-item">
+                                        <svg
+                                          className="rec-list-icon rec-list-icon--missing"
+                                          width="15"
+                                          height="15"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="2.2"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          aria-hidden="true"
+                                        >
+                                          <circle cx="12" cy="12" r="10" />
+                                          <line x1="12" y1="8" x2="12" y2="12" />
+                                          <line x1="12" y1="16" x2="12.01" y2="16" />
+                                        </svg>
+                                        <div className="rec-missing-skills-block">
+                                          <span>{parsed.prefix}:</span>
+                                          <div className="rec-missing-skills-tags">
+                                            {shown.map((skill) => (
+                                              <span key={skill} className="rec-skill-tag">
+                                                {skill}
+                                              </span>
+                                            ))}
+                                            {remaining > 0 ? (
+                                              <button
+                                                type="button"
+                                                className="rec-skill-toggle"
+                                                onClick={() => toggleExpandedMissing(expandKey)}
+                                              >
+                                                {isExpanded
+                                                  ? 'Ringkas'
+                                                  : `+${remaining} skill lainnya`}
+                                              </button>
+                                            ) : null}
+                                          </div>
+                                        </div>
+                                      </li>
+                                    );
+                                  }
+
+                                  return (
+                                    <li key={`${ms}-${i}`} className="rec-list-item">
+                                      <svg
+                                        className="rec-list-icon rec-list-icon--missing"
+                                        width="15"
+                                        height="15"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2.2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        aria-hidden="true"
+                                      >
+                                        <circle cx="12" cy="12" r="10" />
+                                        <line x1="12" y1="8" x2="12" y2="12" />
+                                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                                      </svg>
+                                      <span>{ms}</span>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
                             ) : (
-                              <p className="rec-panel-empty">
+                              <p className="rec-empty-note">
                                 Tidak ada kekurangan persyaratan tercatat.
                               </p>
                             )}
                           </div>
-
-                          <div className="rec-panel rec-panel--unknown">
-                            <div className="rec-panel-head">
-                              <span className="rec-panel-label">
-                                <svg
-                                  width="15"
-                                  height="15"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2.2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  aria-hidden="true"
-                                >
-                                  <circle cx="12" cy="12" r="10" />
-                                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                                  <line x1="12" y1="17" x2="12.01" y2="17" />
-                                </svg>
-                                Belum Terdata
-                              </span>
-                              <span className="rec-panel-count">{item.unknown.length}</span>
-                            </div>
-                            {item.unknown.length > 0 ? (
-                              <div className="rec-chip-list">
-                                {item.unknown.map((unk, i) => (
-                                  <span key={`${unk}-${i}`} className="rec-chip rec-chip--unknown">
-                                    {unk}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="rec-panel-empty">
-                                Seluruh atribut pembanding terdata.
-                              </p>
-                            )}
-                          </div>
                         </div>
+
+                        {item.unknown.length > 0 ? (
+                          <div className="rec-footnote">
+                            <span className="rec-footnote-label">Catatan data lowongan:</span>
+                            <span>{item.unknown.join(' · ')}</span>
+                          </div>
+                        ) : null}
                       </article>
                     );
                   })}
