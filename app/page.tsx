@@ -209,7 +209,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. WHY KERJALOKA */}
+      {/* 3. WHY RAKITKARIER */}
       <section aria-labelledby="heading-why">
         <div className="page-header" style={{ marginBottom: 22 }}>
           <div>
