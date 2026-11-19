@@ -51,3 +51,9 @@ export {
   SiteHeader,
 } from './navigation';
 export { ProfileEditorForm } from './profile-editor';
+export {
+  ScrollProgressBar,
+  ScrollReveal,
+  ScrollStepsProgress,
+  ScrollWordHighlight,
+} from './scroll-motion';

@@ -91,6 +91,11 @@ function LoginFormContent() {
   return (
     <div className="container-auth">
       <div className="ledger-card">
+        <div className="tk-avatar-stack" aria-hidden="true" style={{ marginBottom: 14 }}>
+          <img src="/images/avatar-frontend.jpg" alt="" />
+          <img src="/images/avatar-finance.jpg" alt="" />
+          <img src="/images/avatar-designer.jpg" alt="" />
+        </div>
         <h1 className="page-title" style={{ fontSize: '1.75rem', marginBottom: 8 }}>
           Masuk ke Akunmu
         </h1>
@@ -168,7 +173,7 @@ function LoginFormContent() {
         >
           <span style={{ color: 'var(--ink-secondary)' }}>Belum memiliki akun {SITE_NAME}?</span>
           <Link href="/signup" className="btn btn-outline btn-sm">
-            Daftar Akun Baru →
+            Daftar Akun Baru
           </Link>
         </div>
       </div>

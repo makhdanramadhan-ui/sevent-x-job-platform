@@ -203,7 +203,7 @@ function JobsFeedInner() {
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Link href="/recommendations" className="btn btn-secondary btn-sm">
-            Cek Kecocokan Profil →
+            Cek Kecocokan Profil
           </Link>
           <Link href="/bookmarks" className="btn btn-outline btn-sm">
             Lowongan Tersimpan ({bookmarkedIds.size})
@@ -435,7 +435,7 @@ function JobsFeedInner() {
                           {isSaved ? '★ Tersimpan' : '☆ Simpan'}
                         </Button>
                         <Link href={`/jobs/${job.id}`} className="btn btn-primary btn-sm">
-                          Detail &amp; Sumber →
+                          Detail &amp; Sumber
                         </Link>
                       </div>
                     </div>
@@ -500,7 +500,7 @@ function JobsFeedInner() {
                     disabled={page <= 1}
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                   >
-                    ← Sebelumnya
+                    Sebelumnya
                   </Button>
                   <span className="font-mono" style={{ fontSize: '0.82rem' }}>
                     Halaman <strong>{data.page}</strong> dari <strong>{data.pages}</strong>
@@ -511,7 +511,7 @@ function JobsFeedInner() {
                     disabled={page >= data.pages}
                     onClick={() => setPage((p) => Math.min(data.pages, p + 1))}
                   >
-                    Berikutnya →
+                    Berikutnya
                   </Button>
                 </nav>
               ) : null}

@@ -160,7 +160,7 @@ function RecommendationsInner() {
             Ubah Profil &amp; Preferensi
           </Link>
           <Link href="/jobs" className="btn btn-secondary btn-sm">
-            Cari Semua Lowongan →
+            Cari Semua Lowongan
           </Link>
         </div>
       </div>
@@ -194,7 +194,7 @@ function RecommendationsInner() {
               action={
                 <>
                   <Link href="/onboarding" className="btn btn-primary btn-sm">
-                    Lengkapi Profil Sekarang →
+                    Lengkapi Profil Sekarang
                   </Link>
                   <Link href="/profile" className="btn btn-outline btn-sm">
                     Buka Halaman Profil
@@ -216,7 +216,7 @@ function RecommendationsInner() {
               >
                 <strong style={{ fontSize: '0.95rem' }}>Ringkasan Kualifikasi Profilmu</strong>
                 <Link href="/profile" className="font-mono" style={{ fontSize: '0.78rem' }}>
-                  Perbarui Profil →
+                  Perbarui Profil
                 </Link>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -239,7 +239,7 @@ function RecommendationsInner() {
               action={
                 <>
                   <Link href="/jobs" className="btn btn-primary btn-sm">
-                    Cari Lowongan Sekarang →
+                    Cari Lowongan Sekarang
                   </Link>
                   <Button variant="outline" size="sm" onClick={loadRecommendations}>
                     Muat Ulang
@@ -280,7 +280,7 @@ function RecommendationsInner() {
                   description="Endpoint rekomendasi tidak mengembalikan lowongan yang sesuai dengan profil atau filter yang dipilih saat ini."
                   action={
                     <Link href="/jobs" className="btn btn-primary btn-sm">
-                      Lihat Semua Lowongan di Feed →
+                      Lihat Semua Lowongan di Feed
                     </Link>
                   }
                 />
@@ -348,7 +348,7 @@ function RecommendationsInner() {
                             href={`/jobs/${item.job_id}`}
                             className="btn btn-primary btn-sm"
                           >
-                            Detail &amp; Sumber Asli →
+                            Detail &amp; Sumber Asli
                           </Link>
                         </div>
 

@@ -15,7 +15,7 @@ import type { ProfileInput } from '@/lib/profile';
  */
 export const SITE_NAME = 'RakitKarier';
 export const SITE_MONOGRAM = 'RK';
-export const SITE_TAGLINE = 'Bursa & Pemetaan Kerja';
+export const SITE_TAGLINE = 'Lowongan & Pemetaan Karier';
 
 export type ApiCallError = {
   status: number;

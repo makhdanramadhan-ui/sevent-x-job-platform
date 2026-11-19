@@ -82,7 +82,7 @@ function ProfileInner({ session }: { session: SessionInfo }) {
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Link href="/recommendations" className="btn btn-secondary btn-sm">
-            Lihat Rekomendasi →
+            Lihat Rekomendasi
           </Link>
           <Link href="/cv" className="btn btn-outline btn-sm">
             Buka Studio CV
