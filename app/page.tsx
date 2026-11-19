@@ -356,6 +356,81 @@ export default function HomePage() {
         />
       </section>
 
+      {/* INDONESIAN COMPANIES SHOWCASE (3x2 Grid Left + Copy & CTA Right) */}
+      <ScrollReveal>
+        <section className="tk-companies-section" aria-labelledby="heading-companies">
+          <div className="tk-companies-split">
+            <div className="tk-companies-grid" aria-label="Contoh perusahaan terkemuka di Indonesia">
+              <Link href="/jobs" className="tk-company-tile">
+                <span className="tk-company-wordmark" style={{ color: '#003D79' }}>
+                  mandiri
+                </span>
+                <span className="tk-company-bar" aria-hidden="true">
+                  <span style={{ flex: 1, background: '#FFB700' }} />
+                </span>
+                <span className="tk-company-sector">Perbankan</span>
+              </Link>
+
+              <Link href="/jobs" className="tk-company-tile">
+                <span className="tk-company-wordmark" style={{ color: '#111111', fontSize: '1.1rem' }}>
+                  Telkom <span style={{ color: '#E1251B' }}>Indonesia</span>
+                </span>
+                <span className="tk-company-sector">Telekomunikasi</span>
+              </Link>
+
+              <Link href="/jobs" className="tk-company-tile">
+                <span className="tk-company-wordmark" style={{ color: '#00AA13', fontSize: '1.45rem' }}>
+                  goto
+                </span>
+                <span className="tk-company-sector">Teknologi Digital</span>
+              </Link>
+
+              <Link href="/jobs" className="tk-company-tile">
+                <span className="tk-company-wordmark" style={{ color: '#006CB7', fontSize: '1.08rem', letterSpacing: '0.02em' }}>
+                  PERTAMINA
+                </span>
+                <span className="tk-company-bar" aria-hidden="true">
+                  <span style={{ flex: 1, background: '#006CB7' }} />
+                  <span style={{ flex: 1, background: '#8CC63F' }} />
+                  <span style={{ flex: 1, background: '#ED1C24' }} />
+                </span>
+                <span className="tk-company-sector">Energi &amp; Rekayasa</span>
+              </Link>
+
+              <Link href="/jobs" className="tk-company-tile">
+                <span className="tk-company-wordmark" style={{ color: '#005DAA', fontSize: '1.45rem', letterSpacing: '0.04em' }}>
+                  BCA
+                </span>
+                <span className="tk-company-sector">Jasa Keuangan</span>
+              </Link>
+
+              <Link href="/jobs" className="tk-company-tile">
+                <span className="tk-company-wordmark" style={{ color: '#00338D', fontSize: '1.3rem', letterSpacing: '0.06em' }}>
+                  ASTRA
+                </span>
+                <span className="tk-company-sector">Otomotif &amp; Industri</span>
+              </Link>
+            </div>
+
+            <div className="tk-companies-copy">
+              <h2 id="heading-companies">
+                Temukan pekerjaan yang kamu sukai di berbagai perusahaan Indonesia.
+              </h2>
+              <p>
+                Langkah kariermu berikutnya bisa dimulai dari perusahaan lintas sektor—telusuri
+                lowongan dan buka langsung halaman karier resminya.
+              </p>
+              <Link href="/jobs" className="btn btn-outline btn-lg">
+                Lihat semua lowongan
+              </Link>
+              <span className="tk-companies-footnote">
+                Nama dan merek perusahaan adalah milik masing-masing pemegang hak.
+              </span>
+            </div>
+          </div>
+        </section>
+      </ScrollReveal>
+
       {/* 2. FEATURE BENTO (2x2 clean white cards with 3D render & live UI fragments) */}
       <ScrollReveal>
         <section className="tk-surface-band" aria-labelledby="heading-features">

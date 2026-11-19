@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { apiFetch, SITE_MONOGRAM, SITE_NAME } from './api-client';
+import { apiFetch, SITE_NAME } from './api-client';
 import { Button } from './forms';
 import { ScrollProgressBar } from './scroll-motion';
 
@@ -183,9 +183,6 @@ export function SiteFooter() {
           {/* Column 1: Brand & Description */}
           <div>
             <Link href="/" className="footer-brand-row">
-              <span className="footer-brand-badge" aria-hidden="true">
-                {SITE_MONOGRAM}
-              </span>
               <span className="footer-brand-name">{SITE_NAME}</span>
             </Link>
             <p className="footer-brand-desc">

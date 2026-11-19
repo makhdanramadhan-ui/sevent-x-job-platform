@@ -1474,6 +1474,91 @@ h4 {
   padding-left: 24px;
 }
 
+/* Indonesian Companies Showcase Split (3x2 Logo Grid Left + Copy & CTA Right) */
+.tk-companies-section {
+  padding: 64px 0;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  margin: 24px 0 48px;
+}
+
+.tk-companies-split {
+  display: grid;
+  grid-template-columns: 1.25fr 0.95fr;
+  gap: 48px;
+  align-items: center;
+}
+
+.tk-companies-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.tk-company-tile {
+  background: var(--p-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  min-height: 98px;
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.tk-company-tile:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow: 0 10px 24px rgba(17, 17, 17, 0.06);
+}
+
+.tk-company-wordmark {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.tk-company-sector {
+  font-size: 0.72rem;
+  color: var(--p-muted);
+  font-weight: 500;
+}
+
+.tk-company-bar {
+  display: flex;
+  width: 34px;
+  height: 3px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.tk-companies-copy h2 {
+  font-size: clamp(1.75rem, 2.8vw, 2.35rem);
+  line-height: 1.14;
+  margin: 0 0 14px;
+}
+
+.tk-companies-copy p {
+  margin: 0 0 24px;
+  font-size: 1rem;
+  color: var(--p-muted);
+  line-height: 1.6;
+}
+
+.tk-companies-footnote {
+  display: block;
+  margin-top: 14px;
+  font-size: 0.78rem;
+  color: var(--p-muted);
+}
+
 .tk-steps-rail {
   position: absolute;
   left: 0;
@@ -1800,8 +1885,13 @@ h4 {
 
   .jobs-layout,
   .tk-bento-grid,
-  .tk-hero__top {
+  .tk-hero__top,
+  .tk-companies-split {
     grid-template-columns: 1fr;
+  }
+
+  .tk-companies-split {
+    gap: 28px;
   }
 
   .footer-columns-grid {
@@ -1967,6 +2057,25 @@ h4 {
     grid-template-columns: 1fr;
     gap: 6px;
     padding: 20px 0;
+  }
+
+  .tk-companies-section {
+    padding: 44px 0;
+    margin: 16px 0 32px;
+  }
+
+  .tk-companies-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .tk-company-tile {
+    min-height: 82px;
+    padding: 14px 10px;
+  }
+
+  .tk-companies-copy .btn {
+    width: 100%;
   }
 
   .tk-step-desc,
