@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   type ApiCallError,
   AuthGuard,
@@ -18,25 +18,9 @@ import {
   JobStatusBadge,
   LoadingState,
   NoticeBanner,
-  SITE_NAME,
   WORK_MODE_LABELS,
 } from '@/components/ui';
 import type { BookmarkRecord, JobDetail } from '@/lib/contracts';
-
-function buildPosterDataUri(title: string, company: string, location: string | null): string {
-  const safeTitle = title.slice(0, 44).replace(/[<>&"']/g, '');
-  const safeCompany = company.slice(0, 40).replace(/[<>&"']/g, '');
-  const safeLoc = (location || 'Indonesia').slice(0, 36).replace(/[<>&"']/g, '');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="240" viewBox="0 0 720 240">
-    <rect width="720" height="240" fill="#F4F4F4"/>
-    <rect x="20" y="20" width="680" height="200" rx="12" fill="#FFFFFF" stroke="#E2E2E2" stroke-width="1.5"/>
-    <text x="44" y="64" font-family="sans-serif" font-size="13" font-weight="500" fill="#1A4BE0">${SITE_NAME} · Ringkasan Lowongan</text>
-    <text x="44" y="114" font-family="sans-serif" font-size="24" font-weight="500" fill="#111111">${safeTitle}</text>
-    <text x="44" y="150" font-family="sans-serif" font-size="16" font-weight="500" fill="#454545">${safeCompany}</text>
-    <text x="44" y="186" font-family="sans-serif" font-size="13" fill="#6B6B6B">Lokasi: ${safeLoc}</text>
-  </svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-}
 
 function JobDetailInner() {
   const params = useParams<{ id: string }>();
@@ -47,7 +31,6 @@ function JobDetailInner() {
   const [error, setError] = useState<ApiCallError | null>(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [togglingBookmark, setTogglingBookmark] = useState(false);
-  const [showPoster, setShowPoster] = useState(true);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const loadDetail = useCallback(async () => {
@@ -76,11 +59,6 @@ function JobDetailInner() {
   useEffect(() => {
     loadDetail();
   }, [loadDetail]);
-
-  const posterSrc = useMemo(() => {
-    if (!job) return '';
-    return buildPosterDataUri(job.title, job.company, job.location);
-  }, [job]);
 
   async function handleToggleBookmark() {
     if (!job) return;
@@ -251,59 +229,6 @@ function JobDetailInner() {
             <strong>{formatDateTimeId(job.first_seen_at)}</strong>
           </div>
         </div>
-      </section>
-
-      {/* Optional Visual Poster Card with Accessible Alt Text */}
-      <section className="surface-card" aria-labelledby="heading-optional-poster">
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 10,
-            marginBottom: showPoster ? 12 : 0,
-          }}
-        >
-          <div>
-            <h2 id="heading-optional-poster" style={{ fontSize: '0.95rem', margin: 0 }}>
-              Kartu Visual / Poster Lowongan (Opsional)
-            </h2>
-            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--ink-muted)' }}>
-              Elemen visual bersifat opsional; seluruh informasi utama tetap tersedia dalam bentuk
-              teks terstruktur di halaman ini.
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowPoster((prev) => !prev)}
-            aria-expanded={showPoster}
-          >
-            {showPoster ? 'Sembunyikan Visual' : 'Tampilkan Visual'}
-          </Button>
-        </div>
-
-        {showPoster ? (
-          <figure style={{ margin: 0 }}>
-            <img
-              src={posterSrc}
-              alt={`Kartu informasi lowongan ${job.title} di ${job.company}, lokasi ${job.location || 'Indonesia'}, status ${job.status}.`}
-              style={{
-                width: '100%',
-                maxWidth: 720,
-                height: 'auto',
-                display: 'block',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            />
-            <figcaption className="form-hint" style={{ marginTop: 6 }}>
-              Teks alternatif gambar tersedia untuk pembaca layar. Apabila poster eksternal tidak
-              disertakan oleh sumber, sistem menyajikan ringkasan kartu tipografis.
-            </figcaption>
-          </figure>
-        ) : null}
       </section>
 
       {/* Skills & Description */}
