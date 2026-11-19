@@ -715,6 +715,9 @@ h4 {
   background: var(--status-neutral-bg);
   color: var(--status-neutral);
   line-height: 1.25;
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 100%;
 }
 
 .badge-open,
@@ -2065,6 +2068,16 @@ h4 {
   flex-wrap: wrap;
 }
 
+.job-card-header > :first-child {
+  flex: 1 1 280px;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.job-card-header > :last-child {
+  flex-shrink: 0;
+}
+
 .job-meta-row {
   display: flex;
   flex-wrap: wrap;
@@ -3194,6 +3207,46 @@ h4 {
 
   .app-main {
     padding: 24px 0 56px;
+  }
+
+  .ledger-card,
+  .surface-card,
+  .surface-card-interactive,
+  .job-feed-card,
+  .jobs-saved-card {
+    min-width: 0;
+    overflow-wrap: break-word;
+  }
+
+  .job-card-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .job-card-header > :first-child {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .job-card-header > :last-child {
+    width: 100%;
+  }
+
+  .btn {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.25;
+  }
+
+  .page-banner__subtitle {
+    overflow-wrap: anywhere;
+  }
+
+  .page-banner__actions {
+    width: 100%;
   }
 
   .form-grid-2,
