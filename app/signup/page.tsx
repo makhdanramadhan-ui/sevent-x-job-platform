@@ -6,19 +6,15 @@ import { type FormEvent, useState } from 'react';
 import {
   type ApiCallError,
   apiFetch,
+  AuthDivider,
   Button,
   ErrorState,
   FormField,
-  NoticeBanner,
+  GoogleAuthButton,
   notifyAuthChanged,
   SITE_NAME,
   TextInput,
 } from '@/components/ui';
-
-type SignupResponse = {
-  user: { id: string; email: string };
-  requires_email_confirmation: boolean;
-};
 
 export default function SignupPage() {
   const router = useRouter();
@@ -32,13 +28,11 @@ export default function SignupPage() {
   }>({});
   const [apiError, setApiError] = useState<ApiCallError | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [confirmationNeeded, setConfirmationNeeded] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setFieldErrors({});
     setApiError(null);
-    setConfirmationNeeded(null);
 
     const trimmedEmail = email.trim();
     const trimmedName = fullName.trim();
@@ -68,7 +62,7 @@ export default function SignupPage() {
     }
 
     setSubmitting(true);
-    const res = await apiFetch<SignupResponse>('/api/auth/signup', {
+    const res = await apiFetch<{ user: { id: string; email: string } }>('/api/auth/signup', {
       method: 'POST',
       body,
     });
@@ -76,11 +70,6 @@ export default function SignupPage() {
 
     if (!res.ok) {
       setApiError(res.error);
-      return;
-    }
-
-    if (res.data.requires_email_confirmation) {
-      setConfirmationNeeded(res.data.user.email);
       return;
     }
 
@@ -98,18 +87,6 @@ export default function SignupPage() {
         <p style={{ margin: '0 0 20px', fontSize: '0.9rem', color: 'var(--ink-secondary)' }}>
           Buat akun untuk mulai mencari lowongan, melengkapi profil, dan menyusun CV.
         </p>
-
-        {confirmationNeeded ? (
-          <NoticeBanner variant="success" title="Pendaftaran Berhasil — Konfirmasi Email Diperlukan">
-            <p style={{ margin: '0 0 10px' }}>
-              Akun untuk <strong>{confirmationNeeded}</strong> telah dibuat. Silakan periksa kotak
-              masuk email Anda untuk menyelesaikan verifikasi sebelum masuk.
-            </p>
-            <Link href="/login" className="btn btn-primary btn-sm">
-              Lanjut ke Halaman Masuk →
-            </Link>
-          </NoticeBanner>
-        ) : null}
 
         {apiError ? <ErrorState error={apiError} title="Pendaftaran Gagal" /> : null}
 
@@ -173,6 +150,9 @@ export default function SignupPage() {
             Buat Akun &amp; Lanjut Onboarding
           </Button>
         </form>
+
+        <AuthDivider />
+        <GoogleAuthButton label="Daftar dengan Google" next="/onboarding" />
 
         <div
           style={{

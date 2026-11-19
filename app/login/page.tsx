@@ -6,9 +6,11 @@ import { type FormEvent, Suspense, useState } from 'react';
 import {
   type ApiCallError,
   apiFetch,
+  AuthDivider,
   Button,
   ErrorState,
   FormField,
+  GoogleAuthButton,
   LoadingState,
   NoticeBanner,
   notifyAuthChanged,
@@ -17,12 +19,19 @@ import {
   TextInput,
 } from '@/components/ui';
 
+const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+  oauth: 'Proses masuk dengan Google tidak selesai. Silakan coba lagi.',
+  google_unavailable:
+    'Masuk dengan Google belum tersedia saat ini. Silakan masuk dengan email dan password.',
+};
+
 function LoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextParam = searchParams.get('next');
   const safeNext =
     nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : '/jobs';
+  const oauthMessage = OAUTH_ERROR_MESSAGES[searchParams.get('error') ?? ''] ?? null;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -90,6 +99,12 @@ function LoginFormContent() {
           dan mengelola CV.
         </p>
 
+        {oauthMessage ? (
+          <NoticeBanner variant="error" title="Belum Berhasil Masuk dengan Google">
+            {oauthMessage}
+          </NoticeBanner>
+        ) : null}
+
         {apiError ? <ErrorState error={apiError} title="Belum Berhasil Masuk" /> : null}
 
         <form onSubmit={handleSubmit} className="form-stack" noValidate>
@@ -134,6 +149,9 @@ function LoginFormContent() {
             Masuk Sekarang
           </Button>
         </form>
+
+        <AuthDivider />
+        <GoogleAuthButton label="Masuk dengan Google" next={safeNext} />
 
         <div
           style={{

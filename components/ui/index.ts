@@ -17,6 +17,7 @@ export {
 } from './api-client';
 export { AuthGuard } from './auth-guard';
 export { EmptyState, ErrorState, LoadingState, NoticeBanner } from './feedback';
+export { AuthDivider, GoogleAuthButton } from './google-button';
 export {
   EmptyArchiveIllustration,
   HeroCareerIllustration,

@@ -1,17 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { apiFetch } from './api-client';
 import { LoadingState, NoticeBanner } from './feedback';
 import { Button, FormField, TextInput } from './forms';
+import { AuthDivider, GoogleAuthButton } from './google-button';
 import { notifyAuthChanged, type SessionInfo } from './navigation';
-
-type SignupResponse = {
-  user: { id: string; email: string };
-  requires_email_confirmation: boolean;
-};
 
 export function AuthGuard({
   title = 'Masuk untuk Melanjutkan',
@@ -21,6 +17,7 @@ export function AuthGuard({
   children: (session: SessionInfo) => ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -30,7 +27,6 @@ export function AuthGuard({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
-  const [confirmationMsg, setConfirmationMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const verify = useCallback(async () => {
@@ -51,7 +47,6 @@ export function AuthGuard({
   async function handleModalSubmit(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
-    setConfirmationMsg(null);
 
     const trimmedEmail = email.trim();
     const trimmedName = fullName.trim();
@@ -101,7 +96,7 @@ export function AuthGuard({
       body.full_name = trimmedName;
     }
 
-    const res = await apiFetch<SignupResponse>('/api/auth/signup', {
+    const res = await apiFetch<{ user: { id: string; email: string } }>('/api/auth/signup', {
       method: 'POST',
       body,
     });
@@ -109,15 +104,6 @@ export function AuthGuard({
     if (!res.ok) {
       setSubmitting(false);
       setFormError(res.error.message);
-      return;
-    }
-
-    if (res.data.requires_email_confirmation) {
-      setSubmitting(false);
-      setConfirmationMsg(
-        `Akun ${res.data.user.email} berhasil dibuat. Silakan cek kotak masuk email kamu untuk verifikasi sebelum masuk.`,
-      );
-      setActiveTab('login');
       return;
     }
 
@@ -221,16 +207,6 @@ export function AuthGuard({
               </button>
             </div>
 
-            {confirmationMsg ? (
-              <NoticeBanner
-                variant="success"
-                title="Cek Email Kamu"
-                onDismiss={() => setConfirmationMsg(null)}
-              >
-                {confirmationMsg}
-              </NoticeBanner>
-            ) : null}
-
             {formError ? (
               <NoticeBanner
                 variant="error"
@@ -289,6 +265,12 @@ export function AuthGuard({
                 {activeTab === 'login' ? 'Masuk Sekarang' : 'Daftar & Lanjutkan'}
               </Button>
             </form>
+
+            <AuthDivider />
+            <GoogleAuthButton
+              label={activeTab === 'login' ? 'Masuk dengan Google' : 'Daftar dengan Google'}
+              next={pathname}
+            />
 
             <div
               style={{
