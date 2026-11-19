@@ -164,6 +164,18 @@ async function main(): Promise<void> {
     'unauthorized',
   );
   await expectError('GET /api/cv detail anonim', call('GET', `/api/cv/${id}`), 401, 'unauthorized');
+  await expectError(
+    'POST /api/profile/avatar anonim',
+    call('POST', '/api/profile/avatar'),
+    401,
+    'unauthorized',
+  );
+  await expectError(
+    'DELETE /api/profile/avatar anonim',
+    call('DELETE', '/api/profile/avatar'),
+    401,
+    'unauthorized',
+  );
 
   const bearerStatus = hasSupabase ? 401 : 503;
   const bearerCode = hasSupabase ? 'unauthorized' : 'auth_not_configured';
