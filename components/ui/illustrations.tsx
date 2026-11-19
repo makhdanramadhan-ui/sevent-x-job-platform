@@ -22,10 +22,9 @@ export function HeroCareerIllustration() {
       <svg
         viewBox="0 0 680 340"
         width="100%"
-        height="auto"
         role="img"
         aria-labelledby="hero-illus-title hero-illus-desc"
-        style={{ display: 'block', borderRadius: '4px', background: '#FDFCF9' }}
+        style={{ display: 'block', height: 'auto', borderRadius: '4px', background: '#FDFCF9' }}
       >
         <title id="hero-illus-title">
           Ilustrasi Ekosistem Pencarian Kerja dan Pemetaan Profil RakitKarier
@@ -300,7 +299,7 @@ export function PillarIllustration({ variant }: { variant: 'feed' | 'match' | 'c
           marginBottom: '14px',
         }}
       >
-        <svg viewBox="0 0 320 120" width="100%" height="auto" style={{ display: 'block' }}>
+        <svg viewBox="0 0 320 120" width="100%" style={{ display: 'block', height: 'auto' }}>
           <rect width="320" height="120" rx="4" fill="#FDFCF9" />
           {/* Search Bar Illustration */}
           <rect x="14" y="14" width="210" height="26" rx="4" fill="#ECE8DE" stroke="#171715" strokeWidth="1.5" />
@@ -339,7 +338,7 @@ export function PillarIllustration({ variant }: { variant: 'feed' | 'match' | 'c
           marginBottom: '14px',
         }}
       >
-        <svg viewBox="0 0 320 120" width="100%" height="auto" style={{ display: 'block' }}>
+        <svg viewBox="0 0 320 120" width="100%" style={{ display: 'block', height: 'auto' }}>
           <rect width="320" height="120" rx="4" fill="#FDFCF9" />
           {/* Venn / Comparison Circles */}
           <circle cx="115" cy="60" r="42" fill="#FAEAE5" stroke="#171715" strokeWidth="1.5" />
@@ -380,7 +379,7 @@ export function PillarIllustration({ variant }: { variant: 'feed' | 'match' | 'c
         marginBottom: '14px',
       }}
     >
-      <svg viewBox="0 0 320 120" width="100%" height="auto" style={{ display: 'block' }}>
+      <svg viewBox="0 0 320 120" width="100%" style={{ display: 'block', height: 'auto' }}>
         <rect width="320" height="120" rx="4" fill="#FDFCF9" />
         {/* Old CV Document */}
         <rect x="28" y="18" width="84" height="84" rx="4" fill="#ECE8DE" stroke="#171715" strokeWidth="1.5" />

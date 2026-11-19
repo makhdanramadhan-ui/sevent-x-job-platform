@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch, SITE_NAME } from './api-client';
 import { Button } from './forms';
 import { ScrollProgressBar } from './scroll-motion';
 
 export type SessionInfo = {
-  user: { id: string; email: string | null };
+  user: { id: string; email: string | null; name: string | null; avatar_url: string | null };
   auth_mode: 'cookie' | 'bearer';
   has_profile: boolean;
 };
@@ -27,6 +27,114 @@ const NAV_ITEMS = [
   { href: '/profile', label: 'Profil', exact: false },
   { href: '/cv', label: 'Studio CV', exact: false },
 ] as const;
+
+function getInitials(label: string): string {
+  const base = label.includes('@') ? label.split('@')[0] : label;
+  const parts = base.split(/[\s._-]+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  const letters = parts.length === 1 ? parts[0].slice(0, 2) : parts[0][0] + parts[1][0];
+  return letters.toUpperCase();
+}
+
+type AvatarMenuProps = {
+  user: SessionInfo['user'];
+  loggingOut: boolean;
+  onNavigate: () => void;
+  onLogout: () => void;
+};
+
+function AvatarMenu({ user, loggingOut, onNavigate, onLogout }: AvatarMenuProps) {
+  const [open, setOpen] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const label = user.name ?? user.email ?? 'Akun Aktif';
+  const showImage = Boolean(user.avatar_url) && !imageFailed;
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [user.avatar_url]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        buttonRef.current?.focus();
+      }
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('touchstart', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('touchstart', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
+  function handleNavigate() {
+    setOpen(false);
+    onNavigate();
+  }
+
+  return (
+    <div className="avatar-menu" ref={rootRef}>
+      <button
+        ref={buttonRef}
+        type="button"
+        className="avatar-button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Menu akun"
+        title={label}
+        onClick={() => setOpen((prev) => !prev)}
+      >
+        {showImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={user.avatar_url ?? undefined}
+            alt={label}
+            className="avatar-image"
+            referrerPolicy="no-referrer"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <span className="avatar-initials" aria-hidden="true">
+            {getInitials(label)}
+          </span>
+        )}
+      </button>
+      {open ? (
+        <div className="avatar-dropdown" role="menu" aria-label="Menu akun">
+          <div className="avatar-dropdown-header">
+            {user.name ? <span className="avatar-dropdown-name">{user.name}</span> : null}
+            <span className="avatar-dropdown-email">{user.email ?? 'Akun Aktif'}</span>
+          </div>
+          <Link href="/profile" role="menuitem" className="avatar-dropdown-item" onClick={handleNavigate}>
+            Profil
+          </Link>
+          <Link href="/cv" role="menuitem" className="avatar-dropdown-item" onClick={handleNavigate}>
+            Studio CV
+          </Link>
+          <div className="avatar-dropdown-divider" role="separator" />
+          <button
+            type="button"
+            role="menuitem"
+            className="avatar-dropdown-item avatar-dropdown-logout"
+            disabled={loggingOut}
+            onClick={onLogout}
+          >
+            {loggingOut ? 'Keluar...' : 'Keluar'}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -122,28 +230,21 @@ export function SiteHeader() {
                 <span style={{ fontSize: '0.875rem', color: 'var(--p-muted)' }}>Memuat...</span>
               ) : session ? (
                 <>
-                  <div className="nav-user-meta">
-                    <span className="nav-user-pill" title={session.user.email ?? session.user.id}>
-                      {session.user.email ?? 'Akun Aktif'}
-                    </span>
-                    {!session.has_profile ? (
-                      <Link
-                        href="/onboarding"
-                        className="nav-onboarding-link"
-                        onClick={() => setMenuOpen(false)}
-                      >
-                        Lengkapi profil
-                      </Link>
-                    ) : null}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    loading={loggingOut}
-                    onClick={handleLogout}
-                  >
-                    Keluar
-                  </Button>
+                  <AvatarMenu
+                    user={session.user}
+                    loggingOut={loggingOut}
+                    onNavigate={() => setMenuOpen(false)}
+                    onLogout={handleLogout}
+                  />
+                  {!session.has_profile ? (
+                    <Link
+                      href="/onboarding"
+                      className="nav-onboarding-link"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Lengkapi profil
+                    </Link>
+                  ) : null}
                 </>
               ) : (
                 <>
