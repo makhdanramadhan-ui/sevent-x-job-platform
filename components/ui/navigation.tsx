@@ -195,17 +195,30 @@ export function SiteHeader() {
               <span className="brand-title">{SITE_NAME}</span>
             </Link>
 
-            <button
-              type="button"
-              className={`nav-menu-toggle ${menuOpen ? 'nav-menu-toggle-active' : ''}`}
-              aria-expanded={menuOpen}
-              aria-controls="primary-navigation"
-              aria-label={menuOpen ? 'Tutup menu navigasi' : 'Buka menu navigasi'}
-              onClick={() => setMenuOpen((prev) => !prev)}
-            >
-              <span aria-hidden="true">{menuOpen ? '✕' : '☰'}</span>
-              <span>{menuOpen ? 'Tutup' : 'Menu'}</span>
-            </button>
+            <div className="site-header-mobile-actions">
+              {session ? (
+                <div className="nav-mobile-avatar">
+                  <AvatarMenu
+                    user={session.user}
+                    loggingOut={loggingOut}
+                    onNavigate={() => setMenuOpen(false)}
+                    onLogout={handleLogout}
+                  />
+                </div>
+              ) : null}
+
+              <button
+                type="button"
+                className={`nav-menu-toggle ${menuOpen ? 'nav-menu-toggle-active' : ''}`}
+                aria-expanded={menuOpen}
+                aria-controls="primary-navigation"
+                aria-label={menuOpen ? 'Tutup menu navigasi' : 'Buka menu navigasi'}
+                onClick={() => setMenuOpen((prev) => !prev)}
+              >
+                <span aria-hidden="true">{menuOpen ? '✕' : '☰'}</span>
+                <span>{menuOpen ? 'Tutup' : 'Menu'}</span>
+              </button>
+            </div>
           </div>
 
           <div
@@ -231,17 +244,27 @@ export function SiteHeader() {
               })}
             </nav>
 
-            <div className={`nav-auth-area ${session ? 'nav-auth-area-user' : 'nav-auth-area-guest'}`}>
+            <div
+              className={`nav-auth-area ${
+                session
+                  ? session.has_profile
+                    ? 'nav-auth-area-user nav-auth-area-user-only'
+                    : 'nav-auth-area-user'
+                  : 'nav-auth-area-guest'
+              }`}
+            >
               {checking ? (
                 <span style={{ fontSize: '0.875rem', color: 'var(--p-muted)' }}>Memuat...</span>
               ) : session ? (
                 <>
-                  <AvatarMenu
-                    user={session.user}
-                    loggingOut={loggingOut}
-                    onNavigate={() => setMenuOpen(false)}
-                    onLogout={handleLogout}
-                  />
+                  <div className="nav-desktop-avatar">
+                    <AvatarMenu
+                      user={session.user}
+                      loggingOut={loggingOut}
+                      onNavigate={() => setMenuOpen(false)}
+                      onLogout={handleLogout}
+                    />
+                  </div>
                   {!session.has_profile ? (
                     <Link
                       href="/onboarding"

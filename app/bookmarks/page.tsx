@@ -72,7 +72,17 @@ function BookmarksInner() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <PageBanner
         kicker="Daftar Pilihan"
-        title={`Lowongan Tersimpan (${items.length})`}
+        title={
+          <span className="page-banner__title-row">
+            <span>Lowongan Tersimpan</span>
+            <span
+              className="page-banner__count"
+              aria-label={`${items.length} lowongan tersimpan`}
+            >
+              {items.length} tersimpan
+            </span>
+          </span>
+        }
         subtitle="Daftar lowongan yang kamu simpan untuk ditinjau kembali sebelum melamar di situs resmi perusahaan."
         tone="sage"
         imageSrc="/images/banner-bookmarks.jpg"
