@@ -25,10 +25,20 @@ function firstForwardedIp(value: string | null): string | null {
 }
 
 export function clientIp(req: NextRequest): string {
+  const vercelForwardedFor = firstForwardedIp(req.headers.get('x-vercel-forwarded-for'));
+  if (vercelForwardedFor) return vercelForwardedFor;
+
+  const vercelIp = req.headers.get('x-vercel-ip')?.trim();
+  if (vercelIp) return vercelIp.slice(0, 200);
+
+  if (process.env.VERCEL) return 'unknown';
+
   const realIp = req.headers.get('x-real-ip')?.trim();
   if (realIp) return realIp.slice(0, 200);
+
   const forwarded = firstForwardedIp(req.headers.get('x-forwarded-for'));
   if (forwarded) return forwarded;
+
   return 'unknown';
 }
 
