@@ -60,6 +60,12 @@ export function ProfileEditorForm({
   const [apiError, setApiError] = useState<ApiCallError | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [cvExtraOpen, setCvExtraOpen] = useState(
+    () =>
+      draft.experiences.length > 0 ||
+      draft.organizations.length > 0 ||
+      draft.achievements.length > 0,
+  );
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -405,171 +411,9 @@ export function ProfileEditorForm({
         )}
       </section>
 
-      {/* 4. Pengalaman Kerja */}
-      <section className="ledger-card" aria-labelledby="section-experiences">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
-          <div>
-            <h2 id="section-experiences" className="font-editorial" style={{ fontSize: '1.3rem', margin: 0 }}>
-              Pengalaman Kerja &amp; Magang
-            </h2>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={draft.experiences.length >= 20}
-            onClick={() =>
-              setDraft({
-                ...draft,
-                experiences: [
-                  ...draft.experiences,
-                  {
-                    company: '',
-                    title: '',
-                    location: null,
-                    start_date: null,
-                    end_date: null,
-                    current: false,
-                    description: null,
-                  },
-                ],
-              })
-            }
-          >
-            + Tambah Pengalaman
-          </Button>
-        </div>
-
-        {draft.experiences.length === 0 ? (
-          <p className="form-hint">Belum ada pengalaman kerja atau magang ditambahkan.</p>
-        ) : (
-          <div className="form-stack">
-            {draft.experiences.map((exp, idx) => (
-              <div key={idx} className="surface-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <strong className="font-mono" style={{ fontSize: '0.8rem' }}>
-                    PENGALAMAN #{idx + 1}
-                  </strong>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      setDraft({
-                        ...draft,
-                        experiences: draft.experiences.filter((_, i) => i !== idx),
-                      })
-                    }
-                  >
-                    Hapus
-                  </Button>
-                </div>
-                <div className="form-grid-3">
-                  <FormField id={`exp-title-${idx}`} label="Posisi / Jabatan" required>
-                    <TextInput
-                      id={`exp-title-${idx}`}
-                      maxLength={200}
-                      placeholder="Contoh: Backend Developer Intern"
-                      value={exp.title}
-                      onChange={(e) => {
-                        const next = [...draft.experiences];
-                        next[idx] = { ...exp, title: e.target.value };
-                        setDraft({ ...draft, experiences: next });
-                      }}
-                    />
-                  </FormField>
-                  <FormField id={`exp-company-${idx}`} label="Perusahaan / Instansi" required>
-                    <TextInput
-                      id={`exp-company-${idx}`}
-                      maxLength={200}
-                      placeholder="Contoh: PT Nusantara Digital"
-                      value={exp.company}
-                      onChange={(e) => {
-                        const next = [...draft.experiences];
-                        next[idx] = { ...exp, company: e.target.value };
-                        setDraft({ ...draft, experiences: next });
-                      }}
-                    />
-                  </FormField>
-                  <FormField id={`exp-loc-${idx}`} label="Lokasi">
-                    <TextInput
-                      id={`exp-loc-${idx}`}
-                      maxLength={120}
-                      placeholder="Contoh: Jakarta"
-                      value={exp.location ?? ''}
-                      onChange={(e) => {
-                        const next = [...draft.experiences];
-                        next[idx] = { ...exp, location: e.target.value };
-                        setDraft({ ...draft, experiences: next });
-                      }}
-                    />
-                  </FormField>
-                </div>
-                <div className="form-grid-2" style={{ marginTop: 12 }}>
-                  <FormField id={`exp-start-${idx}`} label="Mulai (YYYY-MM)">
-                    <TextInput
-                      id={`exp-start-${idx}`}
-                      type="month"
-                      value={exp.start_date?.slice(0, 7) ?? ''}
-                      onChange={(e) => {
-                        const next = [...draft.experiences];
-                        next[idx] = { ...exp, start_date: e.target.value || null };
-                        setDraft({ ...draft, experiences: next });
-                      }}
-                    />
-                  </FormField>
-                  <FormField id={`exp-end-${idx}`} label="Selesai (YYYY-MM)">
-                    <TextInput
-                      id={`exp-end-${idx}`}
-                      type="month"
-                      disabled={exp.current}
-                      value={exp.current ? '' : exp.end_date?.slice(0, 7) ?? ''}
-                      onChange={(e) => {
-                        const next = [...draft.experiences];
-                        next[idx] = { ...exp, end_date: e.target.value || null };
-                        setDraft({ ...draft, experiences: next });
-                      }}
-                    />
-                  </FormField>
-                </div>
-                <label className="checkbox-pill" style={{ marginTop: 10 }}>
-                  <input
-                    type="checkbox"
-                    checked={exp.current}
-                    onChange={(e) => {
-                      const next = [...draft.experiences];
-                      next[idx] = {
-                        ...exp,
-                        current: e.target.checked,
-                        end_date: e.target.checked ? null : exp.end_date,
-                      };
-                      setDraft({ ...draft, experiences: next });
-                    }}
-                  />
-                  <span>Masih bekerja di sini saat ini</span>
-                </label>
-                <div style={{ marginTop: 12 }}>
-                  <FormField id={`exp-desc-${idx}`} label="Deskripsi Tanggung Jawab &amp; Dampak">
-                    <TextArea
-                      id={`exp-desc-${idx}`}
-                      maxLength={4000}
-                      placeholder="Ringkasan kontribusi dan pencapaian selama bekerja..."
-                      value={exp.description ?? ''}
-                      onChange={(e) => {
-                        const next = [...draft.experiences];
-                        next[idx] = { ...exp, description: e.target.value };
-                        setDraft({ ...draft, experiences: next });
-                      }}
-                    />
-                  </FormField>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
       {mode === 'full' ? (
         <>
-          {/* 5. Proyek, Tautan Portofolio, Organisasi & Pencapaian */}
+          {/* 4. Tautan Portofolio & Proyek */}
           <section className="ledger-card" aria-labelledby="section-links-projects">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
               <div>
@@ -739,67 +583,222 @@ export function ProfileEditorForm({
             )}
           </section>
 
-          {/* 6. Organisasi & Pencapaian */}
-          <section className="ledger-card" aria-labelledby="section-org-ach">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
-              <div>
-                <h2 id="section-org-ach" className="font-editorial" style={{ fontSize: '1.3rem', margin: 0 }}>
-                  Organisasi &amp; Pencapaian
-                </h2>
+        </>
+      ) : null}
+
+      {/* 5. Tambahan untuk CV (opsional) */}
+      <section className="ledger-card" aria-labelledby="section-cv-extra">
+        <button
+          type="button"
+          className="cv-extra-toggle"
+          aria-expanded={cvExtraOpen}
+          aria-controls="cv-extra-content"
+          onClick={() => setCvExtraOpen((open) => !open)}
+        >
+          <span className="cv-extra-toggle__copy">
+            <span id="section-cv-extra" className="font-editorial cv-extra-toggle__title">
+              Tambahan untuk CV (opsional)
+            </span>
+            <span className="cv-extra-toggle__hint">
+              Pengalaman kerja, organisasi, dan pencapaian — tidak wajib diisi.
+            </span>
+          </span>
+          <span className="cv-extra-toggle__icon" aria-hidden="true">
+            {cvExtraOpen ? '−' : '+'}
+          </span>
+        </button>
+
+        <div id="cv-extra-content" className="form-stack cv-extra-content" hidden={!cvExtraOpen}>
+          <div className="cv-extra-group">
+            <div className="cv-extra-group__header">
+              <h3 className="cv-extra-group__title">Pengalaman Kerja &amp; Magang</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={draft.experiences.length >= 20}
+                onClick={() =>
+                  setDraft({
+                    ...draft,
+                    experiences: [
+                      ...draft.experiences,
+                      {
+                        company: '',
+                        title: '',
+                        location: null,
+                        start_date: null,
+                        end_date: null,
+                        current: false,
+                        description: null,
+                      },
+                    ],
+                  })
+                }
+              >
+                + Tambah Pengalaman
+              </Button>
+            </div>
+
+            {draft.experiences.length === 0 ? (
+              <p className="form-hint">Belum ada pengalaman kerja atau magang ditambahkan.</p>
+            ) : (
+              <div className="form-stack">
+                {draft.experiences.map((exp, idx) => (
+                  <div key={idx} className="surface-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <strong className="font-mono" style={{ fontSize: '0.8rem' }}>
+                        PENGALAMAN #{idx + 1}
+                      </strong>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setDraft({
+                            ...draft,
+                            experiences: draft.experiences.filter((_, i) => i !== idx),
+                          })
+                        }
+                      >
+                        Hapus
+                      </Button>
+                    </div>
+                    <div className="form-grid-3">
+                      <FormField id={`exp-title-${idx}`} label="Posisi / Jabatan">
+                        <TextInput
+                          id={`exp-title-${idx}`}
+                          maxLength={200}
+                          placeholder="Contoh: Backend Developer Intern"
+                          value={exp.title}
+                          onChange={(e) => {
+                            const next = [...draft.experiences];
+                            next[idx] = { ...exp, title: e.target.value };
+                            setDraft({ ...draft, experiences: next });
+                          }}
+                        />
+                      </FormField>
+                      <FormField id={`exp-company-${idx}`} label="Perusahaan / Instansi">
+                        <TextInput
+                          id={`exp-company-${idx}`}
+                          maxLength={200}
+                          placeholder="Contoh: PT Nusantara Digital"
+                          value={exp.company}
+                          onChange={(e) => {
+                            const next = [...draft.experiences];
+                            next[idx] = { ...exp, company: e.target.value };
+                            setDraft({ ...draft, experiences: next });
+                          }}
+                        />
+                      </FormField>
+                      <FormField id={`exp-loc-${idx}`} label="Lokasi">
+                        <TextInput
+                          id={`exp-loc-${idx}`}
+                          maxLength={120}
+                          placeholder="Contoh: Jakarta"
+                          value={exp.location ?? ''}
+                          onChange={(e) => {
+                            const next = [...draft.experiences];
+                            next[idx] = { ...exp, location: e.target.value };
+                            setDraft({ ...draft, experiences: next });
+                          }}
+                        />
+                      </FormField>
+                    </div>
+                    <div className="form-grid-2" style={{ marginTop: 12 }}>
+                      <FormField id={`exp-start-${idx}`} label="Mulai (YYYY-MM)">
+                        <TextInput
+                          id={`exp-start-${idx}`}
+                          type="month"
+                          value={exp.start_date?.slice(0, 7) ?? ''}
+                          onChange={(e) => {
+                            const next = [...draft.experiences];
+                            next[idx] = { ...exp, start_date: e.target.value || null };
+                            setDraft({ ...draft, experiences: next });
+                          }}
+                        />
+                      </FormField>
+                      <FormField id={`exp-end-${idx}`} label="Selesai (YYYY-MM)">
+                        <TextInput
+                          id={`exp-end-${idx}`}
+                          type="month"
+                          disabled={exp.current}
+                          value={exp.current ? '' : exp.end_date?.slice(0, 7) ?? ''}
+                          onChange={(e) => {
+                            const next = [...draft.experiences];
+                            next[idx] = { ...exp, end_date: e.target.value || null };
+                            setDraft({ ...draft, experiences: next });
+                          }}
+                        />
+                      </FormField>
+                    </div>
+                    <label className="checkbox-pill" style={{ marginTop: 10 }}>
+                      <input
+                        type="checkbox"
+                        checked={exp.current}
+                        onChange={(e) => {
+                          const next = [...draft.experiences];
+                          next[idx] = {
+                            ...exp,
+                            current: e.target.checked,
+                            end_date: e.target.checked ? null : exp.end_date,
+                          };
+                          setDraft({ ...draft, experiences: next });
+                        }}
+                      />
+                      <span>Masih bekerja di sini saat ini</span>
+                    </label>
+                    <div style={{ marginTop: 12 }}>
+                      <FormField id={`exp-desc-${idx}`} label="Deskripsi Tanggung Jawab &amp; Dampak">
+                        <TextArea
+                          id={`exp-desc-${idx}`}
+                          maxLength={4000}
+                          placeholder="Ringkasan kontribusi dan pencapaian selama bekerja..."
+                          value={exp.description ?? ''}
+                          onChange={(e) => {
+                            const next = [...draft.experiences];
+                            next[idx] = { ...exp, description: e.target.value };
+                            setDraft({ ...draft, experiences: next });
+                          }}
+                        />
+                      </FormField>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={draft.organizations.length >= 20}
-                  onClick={() =>
-                    setDraft({
-                      ...draft,
-                      organizations: [
-                        ...draft.organizations,
-                        {
-                          name: '',
-                          role: null,
-                          start_date: null,
-                          end_date: null,
-                          description: null,
-                        },
-                      ],
-                    })
-                  }
-                >
-                  + Tambah Organisasi
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={draft.achievements.length >= 20}
-                  onClick={() =>
-                    setDraft({
-                      ...draft,
-                      achievements: [
-                        ...draft.achievements,
-                        {
-                          title: '',
-                          issuer: null,
-                          date: null,
-                          description: null,
-                        },
-                      ],
-                    })
-                  }
-                >
-                  + Tambah Pencapaian
-                </Button>
-              </div>
+            )}
+          </div>
+
+          <div className="cv-extra-group">
+            <div className="cv-extra-group__header">
+              <h3 className="cv-extra-group__title">Organisasi</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={draft.organizations.length >= 20}
+                onClick={() =>
+                  setDraft({
+                    ...draft,
+                    organizations: [
+                      ...draft.organizations,
+                      {
+                        name: '',
+                        role: null,
+                        start_date: null,
+                        end_date: null,
+                        description: null,
+                      },
+                    ],
+                  })
+                }
+              >
+                + Tambah Organisasi
+              </Button>
             </div>
 
             {draft.organizations.length > 0 ? (
-              <div className="form-stack" style={{ marginBottom: 16 }}>
+              <div className="form-stack">
                 {draft.organizations.map((org, idx) => (
                   <div key={idx} className="surface-card">
                     <div className="form-grid-2">
-                      <FormField id={`org-name-${idx}`} label="Nama Organisasi" required>
+                      <FormField id={`org-name-${idx}`} label="Nama Organisasi">
                         <TextInput
                           id={`org-name-${idx}`}
                           maxLength={200}
@@ -843,14 +842,43 @@ export function ProfileEditorForm({
                   </div>
                 ))}
               </div>
-            ) : null}
+            ) : (
+              <p className="form-hint">Belum ada organisasi ditambahkan.</p>
+            )}
+          </div>
+
+          <div className="cv-extra-group">
+            <div className="cv-extra-group__header">
+              <h3 className="cv-extra-group__title">Pencapaian</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={draft.achievements.length >= 20}
+                onClick={() =>
+                  setDraft({
+                    ...draft,
+                    achievements: [
+                      ...draft.achievements,
+                      {
+                        title: '',
+                        issuer: null,
+                        date: null,
+                        description: null,
+                      },
+                    ],
+                  })
+                }
+              >
+                + Tambah Pencapaian
+              </Button>
+            </div>
 
             {draft.achievements.length > 0 ? (
               <div className="form-stack">
                 {draft.achievements.map((ach, idx) => (
                   <div key={idx} className="surface-card">
                     <div className="form-grid-3">
-                      <FormField id={`ach-title-${idx}`} label="Judul Pencapaian / Sertifikasi" required>
+                      <FormField id={`ach-title-${idx}`} label="Judul Pencapaian / Sertifikasi">
                         <TextInput
                           id={`ach-title-${idx}`}
                           maxLength={200}
@@ -906,14 +934,12 @@ export function ProfileEditorForm({
                   </div>
                 ))}
               </div>
-            ) : null}
-
-            {draft.organizations.length === 0 && draft.achievements.length === 0 ? (
-              <p className="form-hint">Belum ada organisasi atau pencapaian ditambahkan.</p>
-            ) : null}
-          </section>
-        </>
-      ) : null}
+            ) : (
+              <p className="form-hint">Belum ada pencapaian ditambahkan.</p>
+            )}
+          </div>
+        </div>
+      </section>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, alignItems: 'center' }}>
         <Button type="submit" variant="primary" size="lg" loading={saving}>
