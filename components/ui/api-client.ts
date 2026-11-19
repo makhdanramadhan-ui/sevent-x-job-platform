@@ -13,9 +13,9 @@ import type { ProfileInput } from '@/lib/profile';
  * Ubah konstanta di bawah ini jika tim ingin mengganti nama website sementara.
  * Diletakkan di modul non-'use client' agar dapat dipakai baik di Server Component maupun Client Component.
  */
-export const SITE_NAME = 'KerjaLoka';
-export const SITE_MONOGRAM = 'KL';
-export const SITE_TAGLINE = 'Bursa & Pemetaan Kerja';
+export const SITE_NAME = 'RakitKarier';
+export const SITE_MONOGRAM = 'RK';
+export const SITE_TAGLINE = 'Lowongan & Pemetaan Karier';
 
 export type ApiCallError = {
   status: number;

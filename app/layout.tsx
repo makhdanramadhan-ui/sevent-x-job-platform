@@ -4,19 +4,22 @@ import { SITE_NAME, SiteFooter, SiteHeader } from '@/components/ui';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: `${SITE_NAME} — Platform Agregasi Lowongan & Pemetaan Karier Indonesia`,
+  title: `${SITE_NAME} — Cari Lowongan Kerja & Cek Kecocokan Profil`,
   description:
-    'Platform agregasi lowongan kerja Indonesia lintas bidang dan tingkat pengalaman dengan pemetaan kecocokan profil yang jujur serta studio persiapan CV.',
+    'Cari lowongan kerja lintas bidang di Indonesia, lihat kecocokan kualifikasi profilmu secara transparan, siapkan CV, lalu lamar langsung di situs resmi perusahaan.',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="id">
+    <html lang="id" data-type="software" data-radius="soft" data-buttons="arrow">
       <head>
+        <meta name="page-type" content="software" />
+        <meta name="site-kind" content="software" />
+        <meta name="theme-color" content="#ffffff" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800&family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap"
           rel="stylesheet"
         />
       </head>

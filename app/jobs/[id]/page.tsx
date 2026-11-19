@@ -28,12 +28,12 @@ function buildPosterDataUri(title: string, company: string, location: string | n
   const safeCompany = company.slice(0, 40).replace(/[<>&"']/g, '');
   const safeLoc = (location || 'Indonesia').slice(0, 36).replace(/[<>&"']/g, '');
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="240" viewBox="0 0 720 240">
-    <rect width="720" height="240" fill="#ECE8DE" stroke="#171715" stroke-width="4"/>
-    <rect x="20" y="20" width="680" height="200" fill="#FDFCF9" stroke="#171715" stroke-width="1.5"/>
-    <text x="44" y="64" font-family="monospace" font-size="13" font-weight="700" fill="#B84221">ARSIP LOWONGAN ${SITE_NAME.toUpperCase()} · LEMBAR INFORMASI</text>
-    <text x="44" y="114" font-family="Georgia, serif" font-size="24" font-weight="700" fill="#171715">${safeTitle}</text>
-    <text x="44" y="152" font-family="sans-serif" font-size="17" font-weight="600" fill="#3F3D37">${safeCompany}</text>
-    <text x="44" y="186" font-family="monospace" font-size="13" fill="#6B685F">Lokasi: ${safeLoc} · Detail teks utama tersedia di bawah</text>
+    <rect width="720" height="240" fill="#F4F4F4"/>
+    <rect x="20" y="20" width="680" height="200" rx="12" fill="#FFFFFF" stroke="#E2E2E2" stroke-width="1.5"/>
+    <text x="44" y="64" font-family="sans-serif" font-size="13" font-weight="500" fill="#1A4BE0">${SITE_NAME} · Ringkasan Lowongan</text>
+    <text x="44" y="114" font-family="sans-serif" font-size="24" font-weight="500" fill="#111111">${safeTitle}</text>
+    <text x="44" y="150" font-family="sans-serif" font-size="16" font-weight="500" fill="#454545">${safeCompany}</text>
+    <text x="44" y="186" font-family="sans-serif" font-size="13" fill="#6B6B6B">Lokasi: ${safeLoc}</text>
   </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
