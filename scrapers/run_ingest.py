@@ -49,6 +49,44 @@ def load_env_file_if_exists(env_path: Path) -> None:
             os.environ[key] = val
 
 
+def save_company_logos(repo_root: Path, results: List[SourceFetchResult]) -> int:
+    """
+    Menggabungkan URL logo perusahaan yang berhasil di-scrape ke lib/recommendation/company-logos.json
+    tanpa menghapus logo perusahaan yang sudah pernah tersimpan sebelumnya.
+    """
+    logos_path = repo_root / "lib" / "recommendation" / "company-logos.json"
+    existing: dict[str, str] = {}
+    if logos_path.exists():
+        try:
+            loaded = json.loads(logos_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                existing = {
+                    str(k).strip().lower(): str(v).strip()
+                    for k, v in loaded.items()
+                    if isinstance(k, str) and isinstance(v, str) and v.strip().startswith("http")
+                }
+        except Exception:
+            existing = {}
+
+    added_or_updated = 0
+    for res in results:
+        for comp_key, logo_url in (res.company_logos or {}).items():
+            clean_key = comp_key.strip().lower()
+            clean_url = logo_url.strip()
+            if clean_key and clean_url.startswith("http"):
+                existing[clean_key] = clean_url
+                added_or_updated += 1
+
+    if added_or_updated > 0:
+        logos_path.parent.mkdir(parents=True, exist_ok=True)
+        sorted_logos = dict(sorted(existing.items()))
+        logos_path.write_text(
+            json.dumps(sorted_logos, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+    return added_or_updated
+
+
 def main(argv: List[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Pipeline akuisisi, normalisasi, deduplikasi, dan ingest lowongan kerja SEVENT X"
@@ -127,6 +165,7 @@ def main(argv: List[str] | None = None) -> int:
         return 1
 
     report = execute_ingest_pipeline(results, client=client, dry_run=is_dry_run)
+    save_company_logos(repo_root, results)
     report_dict = report.to_dict()
     formatted_json = json.dumps(report_dict, indent=2, ensure_ascii=False)
 

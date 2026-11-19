@@ -38,6 +38,7 @@ class SourceFetchResult:
     source_name: str
     status: str  # 'OK' | 'BLOCKED' | 'FAILED'
     payloads: List[Dict[str, Any]] = field(default_factory=list)
+    company_logos: Dict[str, str] = field(default_factory=dict)
     reason: Optional[str] = None
     fetched_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -144,6 +145,17 @@ def parse_linkedin_guest_search_html(raw_html: str) -> List[Dict[str, Optional[s
             block,
             re.DOTALL | re.IGNORECASE,
         )
+        logo_match = re.search(
+            r"<img[^>]*class=\"[^\"]*artdeco-entity-image[^\"]*\"[^>]*(?:data-delayed-url|src)=\"(https?://[^\"]+)\"",
+            block,
+            re.DOTALL | re.IGNORECASE,
+        )
+        if not logo_match:
+            logo_match = re.search(
+                r"<img[^>]*(?:data-delayed-url|src)=\"(https?://media\.licdn\.com/dms/image/[^\"]+)\"",
+                block,
+                re.DOTALL | re.IGNORECASE,
+            )
 
         title = strip_html(html.unescape(title_match.group(1))) if title_match else None
         company = strip_html(html.unescape(company_match.group(1))) if company_match else None
@@ -156,6 +168,7 @@ def parse_linkedin_guest_search_html(raw_html: str) -> List[Dict[str, Optional[s
         # Bersihkan query tracking panjang dari URL LinkedIn agar kanonik
         clean_url = raw_url.split("?")[0] if raw_url.startswith("http") else f"https://www.linkedin.com/jobs/view/{job_id}"
         published_at = time_match.group(1).strip() if time_match else None
+        logo_url = html.unescape(logo_match.group(1)).strip() if logo_match else None
 
         seen_ids.add(job_id)
         cards.append(
@@ -166,6 +179,7 @@ def parse_linkedin_guest_search_html(raw_html: str) -> List[Dict[str, Optional[s
                 "location": location,
                 "url": clean_url,
                 "published_at": published_at,
+                "logo_url": logo_url,
             }
         )
 
@@ -236,6 +250,7 @@ def fetch_linkedin_guest_jobs(
     """
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     payloads: List[Dict[str, Any]] = []
+    company_logos: Dict[str, str] = {}
     seen_job_ids: set[str] = set()
 
     for idx, kw in enumerate(keywords):
@@ -270,6 +285,7 @@ def fetch_linkedin_guest_jobs(
                 source_name="linkedin_guest",
                 status="BLOCKED",
                 payloads=payloads,
+                company_logos=company_logos,
                 fetched_at=now_iso,
                 reason=(
                     f"LinkedIn membatasi akses otomatis (HTTP {status_code}, url={final_url}). "
@@ -282,6 +298,7 @@ def fetch_linkedin_guest_jobs(
                 source_name="linkedin_guest",
                 status="FAILED",
                 payloads=payloads,
+                company_logos=company_logos,
                 fetched_at=now_iso,
                 reason=f"HTTP {status_code} saat mengambil pencarian LinkedIn untuk tag '{clean_kw}'",
             )
@@ -292,6 +309,7 @@ def fetch_linkedin_guest_jobs(
                 source_name="linkedin_guest",
                 status="BLOCKED",
                 payloads=payloads,
+                company_logos=company_logos,
                 fetched_at=now_iso,
                 reason="LinkedIn menampilkan halaman verifikasi keamanan/CAPTCHA. Scraper berhenti.",
             )
@@ -337,11 +355,14 @@ def fetch_linkedin_guest_jobs(
                 reference_date=reference_date,
             )
             payloads.append(payload)
+            if card.get("logo_url") and card.get("company"):
+                company_logos[card["company"].strip().lower()] = card["logo_url"]
 
     return SourceFetchResult(
         source_name="linkedin_guest",
         status="OK",
         payloads=payloads,
+        company_logos=company_logos,
         fetched_at=now_iso,
     )
 
@@ -363,6 +384,7 @@ def fetch_himalayas_public_api(
         data = _http_get_json(url)
         jobs_raw = data.get("jobs", []) if isinstance(data, dict) else []
         payloads: List[Dict[str, Any]] = []
+        company_logos: Dict[str, str] = {}
 
         for item in jobs_raw[:limit]:
             if not isinstance(item, dict):
@@ -372,6 +394,10 @@ def fetch_himalayas_public_api(
             company = str(item.get("companyName") or "").strip()
             if not (source_url and title and company):
                 continue
+
+            logo_url = str(item.get("companyLogo") or "").strip()
+            if logo_url.startswith("http"):
+                company_logos[company.lower()] = logo_url
 
             job_id = str(
                 item.get("guid")
@@ -418,6 +444,7 @@ def fetch_himalayas_public_api(
             source_name="himalayas_api",
             status="OK",
             payloads=payloads,
+            company_logos=company_logos,
             fetched_at=now_iso,
         )
     except Exception as exc:
@@ -447,6 +474,7 @@ def fetch_jobicy_public_api(
         data = _http_get_json(url)
         jobs_raw = data.get("jobs", []) if isinstance(data, dict) else []
         payloads: List[Dict[str, Any]] = []
+        company_logos: Dict[str, str] = {}
 
         for item in jobs_raw[:limit]:
             if not isinstance(item, dict):
@@ -457,6 +485,10 @@ def fetch_jobicy_public_api(
             source_url = str(item.get("url") or "").strip()
             if not (job_id and title and company and source_url):
                 continue
+
+            logo_url = str(item.get("companyLogo") or "").strip()
+            if logo_url.startswith("http"):
+                company_logos[company.lower()] = logo_url
 
             job_types = item.get("jobType")
             if isinstance(job_types, list) and job_types:
@@ -496,6 +528,7 @@ def fetch_jobicy_public_api(
             source_name="jobicy_api",
             status="OK",
             payloads=payloads,
+            company_logos=company_logos,
             fetched_at=now_iso,
         )
     except Exception as exc:
@@ -522,6 +555,7 @@ def fetch_remotive_public_api(
         data = _http_get_json(url)
         jobs_raw = data.get("jobs", []) if isinstance(data, dict) else []
         payloads: List[Dict[str, Any]] = []
+        company_logos: Dict[str, str] = {}
 
         for item in jobs_raw[:limit]:
             if not isinstance(item, dict):
@@ -532,6 +566,10 @@ def fetch_remotive_public_api(
             source_url = str(item.get("url") or "").strip()
             if not (job_id and title and company and source_url):
                 continue
+
+            logo_url = str(item.get("company_logo") or item.get("company_logo_url") or "").strip()
+            if logo_url.startswith("http"):
+                company_logos[company.lower()] = logo_url
 
             tags = item.get("tags") if isinstance(item.get("tags"), list) else []
             candidate_loc = str(item.get("candidate_required_location") or "Remote").strip()
@@ -559,6 +597,7 @@ def fetch_remotive_public_api(
             source_name="remotive_api",
             status="OK",
             payloads=payloads,
+            company_logos=company_logos,
             fetched_at=now_iso,
         )
     except Exception as exc:
