@@ -7,7 +7,7 @@ create table if not exists public.auth_rate_limits (
   constraint auth_rate_limits_bucket_length check (char_length(bucket) between 1 and 80),
   constraint auth_rate_limits_key_hash_length check (char_length(key_hash) = 64),
   constraint auth_rate_limits_count_nonnegative check (count >= 0),
-  primary key (bucket, key_hash, window_start)
+  constraint auth_rate_limits_pkey primary key (bucket, key_hash, window_start)
 );
 
 create index if not exists auth_rate_limits_window_start_idx
@@ -29,6 +29,7 @@ language plpgsql
 security definer
 set search_path = pg_catalog, public
 as $$
+#variable_conflict use_column
 declare
   v_now timestamptz := now();
   v_window_seconds integer;
@@ -60,8 +61,8 @@ begin
   where window_start < v_now - interval '1 day';
 
   insert into public.auth_rate_limits as rl (bucket, key_hash, window_start, count, updated_at)
-  values (bucket, v_key_hash, v_window_start, 1, v_now)
-  on conflict (bucket, key_hash, window_start) do update
+  values (consume_rate_limit.bucket, v_key_hash, v_window_start, 1, v_now)
+  on conflict on constraint auth_rate_limits_pkey do update
     set count = rl.count + 1,
         updated_at = v_now
   returning rl.count into v_count;
