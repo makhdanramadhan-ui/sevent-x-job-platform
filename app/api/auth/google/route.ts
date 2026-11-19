@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { readSupabaseEnv } from '@/lib/env';
+import { readSupabaseAdminEnv, readSupabaseEnv } from '@/lib/env';
+import { clientIp, enforceRateLimits } from '@/lib/rate-limit';
 import { createCookieClient } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
@@ -26,6 +27,25 @@ function isProviderUnavailable(error: { message?: string; code?: string; status?
 }
 
 export async function GET(req: NextRequest) {
+  const adminEnv = readSupabaseAdminEnv();
+  if (adminEnv) {
+    const limited = await enforceRateLimits(adminEnv, [
+      {
+        bucket: 'google:ip',
+        key: clientIp(req),
+        max: 20,
+        windowSeconds: 15 * 60,
+        mode: 'fail-open',
+      },
+    ]);
+    if (limited) return limited;
+  } else {
+    console.error('[rate-limit] fail-open', {
+      bucket: 'google:ip',
+      message: 'SUPABASE_SERVICE_ROLE_KEY tidak tersedia',
+    });
+  }
+
   const env = readSupabaseEnv();
   if (!env) {
     return NextResponse.redirect(new URL('/login?error=google_unavailable', req.nextUrl.origin), 302);

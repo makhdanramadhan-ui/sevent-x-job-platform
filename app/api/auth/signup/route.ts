@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { readSupabaseAdminEnv } from '@/lib/env';
 import { ApiError, asObject, ok, readJson, rejectUnknownKeys, run } from '@/lib/http';
 import { assertOriginAllowed } from '@/lib/auth';
+import { clientIp, enforceRateLimits } from '@/lib/rate-limit';
 import { createAdminClient, createCookieClient } from '@/lib/supabase';
 import { emailValue, optionalText, passwordValue } from '@/lib/validation';
 
@@ -34,6 +35,25 @@ export async function POST(req: NextRequest) {
       throw new ApiError(503, 'auth_not_configured', 'Autentikasi belum dikonfigurasi.');
     }
 
+    const ip = clientIp(req);
+    const limited = await enforceRateLimits(env, [
+      {
+        bucket: 'signup:ip',
+        key: ip,
+        max: 5,
+        windowSeconds: 60 * 60,
+        mode: 'fail-closed',
+      },
+      {
+        bucket: 'signup:email',
+        key: email,
+        max: 3,
+        windowSeconds: 60 * 60,
+        mode: 'fail-closed',
+      },
+    ]);
+    if (limited) return limited;
+
     const admin = createAdminClient(env);
     const { data: created, error: createError } = await admin.auth.admin.createUser({
       email,
@@ -44,7 +64,7 @@ export async function POST(req: NextRequest) {
 
     if (createError || !created.user) {
       if (createError?.status === 429) {
-        throw new ApiError(429, 'rate_limited', 'Terlalu banyak percobaan. Coba lagi nanti.');
+        throw new ApiError(429, 'rate_limited', 'Terlalu banyak percobaan. Coba lagi dalam 15 menit.');
       }
       if (isConflictError(createError)) {
         throw new ApiError(409, 'conflict', 'Email sudah terdaftar.');
@@ -56,7 +76,7 @@ export async function POST(req: NextRequest) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error || !data.user || !data.session) {
       if (error?.status === 429) {
-        throw new ApiError(429, 'rate_limited', 'Terlalu banyak percobaan. Coba lagi nanti.');
+        throw new ApiError(429, 'rate_limited', 'Terlalu banyak percobaan. Coba lagi dalam 15 menit.');
       }
       throw new ApiError(400, 'signup_failed', 'Pendaftaran tidak dapat diproses.');
     }
