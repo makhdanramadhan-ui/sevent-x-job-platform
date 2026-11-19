@@ -1,4 +1,10 @@
-create extension if not exists pg_trgm;
+do $$
+begin
+  create extension if not exists pg_trgm;
+exception when others then
+  raise notice 'pg_trgm tidak tersedia; memakai indeks btree lower(name)/slug sebagai fallback';
+end;
+$$;
 
 create table if not exists public.skills (
   id bigint generated always as identity primary key,
@@ -14,7 +20,13 @@ create table if not exists public.skills (
 
 create index if not exists skills_lower_name_idx on public.skills (lower(name));
 create index if not exists skills_slug_idx on public.skills (slug);
-create index if not exists skills_name_trgm_idx on public.skills using gin (lower(name) gin_trgm_ops);
+do $$
+begin
+  create index if not exists skills_name_trgm_idx on public.skills using gin (lower(name) gin_trgm_ops);
+exception when others then
+  raise notice 'indeks trgm tidak dibuat; pencarian memakai prefiks ilike';
+end;
+$$;
 create index if not exists skills_aliases_gin_idx on public.skills using gin (aliases);
 
 alter table public.skills enable row level security;
