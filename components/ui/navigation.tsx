@@ -192,7 +192,7 @@ export function SiteFooter() {
               Daftar akun untuk melihat daftar lowongan, mengecek kecocokan, dan menyusun CV.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <div className="footer-close-actions" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <Link href="/signup" className="btn btn-primary btn-lg">
               <span>Daftar Akun</span>
               <span className="btn-arrow" aria-hidden="true">

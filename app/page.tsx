@@ -131,7 +131,7 @@ export default function HomePage() {
                 <span />
               </div>
               <span>{SITE_NAME} — Pencarian &amp; Pemetaan Lowongan</span>
-              <span className="font-mono" style={{ fontSize: '0.75rem' }}>
+              <span className="font-mono tk-app-bar-meta" style={{ fontSize: '0.75rem' }}>
                 3 bidang kerja
               </span>
             </div>
@@ -222,21 +222,8 @@ export default function HomePage() {
                   <span className="badge badge-open">Masih dibuka</span>
                 </div>
 
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                    gap: 12,
-                  }}
-                >
-                  <div
-                    style={{
-                      background: 'var(--status-open-bg)',
-                      border: '1px solid var(--status-open-border)',
-                      borderRadius: 10,
-                      padding: '12px 14px',
-                    }}
-                  >
+                <div className="tk-app-match-grid">
+                  <div className="tk-app-match-box tk-app-match-box--open">
                     <div
                       style={{
                         fontSize: '0.8125rem',
@@ -264,14 +251,7 @@ export default function HomePage() {
                     </ul>
                   </div>
 
-                  <div
-                    style={{
-                      background: 'var(--status-warning-bg)',
-                      border: '1px solid var(--status-warning-border)',
-                      borderRadius: 10,
-                      padding: '12px 14px',
-                    }}
-                  >
+                  <div className="tk-app-match-box tk-app-match-box--missing">
                     <div
                       style={{
                         fontSize: '0.8125rem',
@@ -336,7 +316,7 @@ export default function HomePage() {
       </section>
 
       {/* 2. FEATURE BENTO (2x2 clean white cards with lit soft panels & real HTML UI fragments) */}
-      <section className="tk-section tk-section--surface tk-band-bleed" aria-labelledby="heading-features">
+      <section className="tk-surface-band" aria-labelledby="heading-features">
         <div className="tk-section__head">
           <h2 id="heading-features" className="tk-section__h2">
             Semua alat persiapan melamar.{' '}
