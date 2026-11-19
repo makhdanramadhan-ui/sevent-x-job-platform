@@ -80,19 +80,25 @@ export function readProviderAvatarUrl(user: Pick<User, 'user_metadata'>): string
   return readHttpsUrl(meta.avatar_url ?? meta.picture);
 }
 
-export function avatarPublicUrl(env: SupabaseAdminEnv, path: string): string {
-  const admin = createAdminClient(env);
-  const { data } = admin.storage.from(AVATAR_BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+export function avatarPublicUrl(env: { url: string }, path: string): string {
+  const base = env.url.replace(/\/$/, '');
+  const encoded = path
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+  return `${base}/storage/v1/object/public/${AVATAR_BUCKET}/${encoded}`;
 }
 
 export function resolveAvatar(
-  env: SupabaseAdminEnv | null,
+  env: { url: string } | null,
   user: Pick<User, 'app_metadata' | 'user_metadata'>,
 ): { avatar_url: string | null; avatar_source: 'custom' | 'provider' | null } {
   const customPath = readAvatarPath(user);
-  if (customPath && env) {
-    return { avatar_url: avatarPublicUrl(env, customPath), avatar_source: 'custom' };
+  if (customPath) {
+    return {
+      avatar_url: env ? avatarPublicUrl(env, customPath) : null,
+      avatar_source: 'custom',
+    };
   }
   const providerUrl = readProviderAvatarUrl(user);
   if (providerUrl) {
