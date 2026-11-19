@@ -208,12 +208,7 @@ export async function setAvatarPath(
   avatarPath: string | null,
 ): Promise<void> {
   const admin = createAdminClient(env);
-  const nextMetadata: Record<string, unknown> = { ...currentAppMetadata };
-  if (avatarPath) {
-    nextMetadata.avatar_path = avatarPath;
-  } else {
-    delete nextMetadata.avatar_path;
-  }
+  const nextMetadata: Record<string, unknown> = { ...currentAppMetadata, avatar_path: avatarPath };
   const { error } = await admin.auth.admin.updateUserById(userId, { app_metadata: nextMetadata });
   if (error) {
     throw new ApiError(503, 'avatar_update_failed', 'Gagal memperbarui foto profil.');
