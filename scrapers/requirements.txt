@@ -1,0 +1,7 @@
+# Dependensi Python untuk pipeline scraper & normalisasi (Anggota 3)
+# Terpisah dari ekosistem Node.js (package.json).
+# Catatan: Seluruh modul di scrapers/ juga memiliki fallback ke Python Standard Library
+# (urllib.request, html.parser, unittest) agar tetap dapat dijalankan di lingkungan terbatas.
+httpx>=0.27.0
+beautifulsoup4>=4.12.3
+pytest>=8.2.0
