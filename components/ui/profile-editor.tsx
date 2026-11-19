@@ -27,6 +27,7 @@ import {
   TextArea,
   TextInput,
 } from './forms';
+import { SkillComboboxInput } from './skill-combobox';
 
 const WORK_MODE_OPTIONS = WORK_MODES.filter((m) => m !== 'unknown').map((value) => ({
   value,
@@ -195,13 +196,12 @@ export function ProfileEditorForm({
         </p>
 
         <div className="form-stack">
-          <TagListInput
+          <SkillComboboxInput
             id="profile-skills"
             label="Daftar Keahlian (Skills)"
             values={draft.skills}
             onChange={(skills) => setDraft({ ...draft, skills })}
-            placeholder="Ketik keahlian (pisahkan dengan koma, mis. TypeScript, SQL, Akuntansi)"
-            hint="Tambahkan keahlian teknis maupun domain kerja Anda."
+            hint="Ketik untuk mencari keahlian, lalu pilih saran atau tekan Enter untuk menambah keahlian khusus."
             maxItems={50}
             maxLength={60}
           />

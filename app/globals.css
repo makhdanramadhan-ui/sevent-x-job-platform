@@ -931,6 +931,88 @@ h4 {
   color: var(--status-danger);
 }
 
+.skill-combobox {
+  position: relative;
+}
+
+.skill-combobox-control {
+  position: relative;
+}
+
+.skill-combobox-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+}
+
+.skill-combobox-listbox {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  background: var(--p-bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  max-height: 320px;
+  overflow-y: auto;
+  box-shadow: 0 12px 30px rgba(17, 17, 17, 0.08);
+}
+
+.skill-combobox-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.skill-combobox-option:hover,
+.skill-combobox-option.is-active {
+  background: var(--p-surface);
+}
+
+.skill-combobox-option-name {
+  font-size: 0.9375rem;
+  color: var(--p-ink);
+  min-width: 0;
+}
+
+.skill-combobox-option-category {
+  font-size: 0.75rem;
+  color: var(--p-muted);
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.skill-combobox-status {
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  color: var(--p-muted);
+}
+
+.skill-combobox-mark {
+  background: var(--p-accent-soft);
+  color: inherit;
+  font-weight: 600;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+@media (max-width: 640px) {
+  .skill-combobox-option {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .skill-combobox-option-category {
+    text-align: left;
+  }
+}
+
 /* Checkbox Pills */
 .checkbox-pill-grid {
   display: flex;

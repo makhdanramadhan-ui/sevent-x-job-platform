@@ -30,7 +30,6 @@ const NAV_ITEMS = [
   { href: '/jobs', label: 'Lowongan', exact: false },
   { href: '/recommendations', label: 'Rekomendasi', exact: false },
   { href: '/bookmarks', label: 'Tersimpan', exact: false },
-  { href: '/profile', label: 'Profil', exact: false },
   { href: '/cv', label: 'Studio CV', exact: false },
 ] as const;
 
