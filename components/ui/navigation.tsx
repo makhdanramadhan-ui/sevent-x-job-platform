@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { apiFetch, SITE_NAME } from './api-client';
+import { apiFetch, SITE_MONOGRAM, SITE_NAME } from './api-client';
 import { Button } from './forms';
 import { ScrollProgressBar } from './scroll-motion';
 
@@ -179,60 +179,104 @@ export function SiteFooter() {
   return (
     <footer className="site-footer">
       <div className="site-footer-inner">
-        <div className="footer-close-row">
+        <div className="footer-columns-grid">
+          {/* Column 1: Brand & Description */}
           <div>
-            <h2
-              style={{
-                fontSize: 'clamp(1.6rem, 2.8vw, 2.35rem)',
-                margin: '0 0 8px',
-                maxWidth: '22ch',
-              }}
-            >
-              Mulai cari lowongan yang sesuai dengan profilmu.
-            </h2>
-            <p style={{ margin: 0, color: 'var(--p-muted)', fontSize: '1rem' }}>
-              Daftar akun untuk melihat daftar lowongan, mengecek kecocokan, dan menyusun CV.
-            </p>
-          </div>
-          <div className="footer-close-actions" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <Link href="/signup" className="btn btn-primary btn-lg">
-              <span>Daftar Akun</span>
-              <span className="btn-arrow" aria-hidden="true">
-                →
+            <Link href="/" className="footer-brand-row">
+              <span className="footer-brand-badge" aria-hidden="true">
+                {SITE_MONOGRAM}
               </span>
+              <span className="footer-brand-name">{SITE_NAME}</span>
             </Link>
-            <Link href="/jobs" className="btn btn-outline btn-lg">
-              Lihat Lowongan
-            </Link>
+            <p className="footer-brand-desc">
+              Membantu pencari kerja di Indonesia menemukan lowongan lintas bidang, mengecek
+              kecocokan profil secara terbuka, dan menyiapkan CV sebelum melamar di situs resmi
+              perusahaan.
+            </p>
+            <div className="footer-cta-row">
+              <Link href="/signup" className="btn btn-primary btn-sm">
+                <span>Daftar Akun</span>
+                <span className="btn-arrow" aria-hidden="true">
+                  →
+                </span>
+              </Link>
+              <Link
+                href="/jobs"
+                className="btn btn-outline btn-sm"
+                style={{
+                  background: 'transparent',
+                  color: '#ffffff',
+                  borderColor: 'rgba(255,255,255,0.24)',
+                }}
+              >
+                Cari Lowongan
+              </Link>
+            </div>
+          </div>
+
+          {/* Column 2: Fitur */}
+          <div>
+            <h3 className="footer-col-title">Fitur</h3>
+            <ul className="footer-col-list">
+              <li>
+                <Link href="/jobs">Cari Lowongan</Link>
+              </li>
+              <li>
+                <Link href="/recommendations">Rekomendasi Profil</Link>
+              </li>
+              <li>
+                <Link href="/bookmarks">Lowongan Tersimpan</Link>
+              </li>
+              <li>
+                <Link href="/cv">Studio CV</Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 3: Akun */}
+          <div>
+            <h3 className="footer-col-title">Akun</h3>
+            <ul className="footer-col-list">
+              <li>
+                <Link href="/profile">Profil &amp; Preferensi</Link>
+              </li>
+              <li>
+                <Link href="/onboarding">Lengkapi Onboarding</Link>
+              </li>
+              <li>
+                <Link href="/login">Masuk Akun</Link>
+              </li>
+              <li>
+                <Link href="/signup">Daftar Akun Baru</Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 4: Informasi Pelamaran */}
+          <div>
+            <h3 className="footer-col-title">Panduan Melamar</h3>
+            <p className="footer-col-note">
+              Tombol melamar mengarahkan kamu langsung ke portal resmi perusahaan tanpa auto-submit.
+              Periksa selalu ketentuan di sumber asli dan waspadai segala bentuk pungutan biaya.
+            </p>
           </div>
         </div>
 
-        <p className="footer-wordmark" aria-hidden="true">
-          {SITE_NAME}
-        </p>
-
-        <div className="footer-bottom-grid">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <nav aria-label="Tautan Footer" className="footer-nav-links">
-              <Link href="/">Beranda</Link>
-              <Link href="/jobs">Lowongan</Link>
-              <Link href="/recommendations">Rekomendasi</Link>
-              <Link href="/bookmarks">Tersimpan</Link>
-              <Link href="/profile">Profil</Link>
-              <Link href="/cv">Studio CV</Link>
-            </nav>
-            <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--p-muted)' }}>
-              © 2026 {SITE_NAME} · Dikembangkan oleh Tim SEVENT X.
-            </p>
+        {/* Bottom Copyright & Legal Row */}
+        <div className="footer-bottom-bar">
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16 }}>
+            <span>© 2026 {SITE_NAME} · Proyek Tim SEVENT X.</span>
+            <span className="footer-status-pill">
+              <span className="footer-status-dot" aria-hidden="true" />
+              Sumber resmi terhubung
+            </span>
           </div>
 
-          <div className="footer-disclaimer-box" aria-label="Catatan bagi pelamar kerja">
-            <strong style={{ color: 'var(--p-ink)', fontWeight: 500, display: 'block', marginBottom: 4 }}>
-              Informasi Pelamaran
-            </strong>
-            Tombol lamar di {SITE_NAME} membuka halaman rekrutmen resmi penyelenggara secara
-            langsung tanpa auto-submit. Periksa selalu ketentuan lowongan pada situs asli dan
-            waspadai pungutan biaya dalam bentuk apa pun.
+          <div className="footer-bottom-meta">
+            <Link href="/">Beranda</Link>
+            <Link href="/jobs">Lowongan</Link>
+            <Link href="/recommendations">Rekomendasi</Link>
+            <Link href="/cv">Studio CV</Link>
           </div>
         </div>
       </div>
