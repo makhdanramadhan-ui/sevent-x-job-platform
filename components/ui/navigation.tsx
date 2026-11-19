@@ -280,6 +280,26 @@ export function SiteHeader() {
 }
 
 export function SiteFooter() {
+  const pathname = usePathname();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  const checkSession = useCallback(async () => {
+    const res = await apiFetch<SessionInfo>('/api/auth/me');
+    setIsLoggedIn(res.ok);
+  }, []);
+
+  useEffect(() => {
+    checkSession();
+  }, [pathname, checkSession]);
+
+  useEffect(() => {
+    const handler = () => {
+      checkSession();
+    };
+    window.addEventListener('seventx:auth-changed', handler);
+    return () => window.removeEventListener('seventx:auth-changed', handler);
+  }, [checkSession]);
+
   return (
     <footer className="site-footer">
       <div className="site-footer-inner">
@@ -295,17 +315,23 @@ export function SiteFooter() {
               perusahaan.
             </p>
             <div className="footer-cta-row">
-              <Link href="/signup" className="btn btn-primary btn-sm">
-                Daftar Akun
-              </Link>
+              {!isLoggedIn ? (
+                <Link href="/signup" className="btn btn-primary btn-sm">
+                  Daftar Akun
+                </Link>
+              ) : null}
               <Link
                 href="/jobs"
-                className="btn btn-outline btn-sm"
-                style={{
-                  background: 'transparent',
-                  color: '#ffffff',
-                  borderColor: 'rgba(255,255,255,0.24)',
-                }}
+                className={isLoggedIn ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm'}
+                style={
+                  isLoggedIn
+                    ? undefined
+                    : {
+                        background: 'transparent',
+                        color: '#ffffff',
+                        borderColor: 'rgba(255,255,255,0.24)',
+                      }
+                }
               >
                 Cari Lowongan
               </Link>
@@ -341,12 +367,16 @@ export function SiteFooter() {
               <li>
                 <Link href="/onboarding">Lengkapi Onboarding</Link>
               </li>
-              <li>
-                <Link href="/login">Masuk Akun</Link>
-              </li>
-              <li>
-                <Link href="/signup">Daftar Akun Baru</Link>
-              </li>
+              {!isLoggedIn ? (
+                <>
+                  <li>
+                    <Link href="/login">Masuk Akun</Link>
+                  </li>
+                  <li>
+                    <Link href="/signup">Daftar Akun Baru</Link>
+                  </li>
+                </>
+              ) : null}
             </ul>
           </div>
 

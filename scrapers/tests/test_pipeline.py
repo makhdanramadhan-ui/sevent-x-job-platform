@@ -23,6 +23,7 @@ from scrapers.normalizer import (
     build_ingest_payload,
     normalize_employment_type,
     normalize_level,
+    normalize_location,
     normalize_skills,
     normalize_work_mode,
 )
@@ -118,6 +119,16 @@ class TestNormalizerAndContract(unittest.TestCase):
         self.assertIn("Accounting", skills)
         self.assertIn("Taxation", skills)
         self.assertIn("Microsoft Excel", skills)
+
+    def test_location_normalization_country_city_format(self) -> None:
+        self.assertEqual(normalize_location("Jakarta, Jakarta, Indonesia"), "Indonesia, Jakarta")
+        self.assertEqual(normalize_location("Jakarta Selatan"), "Indonesia, Jakarta Selatan")
+        self.assertEqual(normalize_location("Yogyakarta, Indonesia"), "Indonesia, Yogyakarta")
+        self.assertEqual(normalize_location("Bandung"), "Indonesia, Bandung")
+        self.assertEqual(normalize_location("London, United Kingdom"), "United Kingdom, London")
+        self.assertEqual(normalize_location("Indonesia, Surabaya"), "Indonesia, Surabaya")
+        self.assertEqual(normalize_location("Worldwide"), "Global, Remote")
+        self.assertIsNone(normalize_location(""))
 
     def test_linkedin_guest_html_parser_deterministic(self) -> None:
         sample_search_html = """

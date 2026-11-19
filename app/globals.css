@@ -1064,8 +1064,24 @@ h4 {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 14px;
-  flex-wrap: wrap;
+  gap: 16px;
+  flex-wrap: nowrap;
+}
+
+.job-card-header > :first-child {
+  flex: 1 1 0%;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.job-card-header > :last-child {
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .job-card-header {
+    flex-wrap: wrap;
+  }
 }
 
 .job-meta-row {

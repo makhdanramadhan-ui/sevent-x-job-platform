@@ -184,6 +184,148 @@ def clean_whitespace(value: Optional[str], max_len: Optional[int] = None) -> Opt
     return cleaned
 
 
+INDONESIA_CITIES = (
+    "jakarta selatan",
+    "jakarta pusat",
+    "jakarta barat",
+    "jakarta timur",
+    "jakarta utara",
+    "jakarta",
+    "dki jakarta",
+    "bandung",
+    "surabaya",
+    "yogyakarta",
+    "jogjakarta",
+    "jogja",
+    "sleman",
+    "bantul",
+    "semarang",
+    "medan",
+    "denpasar",
+    "bali",
+    "badung",
+    "tangerang selatan",
+    "tangerang",
+    "bekasi",
+    "cikarang",
+    "depok",
+    "bogor",
+    "malang",
+    "makassar",
+    "palembang",
+    "batam",
+    "balikpapan",
+    "samarinda",
+    "banjarmasin",
+    "manado",
+    "padang",
+    "pekanbaru",
+    "pontianak",
+    "surakarta",
+    "solo",
+    "cirebon",
+    "lampung",
+    "bandar lampung",
+    "jabodetabek",
+    "bsd",
+)
+
+KNOWN_COUNTRIES: Dict[str, str] = {
+    "indonesia": "Indonesia",
+    "united states": "USA",
+    "usa": "USA",
+    "us": "USA",
+    "united kingdom": "United Kingdom",
+    "uk": "United Kingdom",
+    "singapore": "Singapore",
+    "malaysia": "Malaysia",
+    "australia": "Australia",
+    "canada": "Canada",
+    "germany": "Germany",
+    "deutschland": "Germany",
+    "france": "France",
+    "netherlands": "Netherlands",
+    "switzerland": "Switzerland",
+    "japan": "Japan",
+    "south korea": "South Korea",
+    "india": "India",
+    "philippines": "Philippines",
+    "vietnam": "Vietnam",
+    "thailand": "Thailand",
+    "sri lanka": "Sri Lanka",
+    "ireland": "Ireland",
+    "spain": "Spain",
+    "italy": "Italy",
+    "poland": "Poland",
+    "portugal": "Portugal",
+    "sweden": "Sweden",
+    "brazil": "Brazil",
+    "mexico": "Mexico",
+    "united arab emirates": "UAE",
+    "uae": "UAE",
+}
+
+
+def normalize_location(raw: Optional[str]) -> Optional[str]:
+    """
+    Menormalisasi teks lokasi ke format standar 'Negara, Kota' (maks 120 karakter).
+    Contoh:
+      - 'Jakarta, Jakarta, Indonesia' -> 'Indonesia, Jakarta'
+      - 'Jakarta Selatan'             -> 'Indonesia, Jakarta Selatan'
+      - 'Yogyakarta, Indonesia'       -> 'Indonesia, Yogyakarta'
+      - 'London, United Kingdom'      -> 'United Kingdom, London'
+      - 'Indonesia'                   -> 'Indonesia'
+      - 'Worldwide' / 'Remote'        -> 'Global, Remote'
+    """
+    cleaned = clean_whitespace(strip_html(raw) if raw else None, max_len=120)
+    if not cleaned:
+        return None
+
+    lower = cleaned.lower()
+    if lower in {"remote", "worldwide", "anywhere", "global", "remote (anywhere)", "anywhere in the world"}:
+        return "Global, Remote"
+
+    # Pecah berdasarkan koma dan bersihkan tiap segmen
+    parts = [p.strip() for p in cleaned.split(",") if p.strip()]
+    if not parts:
+        return None
+
+    # 1. Cek jika sudah diawali nama negara yang dikenal (misal 'Indonesia, Jakarta')
+    first_lower = parts[0].lower()
+    if first_lower in KNOWN_COUNTRIES:
+        country = KNOWN_COUNTRIES[first_lower]
+        if len(parts) == 1:
+            return country
+        # Ambil kota pertama yang bukan pengulangan nama negara
+        for seg in parts[1:]:
+            if seg.lower() != first_lower:
+                return clean_whitespace(f"{country}, {seg}", max_len=120)
+        return country
+
+    # 2. Cek jika diakhiri nama negara yang dikenal (format umum LinkedIn: 'Kota, Provinsi, Negara' atau 'Kota, Negara')
+    last_lower = parts[-1].lower()
+    if last_lower in KNOWN_COUNTRIES:
+        country = KNOWN_COUNTRIES[last_lower]
+        city = parts[0]
+        if city.lower() == last_lower or city.lower() == country.lower():
+            return country
+        return clean_whitespace(f"{country}, {city}", max_len=120)
+
+    # 3. Cek jika menyebut kota Indonesia tanpa menuliskan kata 'Indonesia' (misal 'Jakarta Selatan', 'Bandung')
+    for city_kw in INDONESIA_CITIES:
+        if re.search(rf"\b{re.escape(city_kw)}\b", lower):
+            city_display = parts[0]
+            if city_display.lower() == "indonesia":
+                return "Indonesia"
+            return clean_whitespace(f"Indonesia, {city_display}", max_len=120)
+
+    # 4. Cek jika hanya nama negara tunggal yang ada di KNOWN_COUNTRIES
+    if lower in KNOWN_COUNTRIES:
+        return KNOWN_COUNTRIES[lower]
+
+    return cleaned
+
+
 def normalize_work_mode(raw: Optional[str], location_hint: Optional[str] = None, title_hint: Optional[str] = None) -> str:
     combined = " ".join(
         part for part in [raw or "", location_hint or "", title_hint or ""] if part
@@ -462,7 +604,7 @@ def build_ingest_payload(
     norm_published_at = normalize_iso_timestamp(published_at)
 
     norm_description = clean_whitespace(strip_html(description), max_len=20000)
-    norm_location = clean_whitespace(strip_html(location) if location else None, max_len=120)
+    norm_location = normalize_location(location)
     norm_work_mode = normalize_work_mode(work_mode, location_hint=norm_location, title_hint=norm_title)
     norm_employment_type = normalize_employment_type(employment_type, title_hint=norm_title)
     norm_level = normalize_level(level, title_hint=norm_title)
