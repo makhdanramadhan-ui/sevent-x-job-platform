@@ -14,6 +14,8 @@ type PreviewRole = {
   level: string;
   source: string;
   fetched: string;
+  avatar: string;
+  avatarAlt: string;
   matched: string[];
   missing: string[];
 };
@@ -29,6 +31,8 @@ const PREVIEW_ROLES: readonly PreviewRole[] = [
     level: 'Junior – Mid',
     source: 'Portal Karier Perusahaan',
     fetched: 'Diperbarui 2 jam lalu',
+    avatar: '/images/avatar-frontend.jpg',
+    avatarAlt: 'Avatar 3D pelamar bidang rekayasa perangkat lunak',
     matched: ['TypeScript & React', 'Sistem kerja Hybrid', 'Domisili Jabodetabek'],
     missing: ['Pengujian end-to-end (Playwright)'],
   },
@@ -42,6 +46,8 @@ const PREVIEW_ROLES: readonly PreviewRole[] = [
     level: 'Fresh Graduate',
     source: 'Laman Rekrutmen Resmi',
     fetched: 'Diperbarui hari ini',
+    avatar: '/images/avatar-finance.jpg',
+    avatarAlt: 'Avatar 3D pelamar bidang keuangan dan bisnis',
     matched: ['S1 Akuntansi / Manajemen', 'Analisis laporan keuangan', 'Microsoft Excel'],
     missing: ['Sertifikasi Brevet Pajak A/B'],
   },
@@ -55,6 +61,8 @@ const PREVIEW_ROLES: readonly PreviewRole[] = [
     level: 'Mid-Level',
     source: 'Portal Karier Resmi',
     fetched: 'Diperbarui kemarin',
+    avatar: '/images/avatar-designer.jpg',
+    avatarAlt: 'Avatar 3D pelamar bidang desain produk',
     matched: ['Figma & Design System', 'Riset pengguna', 'Sistem kerja Remote'],
     missing: ['Studi kasus produk mobile B2B'],
   },
@@ -98,26 +106,46 @@ export default function HomePage() {
 
   return (
     <div>
-      {/* 1. HERO: centred headline + interactive live-HTML app-frame */}
+      {/* 1. HERO: Split with 3D Career Avatar + Interactive App-Frame */}
       <section className="tk-hero" aria-labelledby="hero-heading">
-        <div className="tk-hero__text">
-          <h1 id="hero-heading" className="tk-hero__h1">
-            Cari lowongan Indonesia dan cek kecocokan profilmu.
-          </h1>
-          <p className="tk-hero__lead">
-            Saring peluang kerja lintas bidang dari sumber resmi, lihat syarat yang cocok maupun
-            yang belum tercantum di profilmu, lalu susun CV sebelum melamar.
-          </p>
-          <div className="tk-hero__actions">
-            <Link href="/jobs" className="btn btn-primary btn-lg">
-              <span>Cari Lowongan</span>
-              <span className="btn-arrow" aria-hidden="true">
-                →
+        <div className="tk-hero__top">
+          <div className="tk-hero__text">
+            <h1 id="hero-heading" className="tk-hero__h1">
+              Cari lowongan Indonesia dan cek kecocokan profilmu.
+            </h1>
+            <p className="tk-hero__lead">
+              Saring peluang kerja lintas bidang dari sumber resmi, lihat syarat yang cocok maupun
+              yang belum tercantum di profilmu, lalu susun CV sebelum melamar.
+            </p>
+            <div className="tk-hero__actions">
+              <Link href="/jobs" className="btn btn-primary btn-lg">
+                <span>Cari Lowongan</span>
+                <span className="btn-arrow" aria-hidden="true">
+                  →
+                </span>
+              </Link>
+              <Link href="/signup" className="btn btn-outline btn-lg">
+                Daftar Akun
+              </Link>
+            </div>
+
+            <div className="tk-hero__avatars-row">
+              <div className="tk-avatar-stack" aria-hidden="true">
+                <img src="/images/avatar-frontend.jpg" alt="" />
+                <img src="/images/avatar-finance.jpg" alt="" />
+                <img src="/images/avatar-designer.jpg" alt="" />
+              </div>
+              <span style={{ fontSize: '0.875rem', color: 'var(--p-muted)', lineHeight: 1.4 }}>
+                Terbuka untuk magang, fresh graduate, hingga profesional lintas bidang.
               </span>
-            </Link>
-            <Link href="/signup" className="btn btn-outline btn-lg">
-              Daftar Akun
-            </Link>
+            </div>
+          </div>
+
+          <div className="tk-hero__visual">
+            <img
+              src="/images/hero-3d-seeker.jpg"
+              alt="Ilustrasi 3D pencari kerja Indonesia menyiapkan lamaran dan CV dengan laptop"
+            />
           </div>
         </div>
 
@@ -137,7 +165,7 @@ export default function HomePage() {
             </div>
 
             <div className="tk-app-body">
-              {/* Interactive Sidebar List */}
+              {/* Interactive Sidebar List with 3D Avatars */}
               <div className="tk-app-sidebar" role="tablist" aria-label="Pilih contoh posisi">
                 {PREVIEW_ROLES.map((role) => {
                   const active = role.id === selectedRole.id;
@@ -150,49 +178,39 @@ export default function HomePage() {
                       className={`tk-app-job-item ${active ? 'tk-app-job-item--active' : ''}`}
                       onClick={() => setSelectedId(role.id)}
                     >
-                      <div
-                        style={{
-                          fontWeight: 500,
-                          fontSize: '0.9375rem',
-                          color: 'var(--p-ink)',
-                          marginBottom: 3,
-                        }}
-                      >
-                        {role.title}
-                      </div>
-                      <div style={{ fontSize: '0.8125rem', color: 'var(--p-muted)' }}>
-                        {role.company} · {role.location}
-                      </div>
-                      <div
-                        style={{
-                          marginTop: 8,
-                          display: 'flex',
-                          gap: 6,
-                          flexWrap: 'wrap',
-                          fontSize: '0.75rem',
-                        }}
-                      >
-                        <span
-                          style={{
-                            padding: '2px 7px',
-                            borderRadius: 5,
-                            background: active ? 'var(--p-accent-soft)' : 'var(--p-surface)',
-                            color: active ? 'var(--p-accent)' : 'var(--p-muted)',
-                            fontWeight: 500,
-                          }}
-                        >
-                          {role.mode}
-                        </span>
-                        <span
-                          style={{
-                            padding: '2px 7px',
-                            borderRadius: 5,
-                            background: 'var(--p-surface)',
-                            color: 'var(--p-muted)',
-                          }}
-                        >
-                          {role.level}
-                        </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <img
+                          src={role.avatar}
+                          alt=""
+                          aria-hidden="true"
+                          className="tk-role-avatar"
+                        />
+                        <div style={{ minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontWeight: 500,
+                              fontSize: '0.9rem',
+                              color: 'var(--p-ink)',
+                              marginBottom: 2,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {role.title}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: '0.78rem',
+                              color: 'var(--p-muted)',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {role.location} · {role.mode}
+                          </div>
+                        </div>
                       </div>
                     </button>
                   );
@@ -210,13 +228,21 @@ export default function HomePage() {
                     flexWrap: 'wrap',
                   }}
                 >
-                  <div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 500, color: 'var(--p-ink)' }}>
-                      {selectedRole.title}
-                    </div>
-                    <div style={{ fontSize: '0.9rem', color: 'var(--p-muted)', marginTop: 2 }}>
-                      {selectedRole.company} · {selectedRole.location} · {selectedRole.mode} ·{' '}
-                      {selectedRole.type}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <img
+                      src={selectedRole.avatar}
+                      alt={selectedRole.avatarAlt}
+                      className="tk-role-avatar"
+                      style={{ width: 46, height: 46, borderRadius: 12 }}
+                    />
+                    <div>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 500, color: 'var(--p-ink)' }}>
+                        {selectedRole.title}
+                      </div>
+                      <div style={{ fontSize: '0.88rem', color: 'var(--p-muted)', marginTop: 2 }}>
+                        {selectedRole.company} · {selectedRole.location} · {selectedRole.mode} ·{' '}
+                        {selectedRole.type}
+                      </div>
                     </div>
                   </div>
                   <span className="badge badge-open">Masih dibuka</span>
@@ -315,7 +341,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. FEATURE BENTO (2x2 clean white cards with lit soft panels & real HTML UI fragments) */}
+      {/* 2. FEATURE BENTO (2x2 clean white cards with 3D render & live UI fragments) */}
       <section className="tk-surface-band" aria-labelledby="heading-features">
         <div className="tk-section__head">
           <h2 id="heading-features" className="tk-section__h2">
@@ -351,6 +377,7 @@ export default function HomePage() {
                     marginBottom: 12,
                     color: 'var(--p-ink)',
                     fontWeight: 500,
+                    gap: 8,
                   }}
                 >
                   <span>Cari posisi atau perusahaan...</span>
@@ -377,14 +404,23 @@ export default function HomePage() {
                     borderTop: '1px solid var(--border-subtle)',
                     paddingTop: 10,
                     display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'space-between',
+                    gap: 8,
                     color: 'var(--p-muted)',
                     fontSize: '0.8rem',
                   }}
                 >
-                  <strong style={{ color: 'var(--p-ink)', fontWeight: 500 }}>
-                    Data Analyst · Bandung
-                  </strong>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <img
+                      src="/images/avatar-designer.jpg"
+                      alt=""
+                      style={{ width: 28, height: 28, borderRadius: 7, objectFit: 'cover' }}
+                    />
+                    <strong style={{ color: 'var(--p-ink)', fontWeight: 500 }}>
+                      Product Designer · Bandung
+                    </strong>
+                  </div>
                   <span>Masih dibuka</span>
                 </div>
               </div>
@@ -402,55 +438,58 @@ export default function HomePage() {
             </div>
             <div className="tk-feature-panel tk-feature-panel--sage" aria-hidden="true">
               <div className="tk-ui-frag">
-                <div style={{ fontWeight: 500, marginBottom: 10, color: 'var(--p-ink)' }}>
-                  Pemetaan profil terhadap syarat posisi
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    marginBottom: 12,
+                  }}
+                >
+                  <img
+                    src="/images/avatar-finance.jpg"
+                    alt=""
+                    style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover' }}
+                  />
+                  <div style={{ fontWeight: 500, color: 'var(--p-ink)' }}>
+                    Pemetaan profil terhadap syarat posisi
+                  </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div
                     style={{
                       display: 'flex',
                       justifyContent: 'space-between',
+                      gap: 8,
                       padding: '8px 10px',
                       borderRadius: 8,
                       background: 'var(--status-open-bg)',
                       color: 'var(--status-open)',
                     }}
                   >
-                    <span>Keahlian SQL &amp; Visualisasi Data</span>
+                    <span>Keahlian SQL &amp; Pelaporan</span>
                     <strong>Cocok</strong>
                   </div>
                   <div
                     style={{
                       display: 'flex',
                       justifyContent: 'space-between',
+                      gap: 8,
                       padding: '8px 10px',
                       borderRadius: 8,
                       background: 'var(--status-warning-bg)',
                       color: 'var(--status-warning)',
                     }}
                   >
-                    <span>Pengalaman Python untuk analisis</span>
+                    <span>Sertifikasi Brevet Pajak</span>
                     <strong>Belum ada</strong>
-                  </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      padding: '8px 10px',
-                      borderRadius: 8,
-                      background: 'var(--p-surface)',
-                      color: 'var(--p-muted)',
-                    }}
-                  >
-                    <span>Rentang gaji lowongan</span>
-                    <span>Tidak dicantumkan</span>
                   </div>
                 </div>
               </div>
             </div>
           </article>
 
-          {/* Card 3: Studio CV */}
+          {/* Card 3: Studio CV with bespoke 3D workspace render */}
           <article className="tk-feature-card">
             <div>
               <h3 className="tk-feature-card__title">Buat CV baru atau impor CV lama</h3>
@@ -459,35 +498,11 @@ export default function HomePage() {
                 rapi, lalu unduh dalam bentuk PDF siap kirim.
               </p>
             </div>
-            <div className="tk-feature-panel tk-feature-panel--sand" aria-hidden="true">
-              <div className="tk-ui-frag">
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: 12,
-                    paddingBottom: 10,
-                    borderBottom: '1px solid var(--border-subtle)',
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 500, color: 'var(--p-ink)' }}>CV — Nadia Pratama</div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--p-muted)' }}>
-                      Terakhir diperbarui hari ini
-                    </div>
-                  </div>
-                  <span className="badge badge-accent">Ekspor PDF</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, color: 'var(--p-muted)' }}>
-                  <div style={{ color: 'var(--p-ink)', fontWeight: 500 }}>Pengalaman Kerja</div>
-                  <div>UI/UX Designer Intern · 2025 – 2026</div>
-                  <div style={{ color: 'var(--p-ink)', fontWeight: 500, marginTop: 4 }}>
-                    Keahlian Utama
-                  </div>
-                  <div>Figma, Riset Pengguna, HTML/CSS, Desain Responsif</div>
-                </div>
-              </div>
+            <div className="tk-feature-panel tk-feature-panel--photo">
+              <img
+                src="/images/cv-3d-workspace.jpg"
+                alt="Ilustrasi 3D dokumen CV, tas kerja, pena biru, dan kaca pembesar di meja kerja"
+              />
             </div>
           </article>
 
@@ -508,6 +523,8 @@ export default function HomePage() {
                     justifyContent: 'space-between',
                     marginBottom: 10,
                     alignItems: 'center',
+                    gap: 8,
+                    flexWrap: 'wrap',
                   }}
                 >
                   <strong style={{ fontWeight: 500, color: 'var(--p-ink)' }}>

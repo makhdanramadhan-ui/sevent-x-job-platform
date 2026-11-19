@@ -156,13 +156,20 @@ export function AuthGuard({
         >
           <div className="auth-modal-dialog">
             <div className="auth-modal-header">
-              <h1
-                id="auth-modal-title"
-                className="font-editorial"
-                style={{ fontSize: '1.4rem', margin: 0 }}
-              >
-                {title}
-              </h1>
+              <div>
+                <div className="tk-avatar-stack" aria-hidden="true" style={{ marginBottom: 12 }}>
+                  <img src="/images/avatar-frontend.jpg" alt="" />
+                  <img src="/images/avatar-finance.jpg" alt="" />
+                  <img src="/images/avatar-designer.jpg" alt="" />
+                </div>
+                <h1
+                  id="auth-modal-title"
+                  className="font-editorial"
+                  style={{ fontSize: '1.4rem', margin: 0 }}
+                >
+                  {title}
+                </h1>
+              </div>
 
               <Link
                 href="/"
