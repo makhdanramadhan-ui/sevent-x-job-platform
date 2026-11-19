@@ -62,6 +62,80 @@ const INITIAL_FILTERS: FilterState = {
   status: '',
 };
 
+const HIDDEN_JOBS_STORAGE_KEY = 'rakitkarier:hidden-jobs';
+
+function parseQueryStateFromSearch(search: string): { filters: FilterState; page: number } {
+  const params = new URLSearchParams(search);
+  const q = (params.get('q') ?? '').slice(0, 100);
+  const location = (params.get('location') ?? '').slice(0, 100);
+  const rawWorkMode = params.get('work_mode') ?? '';
+  const rawEmpType = params.get('employment_type') ?? '';
+  const rawLevel = params.get('level') ?? '';
+  const rawStatus = params.get('status') ?? '';
+  const rawPage = Number(params.get('page') ?? '1');
+
+  const work_mode: '' | WorkMode = WORK_MODES.includes(rawWorkMode as WorkMode)
+    ? (rawWorkMode as WorkMode)
+    : '';
+  const employment_type: '' | EmploymentType = EMPLOYMENT_TYPES.includes(
+    rawEmpType as EmploymentType,
+  )
+    ? (rawEmpType as EmploymentType)
+    : '';
+  const level: '' | ExperienceLevel = EXPERIENCE_LEVELS.includes(rawLevel as ExperienceLevel)
+    ? (rawLevel as ExperienceLevel)
+    : '';
+  const status: '' | JobStatus = JOB_STATUSES.includes(rawStatus as JobStatus)
+    ? (rawStatus as JobStatus)
+    : '';
+  const page = Number.isInteger(rawPage) && rawPage >= 1 && rawPage <= 1000 ? rawPage : 1;
+
+  return {
+    filters: { q, location, work_mode, employment_type, level, status },
+    page,
+  };
+}
+
+function buildJobsQueryString(applied: FilterState, pageNum: number): string {
+  const params = new URLSearchParams();
+  const cleanedQ = cleanSearchQuery(applied.q);
+  if (cleanedQ) params.set('q', cleanedQ.slice(0, 100));
+  const cleanedLoc = cleanSearchQuery(applied.location);
+  if (cleanedLoc) params.set('location', cleanedLoc.slice(0, 100));
+  if (applied.work_mode) params.set('work_mode', applied.work_mode);
+  if (applied.employment_type) params.set('employment_type', applied.employment_type);
+  if (applied.level) params.set('level', applied.level);
+  if (applied.status) params.set('status', applied.status);
+  if (pageNum > 1) params.set('page', String(pageNum));
+  return params.toString();
+}
+
+function readHiddenJobIds(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = window.localStorage.getItem(HIDDEN_JOBS_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((item): item is string => typeof item === 'string' && item.length > 0));
+  } catch {
+    return new Set();
+  }
+}
+
+function persistHiddenJobIds(ids: Set<string>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (ids.size === 0) {
+      window.localStorage.removeItem(HIDDEN_JOBS_STORAGE_KEY);
+    } else {
+      window.localStorage.setItem(HIDDEN_JOBS_STORAGE_KEY, JSON.stringify(Array.from(ids)));
+    }
+  } catch {
+    // Abaikan error kuota/private mode localStorage
+  }
+}
+
 function cleanSearchQuery(raw: string): string {
   return raw.replace(/[,()%*\\]/g, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -94,6 +168,7 @@ function formatRelativeTimeId(dateIso: string | null | undefined): string {
 
 function JobsFeedInner() {
   const router = useRouter();
+  const [urlHydrated, setUrlHydrated] = useState(false);
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<FilterState>(INITIAL_FILTERS);
   const [openPill, setOpenPill] = useState<PillKey | null>(null);
@@ -114,6 +189,36 @@ function JobsFeedInner() {
 
   const pillsRef = useRef<HTMLDivElement | null>(null);
   const prefersReducedMotion = useReducedMotion();
+
+  // Fitur #4 & #5: Muat filter awal dari URL query string & hiddenIds dari localStorage
+  useEffect(() => {
+    const initial = parseQueryStateFromSearch(window.location.search);
+    setFilters(initial.filters);
+    setAppliedFilters(initial.filters);
+    setPage(initial.page);
+    setHiddenIds(readHiddenJobIds());
+    setUrlHydrated(true);
+
+    const handlePopState = () => {
+      const next = parseQueryStateFromSearch(window.location.search);
+      setFilters(next.filters);
+      setAppliedFilters(next.filters);
+      setPage(next.page);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Fitur #4: Sinkronkan filter aktif & halaman ke URL browser tanpa reload halaman
+  useEffect(() => {
+    if (!urlHydrated) return;
+    const qs = buildJobsQueryString(appliedFilters, page);
+    const nextUrl = qs ? `/jobs?${qs}` : '/jobs';
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+    if (nextUrl !== currentUrl) {
+      window.history.replaceState(null, '', nextUrl);
+    }
+  }, [appliedFilters, page, urlHydrated]);
 
   const bookmarkedIds = useMemo(
     () => new Set(bookmarks.map((b) => b.job_id)),
@@ -179,8 +284,9 @@ function JobsFeedInner() {
   }, [loadBookmarks]);
 
   useEffect(() => {
+    if (!urlHydrated) return;
     loadJobs();
-  }, [loadJobs]);
+  }, [loadJobs, urlHydrated]);
 
   function handleApplyFilters(e: FormEvent) {
     e.preventDefault();
@@ -205,7 +311,26 @@ function JobsFeedInner() {
   }
 
   function handleHideJob(jobId: string) {
-    setHiddenIds((prev) => new Set(prev).add(jobId));
+    setHiddenIds((prev) => {
+      const next = new Set(prev);
+      next.add(jobId);
+      persistHiddenJobIds(next);
+      return next;
+    });
+    setActionNotice({
+      type: 'success',
+      text: 'Lowongan disembunyikan dari daftar. Kamu dapat memulihkannya kapan saja lewat tombol di atas daftar.',
+    });
+  }
+
+  function handleRestoreHiddenJobs() {
+    const empty = new Set<string>();
+    persistHiddenJobIds(empty);
+    setHiddenIds(empty);
+    setActionNotice({
+      type: 'success',
+      text: 'Seluruh lowongan yang disembunyikan telah ditampilkan kembali.',
+    });
   }
 
   function handleCardClick(event: ReactMouseEvent<HTMLElement>, jobId: string) {
@@ -539,7 +664,7 @@ function JobsFeedInner() {
                     type="button"
                     className="job-action-ghost"
                     style={{ display: 'inline-flex', height: 'auto', padding: '2px 6px' }}
-                    onClick={() => setHiddenIds(new Set())}
+                    onClick={handleRestoreHiddenJobs}
                   >
                     Tampilkan {hiddenIds.size} yang disembunyikan
                   </button>
