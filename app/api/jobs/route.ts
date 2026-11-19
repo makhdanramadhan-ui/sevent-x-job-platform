@@ -13,7 +13,7 @@ import {
 export const dynamic = 'force-dynamic';
 
 const JOB_COLUMNS =
-  'id, title, company, location, work_mode, employment_type, level, education, skills, description, deadline, status, first_seen_at, last_seen_at, last_fetched_at, updated_at';
+  'id, title, company, company_logo_url, location, work_mode, employment_type, level, education, skills, description, deadline, status, first_seen_at, last_seen_at, last_fetched_at, updated_at';
 
 const QUERY_KEYS = [
   'page',
