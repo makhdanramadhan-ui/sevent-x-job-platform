@@ -19,6 +19,7 @@ import {
   JobStatusBadge,
   LoadingState,
   NoticeBanner,
+  PageBanner,
   SelectInput,
   SITE_NAME,
   TextInput,
@@ -194,22 +195,24 @@ function JobsFeedInner() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Cari Lowongan Kerja</h1>
-          <p className="page-subtitle">
-            Temukan peluang kerja yang sesuai dengan bidang, lokasi, dan sistem kerja pilihanmu.
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <Link href="/recommendations" className="btn btn-secondary btn-sm">
-            Cek Kecocokan Profil
-          </Link>
-          <Link href="/bookmarks" className="btn btn-outline btn-sm">
-            Lowongan Tersimpan ({bookmarkedIds.size})
-          </Link>
-        </div>
-      </div>
+      <PageBanner
+        kicker="Eksplorasi Karier"
+        title="Cari Lowongan Kerja"
+        subtitle="Temukan peluang kerja yang sesuai dengan bidang, lokasi, dan sistem kerja pilihanmu."
+        tone="sky"
+        imageSrc="/images/banner-jobs.jpg"
+        imageAlt="Ilustrasi pencarian lowongan kerja"
+        actions={
+          <>
+            <Link href="/recommendations" className="btn btn-secondary btn-sm">
+              Cek Kecocokan Profil
+            </Link>
+            <Link href="/bookmarks" className="btn btn-outline btn-sm">
+              Lowongan Tersimpan ({bookmarkedIds.size})
+            </Link>
+          </>
+        }
+      />
 
       {actionNotice ? (
         <NoticeBanner

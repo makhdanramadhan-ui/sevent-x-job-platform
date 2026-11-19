@@ -17,6 +17,7 @@ import {
   JobStatusBadge,
   LoadingState,
   NoticeBanner,
+  PageBanner,
   WORK_MODE_LABELS,
 } from '@/components/ui';
 import {
@@ -147,23 +148,24 @@ function RecommendationsInner() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Rekomendasi Lowongan Untukmu</h1>
-          <p className="page-subtitle">
-            Lihat peluang kerja yang paling sesuai dengan keahlian, pengalaman, dan preferensi
-            profilmu, beserta persyaratan yang masih perlu kamu lengkapi.
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <Link href="/profile" className="btn btn-outline btn-sm">
-            Ubah Profil &amp; Preferensi
-          </Link>
-          <Link href="/jobs" className="btn btn-secondary btn-sm">
-            Cari Semua Lowongan
-          </Link>
-        </div>
-      </div>
+      <PageBanner
+        kicker="Kecocokan Profil"
+        title="Rekomendasi Lowongan Untukmu"
+        subtitle="Lihat peluang kerja yang paling sesuai dengan keahlian, pengalaman, dan preferensi profilmu, beserta persyaratan yang masih perlu kamu lengkapi."
+        tone="mist"
+        imageSrc="/images/banner-recommendations.jpg"
+        imageAlt="Ilustrasi rekomendasi kecocokan lowongan"
+        actions={
+          <>
+            <Link href="/profile" className="btn btn-outline btn-sm">
+              Ubah Profil &amp; Preferensi
+            </Link>
+            <Link href="/jobs" className="btn btn-secondary btn-sm">
+              Cari Semua Lowongan
+            </Link>
+          </>
+        }
+      />
 
       {/* Friendly Info Banner */}
       <NoticeBanner variant="info" title="Cara Membaca Kecocokan Profil">

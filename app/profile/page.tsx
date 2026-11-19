@@ -22,6 +22,7 @@ import {
   LoadingState,
   NoticeBanner,
   notifyAuthChanged,
+  PageBanner,
   ProfileEditorForm,
   type SessionInfo,
 } from '@/components/ui';
@@ -441,24 +442,30 @@ function ProfileInner({ session }: { session: SessionInfo }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Profil &amp; Preferensi Kerja</h1>
-          <p className="page-subtitle">
+      <PageBanner
+        kicker="Akun & Karier"
+        title="Profil & Preferensi Kerja"
+        subtitle={
+          <>
             Kelola riwayat pendidikan, pengalaman kerja, keahlian, portofolio, serta preferensi
             pencarian kerja untuk akun{' '}
             <strong className="font-mono">{session.user.email ?? session.user.id}</strong>.
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <Link href="/recommendations" className="btn btn-secondary btn-sm">
-            Lihat Rekomendasi
-          </Link>
-          <Link href="/cv" className="btn btn-outline btn-sm">
-            Buka Studio CV
-          </Link>
-        </div>
-      </div>
+          </>
+        }
+        tone="sand"
+        imageSrc="/images/banner-profile.jpg"
+        imageAlt="Ilustrasi profil dan preferensi kerja"
+        actions={
+          <>
+            <Link href="/recommendations" className="btn btn-secondary btn-sm">
+              Lihat Rekomendasi
+            </Link>
+            <Link href="/cv" className="btn btn-outline btn-sm">
+              Buka Studio CV
+            </Link>
+          </>
+        }
+      />
 
       <ProfileAvatarSection session={session} />
 

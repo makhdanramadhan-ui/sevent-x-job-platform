@@ -16,7 +16,14 @@ export {
   WORK_MODE_LABELS,
 } from './api-client';
 export { AuthGuard } from './auth-guard';
-export { EmptyState, ErrorState, LoadingState, NoticeBanner } from './feedback';
+export {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  NoticeBanner,
+  NoticePopup,
+  type NoticeVariant,
+} from './feedback';
 export { AuthDivider, GoogleAuthButton } from './google-button';
 export {
   EmptyArchiveIllustration,
@@ -52,6 +59,7 @@ export {
   SiteFooter,
   SiteHeader,
 } from './navigation';
+export { PageBanner, type PageBannerProps, type PageBannerTone } from './page-banner';
 export { ProfileEditorForm } from './profile-editor';
 export {
   ScrollProgressBar,
