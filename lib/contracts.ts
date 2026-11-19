@@ -160,3 +160,16 @@ export type ApiErrorBody = {
 export type ApiSuccess<T> = {
   data: T;
 };
+
+export type AuthUser = {
+  id: string;
+  email: string | null;
+  name: string | null;
+  avatar_url: string | null;
+};
+
+export type AuthMeData = {
+  user: AuthUser;
+  auth_mode: 'cookie' | 'bearer';
+  has_profile: boolean;
+};
