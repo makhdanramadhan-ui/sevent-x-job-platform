@@ -35,6 +35,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         status: 200,
         headers: {
           'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+          'CDN-Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
         },
       },
     );

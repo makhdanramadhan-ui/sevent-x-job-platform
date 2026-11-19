@@ -271,7 +271,12 @@ async function main(): Promise<void> {
       assert.equal(typeof row.name, 'string', 'GET /api/skills: name bukan string');
       assert.equal(typeof row.category, 'string', 'GET /api/skills: category bukan string');
     }
-    console.log('PASS GET /api/skills -> 200 (shape)');
+    assert.equal(
+      skills.headers.get('cache-control'),
+      'public, s-maxage=3600, stale-while-revalidate=86400',
+      'GET /api/skills: cache-control',
+    );
+    console.log('PASS GET /api/skills -> 200 (cache-control)');
   }
 
   console.log(`PASS smoke selesai (${hasSupabase ? 'Supabase env terdeteksi' : 'tanpa Supabase env'})`);
