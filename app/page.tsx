@@ -2,7 +2,12 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { SITE_NAME } from '@/components/ui';
+import {
+  ScrollReveal,
+  ScrollStepsProgress,
+  ScrollWordHighlight,
+  SITE_NAME,
+} from '@/components/ui';
 
 type PreviewRole = {
   id: string;
@@ -150,7 +155,8 @@ export default function HomePage() {
         </div>
 
         {/* Live HTML Application Window inside Calm Lit Frame */}
-        <div className="tk-hero__stage" aria-label={`Pratinjau antarmuka ${SITE_NAME}`}>
+        <ScrollReveal delayMs={100}>
+          <div className="tk-hero__stage" aria-label={`Pratinjau antarmuka ${SITE_NAME}`}>
           <div className="tk-app-window">
             <div className="tk-app-bar">
               <div className="tk-app-dots" aria-hidden="true">
@@ -339,10 +345,20 @@ export default function HomePage() {
 
           <div className="tk-hero__fade" aria-hidden="true" />
         </div>
+        </ScrollReveal>
+      </section>
+
+      {/* SCROLL MOMENT: Word-Highlight Statement (tasteskill) */}
+      <section aria-label="Ringkasan cara kerja RakitKarier">
+        <ScrollWordHighlight
+          text={`Di ${SITE_NAME}, kamu tidak hanya melihat daftar lowongan, tetapi langsung memahami syarat mana yang cocok dengan profilmu, melengkapi CV, lalu melamar di situs resmi perusahaan.`}
+          accentWords={[SITE_NAME, 'cocok', 'profilmu', 'CV', 'resmi']}
+        />
       </section>
 
       {/* 2. FEATURE BENTO (2x2 clean white cards with 3D render & live UI fragments) */}
-      <section className="tk-surface-band" aria-labelledby="heading-features">
+      <ScrollReveal>
+        <section className="tk-surface-band" aria-labelledby="heading-features">
         <div className="tk-section__head">
           <h2 id="heading-features" className="tk-section__h2">
             Semua alat persiapan melamar.{' '}
@@ -555,30 +571,47 @@ export default function HomePage() {
           </article>
         </div>
       </section>
+      </ScrollReveal>
 
-      {/* 3. CALM STEPS SECTION (Hairline rows on pure white ground) */}
+      {/* 3. CALM STEPS SECTION (Scroll-linked vertical progress rail) */}
       <section className="tk-section" aria-labelledby="heading-steps">
-        <div className="tk-section__head">
-          <h2 id="heading-steps" className="tk-section__h2">
-            Alur melamar kerja di {SITE_NAME}.
-          </h2>
-          <p className="tk-section__intro">
-            Empat langkah sederhana dari pembuatan profil hingga membuka halaman pendaftaran resmi.
-          </p>
-        </div>
+        <ScrollReveal>
+          <div className="tk-section__head">
+            <h2 id="heading-steps" className="tk-section__h2">
+              Alur melamar kerja di {SITE_NAME}.
+            </h2>
+            <p className="tk-section__intro">
+              Empat langkah sederhana dari pembuatan profil hingga membuka halaman pendaftaran
+              resmi.
+            </p>
+          </div>
+        </ScrollReveal>
 
-        <div className="tk-steps-list">
-          {WORKFLOW_STEPS.map((step) => (
-            <div key={step.num} className="tk-step-row">
-              <span className="tk-step-num">{step.num}</span>
-              <h3 className="tk-step-title">{step.title}</h3>
-              <p className="tk-step-desc">{step.desc}</p>
-              <Link href={step.href} className="tk-step-link">
-                {step.label} →
-              </Link>
+        <ScrollStepsProgress>
+          {(activeIndex) => (
+            <div className="tk-steps-list">
+              {WORKFLOW_STEPS.map((step, idx) => {
+                const isActive = idx === activeIndex;
+                const isPast = idx <= activeIndex;
+                return (
+                  <div
+                    key={step.num}
+                    className={`tk-step-row ${isActive ? 'tk-step-row--active' : ''} ${
+                      !isPast ? 'tk-step-row--dim' : ''
+                    }`.trim()}
+                  >
+                    <span className="tk-step-num">{step.num}</span>
+                    <h3 className="tk-step-title">{step.title}</h3>
+                    <p className="tk-step-desc">{step.desc}</p>
+                    <Link href={step.href} className="tk-step-link">
+                      {step.label} →
+                    </Link>
+                  </div>
+                );
+              })}
             </div>
-          ))}
-        </div>
+          )}
+        </ScrollStepsProgress>
       </section>
     </div>
   );

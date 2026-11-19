@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { apiFetch, SITE_NAME } from './api-client';
 import { Button } from './forms';
+import { ScrollProgressBar } from './scroll-motion';
 
 export type SessionInfo = {
   user: { id: string; email: string | null };
@@ -168,6 +169,7 @@ export function SiteHeader() {
             </div>
           </div>
         </div>
+        <ScrollProgressBar />
       </header>
     </>
   );
