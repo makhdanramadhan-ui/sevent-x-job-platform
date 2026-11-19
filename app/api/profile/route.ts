@@ -5,6 +5,7 @@ import { throwDb } from '@/lib/db';
 import { readSupabaseAdminEnv } from '@/lib/env';
 import { ok, readJson, run } from '@/lib/http';
 import { parseProfile } from '@/lib/profile';
+import { canonicalizeSkillNames, tryLoadSkillCatalog } from '@/lib/skills';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,9 +29,11 @@ export async function PUT(req: NextRequest) {
   return run(async () => {
     const auth = await requireAuth(req);
     const input = parseProfile(await readJson(req, 64 * 1024));
+    const catalog = await tryLoadSkillCatalog(auth.supabase);
+    const canonical = canonicalizeSkillNames(input.skills, catalog);
     const { data, error } = await auth.supabase
       .from('profiles')
-      .upsert({ user_id: auth.user.id, ...input }, { onConflict: 'user_id' })
+      .upsert({ user_id: auth.user.id, ...input, skills: canonical }, { onConflict: 'user_id' })
       .select(PROFILE_COLUMNS)
       .single();
     if (error) throwDb(error);
