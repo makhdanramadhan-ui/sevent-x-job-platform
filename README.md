@@ -22,4 +22,9 @@ Repositori ini digunakan bersama untuk seluruh proyek: frontend, backend, agrega
 3. Untuk proyek Supabase baru, jalankan SQL di `supabase/migrations/` sesuai urutan nama file.
 4. Jalankan `npm run dev`.
 
+## Autentikasi
+
+- Pendaftaran (`POST /api/auth/signup`) dibuat server-side lewat Supabase Admin API dengan `email_confirm: true`, lalu langsung membuat sesi cookie (tanpa email konfirmasi). Membutuhkan `SUPABASE_SERVICE_ROLE_KEY` di server.
+- Login Google: `GET /api/auth/google?next=/path` mengarah ke OAuth Supabase, lalu `GET /auth/callback` menukar kode sesi dan mengarahkan ke `/onboarding` (belum ada profil) atau `next`/`/jobs`. Provider Google harus diaktifkan di dashboard Supabase; jika belum, endpoint mengembalikan alihan gagal yang aman ke `/login`.
+
 Pemeriksaan backend: `npm run typecheck`, `npm run build`, `npm run check`, dan `npm run check:supabase` untuk integrasi dengan proyek Supabase uji. Kedua skrip pemeriksaan ditulis dalam TypeScript dan dijalankan melalui `tsx`; `npm run typecheck` juga memeriksa keduanya.

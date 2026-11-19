@@ -1,11 +1,24 @@
 import type { NextRequest } from 'next/server';
-import { readSupabaseEnv } from '@/lib/env';
+import { readSupabaseAdminEnv } from '@/lib/env';
 import { ApiError, asObject, ok, readJson, rejectUnknownKeys, run } from '@/lib/http';
-import { createCookieClient } from '@/lib/supabase';
-import { emailValue, optionalText, passwordValue } from '@/lib/validation';
 import { assertOriginAllowed } from '@/lib/auth';
+import { createAdminClient, createCookieClient } from '@/lib/supabase';
+import { emailValue, optionalText, passwordValue } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
+
+function isConflictError(error: { message?: string; code?: string } | null): boolean {
+  if (!error) return false;
+  const code = (error.code ?? '').toLowerCase();
+  const message = (error.message ?? '').toLowerCase();
+  return (
+    code === 'email_exists' ||
+    code === 'user_already_exists' ||
+    message.includes('already registered') ||
+    message.includes('already exists') ||
+    message.includes('sudah terdaftar')
+  );
+}
 
 export async function POST(req: NextRequest) {
   return run(async () => {
@@ -15,28 +28,39 @@ export async function POST(req: NextRequest) {
     const password = passwordValue(body.password);
     const fullName = optionalText(body.full_name, 'full_name', 1, 120);
     assertOriginAllowed(req);
-    const env = readSupabaseEnv();
+
+    const env = readSupabaseAdminEnv();
     if (!env) {
       throw new ApiError(503, 'auth_not_configured', 'Autentikasi belum dikonfigurasi.');
     }
-    const supabase = await createCookieClient(env);
-    const { data, error } = await supabase.auth.signUp({
+
+    const admin = createAdminClient(env);
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
       email,
       password,
-      options: fullName ? { data: { full_name: fullName } } : undefined,
+      email_confirm: true,
+      ...(fullName ? { user_metadata: { full_name: fullName } } : {}),
     });
-    if (error || !data.user) {
+
+    if (createError || !created.user) {
+      if (createError?.status === 429) {
+        throw new ApiError(429, 'rate_limited', 'Terlalu banyak percobaan. Coba lagi nanti.');
+      }
+      if (isConflictError(createError)) {
+        throw new ApiError(409, 'conflict', 'Email sudah terdaftar.');
+      }
+      throw new ApiError(400, 'signup_failed', 'Pendaftaran tidak dapat diproses.');
+    }
+
+    const supabase = await createCookieClient(env);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data.user || !data.session) {
       if (error?.status === 429) {
         throw new ApiError(429, 'rate_limited', 'Terlalu banyak percobaan. Coba lagi nanti.');
       }
       throw new ApiError(400, 'signup_failed', 'Pendaftaran tidak dapat diproses.');
     }
-    return ok(
-      {
-        user: { id: data.user.id, email: data.user.email ?? email },
-        requires_email_confirmation: !data.session,
-      },
-      201,
-    );
+
+    return ok({ user: { id: data.user.id, email: data.user.email ?? email } }, 201);
   });
 }
