@@ -6,7 +6,6 @@ import {
   type ApiCallError,
   AuthGuard,
   apiFetch,
-  Badge,
   Button,
   CheckboxGroup,
   EMPLOYMENT_TYPE_LABELS,
@@ -53,6 +52,12 @@ const LEVEL_FILTER_OPTS = EXPERIENCE_LEVELS.map((value) => ({
   label: EXPERIENCE_LEVEL_LABELS[value],
 }));
 
+const EMPTY_FILTERS: RecommendationFilters = {
+  work_modes: [],
+  employment_types: [],
+  levels: [],
+};
+
 function isRecommendationOutput(val: unknown): val is RecommendationOutput {
   if (!val || typeof val !== 'object') return false;
   const obj = val as Record<string, unknown>;
@@ -66,12 +71,9 @@ function RecommendationsInner() {
   const [endpointMissing, setEndpointMissing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiCallError | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(true);
 
-  const [filters, setFilters] = useState<RecommendationFilters>({
-    work_modes: [],
-    employment_types: [],
-    levels: [],
-  });
+  const [filters, setFilters] = useState<RecommendationFilters>(EMPTY_FILTERS);
 
   const loadRecommendations = useCallback(async () => {
     setLoading(true);
@@ -117,11 +119,16 @@ function RecommendationsInner() {
     loadRecommendations();
   }, [loadRecommendations]);
 
+  const activeFilterCount =
+    filters.work_modes.length + filters.employment_types.length + filters.levels.length;
+
   const filteredItems = useMemo(() => {
     if (!recOutput) return [];
     return recOutput.items.filter((item) => {
       const job = jobsMap[item.job_id];
-      if (!job) return true;
+      if (!job) {
+        return activeFilterCount === 0;
+      }
       if (filters.work_modes.length > 0 && !filters.work_modes.includes(job.work_mode)) {
         return false;
       }
@@ -136,7 +143,7 @@ function RecommendationsInner() {
       }
       return true;
     });
-  }, [recOutput, jobsMap, filters]);
+  }, [recOutput, jobsMap, filters, activeFilterCount]);
 
   const profileHasContent = Boolean(
     profile &&
@@ -147,7 +154,7 @@ function RecommendationsInner() {
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
       <PageBanner
         kicker="Kecocokan Profil"
         title="Rekomendasi Lowongan Untukmu"
@@ -205,30 +212,38 @@ function RecommendationsInner() {
               }
             />
           ) : (
-            <section className="surface-card" aria-label="Ringkasan profil kamu">
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: 10,
-                  marginBottom: 10,
-                }}
-              >
-                <strong style={{ fontSize: '0.95rem' }}>Ringkasan Kualifikasi Profilmu</strong>
-                <Link href="/profile" className="font-mono" style={{ fontSize: '0.78rem' }}>
-                  Perbarui Profil
+            <section className="rec-profile-card" aria-label="Ringkasan profil kamu">
+              <div className="rec-profile-header">
+                <h2 className="rec-profile-title">Ringkasan Kualifikasi Profilmu</h2>
+                <Link href="/profile" className="rec-profile-link">
+                  Perbarui Profil →
                 </Link>
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                <Badge variant="open">{profile?.skills.length ?? 0} Keahlian</Badge>
-                <Badge variant="neutral">{profile?.education.length ?? 0} Pendidikan</Badge>
-                <Badge variant="neutral">{profile?.experiences.length ?? 0} Pengalaman</Badge>
-                <Badge variant="neutral">{profile?.projects.length ?? 0} Proyek</Badge>
-                <Badge variant="neutral">
-                  {profile?.preferences.positions.length ?? 0} Posisi Diminati
-                </Badge>
+              <div className="rec-stats-grid">
+                <div className="rec-stat-box">
+                  <span className="rec-stat-value rec-stat-value--accent">
+                    {profile?.skills.length ?? 0}
+                  </span>
+                  <span className="rec-stat-label">Keahlian</span>
+                </div>
+                <div className="rec-stat-box">
+                  <span className="rec-stat-value">{profile?.education.length ?? 0}</span>
+                  <span className="rec-stat-label">Pendidikan</span>
+                </div>
+                <div className="rec-stat-box">
+                  <span className="rec-stat-value">{profile?.experiences.length ?? 0}</span>
+                  <span className="rec-stat-label">Pengalaman</span>
+                </div>
+                <div className="rec-stat-box">
+                  <span className="rec-stat-value">{profile?.projects.length ?? 0}</span>
+                  <span className="rec-stat-label">Proyek</span>
+                </div>
+                <div className="rec-stat-box">
+                  <span className="rec-stat-value">
+                    {profile?.preferences.positions.length ?? 0}
+                  </span>
+                  <span className="rec-stat-label">Posisi Diminati</span>
+                </div>
               </div>
             </section>
           )}
@@ -252,63 +267,102 @@ function RecommendationsInner() {
           ) : (
             <>
               {/* Filter Bar when recommendations exist */}
-              <section className="surface-card" aria-label="Filter daftar rekomendasi">
-                <div className="form-stack">
-                  <CheckboxGroup
-                    legend="Filter Mode Kerja"
-                    options={WORK_MODE_FILTER_OPTS}
-                    selected={filters.work_modes}
-                    onChange={(work_modes) => setFilters({ ...filters, work_modes })}
-                  />
-                  <CheckboxGroup
-                    legend="Filter Jenis Kontrak"
-                    options={EMPLOYMENT_FILTER_OPTS}
-                    selected={filters.employment_types}
-                    onChange={(employment_types) => setFilters({ ...filters, employment_types })}
-                  />
-                  <CheckboxGroup
-                    legend="Filter Tingkat Pengalaman"
-                    options={LEVEL_FILTER_OPTS}
-                    selected={filters.levels}
-                    onChange={(levels) => setFilters({ ...filters, levels })}
-                  />
+              <section className="rec-filter-card" aria-label="Filter daftar rekomendasi">
+                <div className="rec-filter-head">
+                  <div className="rec-filter-head-left">
+                    <h2 className="rec-filter-title">Filter Rekomendasi</h2>
+                    {activeFilterCount > 0 ? (
+                      <span className="rec-filter-count">{activeFilterCount} aktif</span>
+                    ) : null}
+                  </div>
+                  <div className="rec-filter-actions">
+                    {activeFilterCount > 0 ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFilters(EMPTY_FILTERS)}
+                      >
+                        Reset Filter
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-expanded={filtersOpen}
+                      onClick={() => setFiltersOpen((prev) => !prev)}
+                    >
+                      {filtersOpen ? 'Sembunyikan' : 'Tampilkan Filter'}
+                    </Button>
+                  </div>
                 </div>
+
+                {filtersOpen ? (
+                  <div className="rec-filter-body">
+                    <CheckboxGroup
+                      legend="Mode Kerja"
+                      options={WORK_MODE_FILTER_OPTS}
+                      selected={filters.work_modes}
+                      onChange={(work_modes) => setFilters({ ...filters, work_modes })}
+                    />
+                    <CheckboxGroup
+                      legend="Jenis Kontrak"
+                      options={EMPLOYMENT_FILTER_OPTS}
+                      selected={filters.employment_types}
+                      onChange={(employment_types) => setFilters({ ...filters, employment_types })}
+                    />
+                    <CheckboxGroup
+                      legend="Tingkat Pengalaman"
+                      options={LEVEL_FILTER_OPTS}
+                      selected={filters.levels}
+                      onChange={(levels) => setFilters({ ...filters, levels })}
+                    />
+                  </div>
+                ) : null}
               </section>
 
               {filteredItems.length === 0 ? (
                 <EmptyState
                   kicker="BELUM ADA HASIL REKOMENDASI"
                   title="Tidak Ada Item Rekomendasi untuk Ditampilkan"
-                  description="Endpoint rekomendasi tidak mengembalikan lowongan yang sesuai dengan profil atau filter yang dipilih saat ini."
+                  description={
+                    activeFilterCount > 0
+                      ? 'Tidak ada rekomendasi yang cocok dengan kombinasi filter saat ini. Coba reset atau longgarkan filter.'
+                      : 'Endpoint rekomendasi tidak mengembalikan lowongan yang sesuai dengan profil saat ini.'
+                  }
                   action={
-                    <Link href="/jobs" className="btn btn-primary btn-sm">
-                      Lihat Semua Lowongan di Feed
-                    </Link>
+                    activeFilterCount > 0 ? (
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setFilters(EMPTY_FILTERS)}
+                      >
+                        Reset Semua Filter
+                      </Button>
+                    ) : (
+                      <Link href="/jobs" className="btn btn-primary btn-sm">
+                        Lihat Semua Lowongan di Feed
+                      </Link>
+                    )
                   }
                 />
               ) : (
                 <div className="jobs-list">
                   {filteredItems.map((item: RecommendationItem) => {
                     const job = jobsMap[item.job_id];
-                    const displayScore =
+                    const pct =
                       item.score <= 1 && item.score >= 0
-                        ? `${Math.round(item.score * 100)}%`
-                        : `${Math.round(item.score)}`;
+                        ? Math.round(item.score * 100)
+                        : Math.max(0, Math.min(100, Math.round(item.score)));
+                    const isHighMatch = pct >= 70;
 
                     return (
-                      <article key={item.job_id} className="ledger-card">
-                        <div className="job-card-header">
-                          <div>
-                            <div
-                              style={{
-                                display: 'flex',
-                                gap: 8,
-                                alignItems: 'center',
-                                flexWrap: 'wrap',
-                                marginBottom: 6,
-                              }}
-                            >
-                              <Badge variant="accent">Indeks Kecocokan: {displayScore}</Badge>
+                      <article key={item.job_id} className="rec-card">
+                        <div className="rec-card-top">
+                          <div className="rec-card-main">
+                            <div className="rec-card-badges">
                               {job ? <JobStatusBadge status={job.status} /> : null}
                               {job ? (
                                 <span className="job-timestamp">
@@ -317,27 +371,14 @@ function RecommendationsInner() {
                               ) : null}
                             </div>
 
-                            <h2
-                              className="font-editorial"
-                              style={{ fontSize: '1.35rem', margin: '0 0 4px' }}
-                            >
-                              <Link
-                                href={`/jobs/${item.job_id}`}
-                                style={{ textDecoration: 'none' }}
-                              >
+                            <h2 className="rec-card-title">
+                              <Link href={`/jobs/${item.job_id}`}>
                                 {job ? job.title : `Lowongan #${item.job_id}`}
                               </Link>
                             </h2>
 
                             {job ? (
-                              <p
-                                style={{
-                                  margin: 0,
-                                  fontWeight: 600,
-                                  color: 'var(--ink-secondary)',
-                                  fontSize: '0.93rem',
-                                }}
-                              >
+                              <p className="rec-card-company">
                                 {job.company} ·{' '}
                                 <span style={{ fontWeight: 400 }}>
                                   {job.location || 'Lokasi tidak dicantumkan'}
@@ -346,95 +387,109 @@ function RecommendationsInner() {
                             ) : null}
                           </div>
 
-                          <Link
-                            href={`/jobs/${item.job_id}`}
-                            className="btn btn-primary btn-sm"
-                          >
-                            Detail &amp; Sumber Asli
-                          </Link>
+                          <div className="rec-card-side">
+                            <div className="rec-score-box" aria-label={`Indeks kecocokan ${pct} persen`}>
+                              <div className="rec-score-row">
+                                <span className="rec-score-label">Kecocokan</span>
+                                <span
+                                  className={`rec-score-value${isHighMatch ? ' rec-score-value--high' : ''}`}
+                                >
+                                  {pct}%
+                                </span>
+                              </div>
+                              <div className="rec-score-track" aria-hidden="true">
+                                <div
+                                  className={`rec-score-fill${isHighMatch ? ' rec-score-fill--high' : ''}`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            <Link
+                              href={`/jobs/${item.job_id}`}
+                              className="btn btn-primary btn-sm"
+                            >
+                              Detail &amp; Sumber Asli
+                            </Link>
+                          </div>
                         </div>
 
                         {/* Matched, Missing, Unknown Breakdown */}
-                        <div
-                          className="form-grid-3"
-                          style={{
-                            marginTop: 16,
-                            paddingTop: 14,
-                            borderTop: '1px solid var(--border-subtle)',
-                          }}
-                        >
-                          <div className="surface-card" style={{ padding: 14 }}>
-                            <strong
-                              className="font-mono"
-                              style={{
-                                fontSize: '0.75rem',
-                                color: 'var(--status-open)',
-                                display: 'block',
-                                marginBottom: 8,
-                              }}
-                            >
-                              ✓ ALASAN COCOK ({item.matched.length})
-                            </strong>
+                        <div className="rec-breakdown-grid">
+                          <div className="rec-panel rec-panel--matched">
+                            <div className="rec-panel-head">
+                              <span className="rec-panel-label">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                                Alasan Cocok
+                              </span>
+                              <span className="rec-panel-count">{item.matched.length}</span>
+                            </div>
                             {item.matched.length > 0 ? (
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                              <div className="rec-chip-list">
                                 {item.matched.map((m, i) => (
-                                  <Badge key={`${m}-${i}`} variant="matched">
+                                  <span key={`${m}-${i}`} className="rec-chip rec-chip--matched">
                                     {m}
-                                  </Badge>
+                                  </span>
                                 ))}
                               </div>
                             ) : (
-                              <p className="form-hint">Tidak ada poin kecocokan tercatat.</p>
+                              <p className="rec-panel-empty">Tidak ada poin kecocokan tercatat.</p>
                             )}
                           </div>
 
-                          <div className="surface-card" style={{ padding: 14 }}>
-                            <strong
-                              className="font-mono"
-                              style={{
-                                fontSize: '0.75rem',
-                                color: 'var(--status-warning)',
-                                display: 'block',
-                                marginBottom: 8,
-                              }}
-                            >
-                              ! BELUM COCOK / KURANG ({item.missing.length})
-                            </strong>
+                          <div className="rec-panel rec-panel--missing">
+                            <div className="rec-panel-head">
+                              <span className="rec-panel-label">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                  <circle cx="12" cy="12" r="10" />
+                                  <line x1="12" y1="8" x2="12" y2="12" />
+                                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                                </svg>
+                                Perlu Dilengkapi
+                              </span>
+                              <span className="rec-panel-count">{item.missing.length}</span>
+                            </div>
                             {item.missing.length > 0 ? (
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                              <div className="rec-chip-list">
                                 {item.missing.map((ms, i) => (
-                                  <Badge key={`${ms}-${i}`} variant="missing">
+                                  <span key={`${ms}-${i}`} className="rec-chip rec-chip--missing">
                                     {ms}
-                                  </Badge>
+                                  </span>
                                 ))}
                               </div>
                             ) : (
-                              <p className="form-hint">Tidak ada kekurangan persyaratan tercatat.</p>
+                              <p className="rec-panel-empty">
+                                Tidak ada kekurangan persyaratan tercatat.
+                              </p>
                             )}
                           </div>
 
-                          <div className="surface-card" style={{ padding: 14 }}>
-                            <strong
-                              className="font-mono"
-                              style={{
-                                fontSize: '0.75rem',
-                                color: 'var(--ink-muted)',
-                                display: 'block',
-                                marginBottom: 8,
-                              }}
-                            >
-                              ? DATA TIDAK DIKETAHUI ({item.unknown.length})
-                            </strong>
+                          <div className="rec-panel rec-panel--unknown">
+                            <div className="rec-panel-head">
+                              <span className="rec-panel-label">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                  <circle cx="12" cy="12" r="10" />
+                                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                                </svg>
+                                Belum Terdata
+                              </span>
+                              <span className="rec-panel-count">{item.unknown.length}</span>
+                            </div>
                             {item.unknown.length > 0 ? (
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                              <div className="rec-chip-list">
                                 {item.unknown.map((unk, i) => (
-                                  <Badge key={`${unk}-${i}`} variant="neutral">
+                                  <span key={`${unk}-${i}`} className="rec-chip rec-chip--unknown">
                                     {unk}
-                                  </Badge>
+                                  </span>
                                 ))}
                               </div>
                             ) : (
-                              <p className="form-hint">Seluruh atribut pembanding terdata.</p>
+                              <p className="rec-panel-empty">
+                                Seluruh atribut pembanding terdata.
+                              </p>
                             )}
                           </div>
                         </div>
