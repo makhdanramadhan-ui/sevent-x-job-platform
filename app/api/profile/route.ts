@@ -74,12 +74,11 @@ export async function PUT(req: NextRequest) {
         preferences: (data?.preferences ?? normalizedInput.preferences) as any,
       } as any).keywords;
       const changed = keywordDiff(newKeywords, oldKeywords);
-      const keywordsToIngest = changed.length > 0 ? changed : newKeywords;
-      if (keywordsToIngest.length > 0) {
+      if (changed.length > 0) {
         after(async () => {
           try {
             const admin = createAdminClient(adminEnv);
-            await runKeywordIngest(admin, keywordsToIngest, { respectThrottle: true });
+            await runKeywordIngest(admin, changed, { respectThrottle: true });
           } catch {
             // background ingest failure must not affect profile save response
           }
