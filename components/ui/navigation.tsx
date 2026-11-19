@@ -159,10 +159,7 @@ export function SiteHeader() {
                     className="btn btn-primary nav-auth-btn"
                     onClick={() => setMenuOpen(false)}
                   >
-                    <span>Daftar Akun</span>
-                    <span className="btn-arrow" aria-hidden="true">
-                      →
-                    </span>
+                    Daftar Akun
                   </Link>
                 </>
               )}
@@ -192,10 +189,7 @@ export function SiteFooter() {
             </p>
             <div className="footer-cta-row">
               <Link href="/signup" className="btn btn-primary btn-sm">
-                <span>Daftar Akun</span>
-                <span className="btn-arrow" aria-hidden="true">
-                  →
-                </span>
+                Daftar Akun
               </Link>
               <Link
                 href="/jobs"

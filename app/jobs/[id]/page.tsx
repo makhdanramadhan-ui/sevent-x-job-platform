@@ -129,7 +129,7 @@ function JobDetailInner() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>
           <Link href="/jobs" className="btn btn-outline btn-sm">
-            ← Kembali ke Feed Lowongan
+            Kembali ke Feed Lowongan
           </Link>
         </div>
         {error ? (
@@ -159,7 +159,7 @@ function JobDetailInner() {
         }}
       >
         <Link href="/jobs" className="btn btn-outline btn-sm">
-          ← Kembali ke Feed Lowongan
+          Kembali ke Feed Lowongan
         </Link>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Button
@@ -178,7 +178,7 @@ function JobDetailInner() {
               rel="noopener noreferrer"
               className="btn btn-primary btn-sm"
             >
-              Lamar di Sumber Asli ({primarySource.source_name}) ↗
+              Lamar di Sumber Asli ({primarySource.source_name})
             </a>
           ) : null}
         </div>
@@ -425,7 +425,7 @@ function JobDetailInner() {
                         className="btn btn-primary"
                         style={{ width: '100%' }}
                       >
-                        Buka &amp; Lamar di Sumber Asli ({src.source_name}) ↗
+                        Buka &amp; Lamar di Sumber Asli ({src.source_name})
                       </a>
                     ) : (
                       <p className="form-error-text">

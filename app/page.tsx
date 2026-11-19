@@ -124,10 +124,7 @@ export default function HomePage() {
             </p>
             <div className="tk-hero__actions">
               <Link href="/jobs" className="btn btn-primary btn-lg">
-                <span>Cari Lowongan</span>
-                <span className="btn-arrow" aria-hidden="true">
-                  →
-                </span>
+                Cari Lowongan
               </Link>
               <Link href="/signup" className="btn btn-outline btn-lg">
                 Daftar Akun
@@ -336,7 +333,7 @@ export default function HomePage() {
                       textDecoration: 'none',
                     }}
                   >
-                    Buka di halaman Lowongan →
+                    Buka di halaman Lowongan
                   </Link>
                 </div>
               </div>
@@ -639,7 +636,7 @@ export default function HomePage() {
                     fontWeight: 500,
                   }}
                 >
-                  Buka &amp; Lamar di Sumber Asli ↗
+                  Buka &amp; Lamar di Sumber Asli
                 </div>
               </div>
             </div>
@@ -679,7 +676,7 @@ export default function HomePage() {
                     <h3 className="tk-step-title">{step.title}</h3>
                     <p className="tk-step-desc">{step.desc}</p>
                     <Link href={step.href} className="tk-step-link">
-                      {step.label} →
+                      {step.label}
                     </Link>
                   </div>
                 );

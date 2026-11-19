@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="id" data-type="software" data-radius="soft" data-buttons="arrow">
+    <html lang="id" data-type="software" data-radius="soft" data-buttons="solid">
       <head>
         <meta name="page-type" content="software" />
         <meta name="site-kind" content="software" />

@@ -173,7 +173,7 @@ function LoginFormContent() {
         >
           <span style={{ color: 'var(--ink-secondary)' }}>Belum memiliki akun {SITE_NAME}?</span>
           <Link href="/signup" className="btn btn-outline btn-sm">
-            Daftar Akun Baru →
+            Daftar Akun Baru
           </Link>
         </div>
       </div>

@@ -50,7 +50,7 @@ function OnboardingInner() {
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Link href="/jobs" className="btn btn-outline btn-sm">
-            Lihat Lowongan →
+            Lihat Lowongan
           </Link>
         </div>
       </div>
@@ -63,7 +63,7 @@ function OnboardingInner() {
           </p>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <Link href="/jobs" className="btn btn-primary btn-sm">
-              Cari Lowongan →
+              Cari Lowongan
             </Link>
             <Link href="/recommendations" className="btn btn-secondary btn-sm">
               Lihat Rekomendasi

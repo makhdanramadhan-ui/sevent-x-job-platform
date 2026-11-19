@@ -112,7 +112,7 @@ function BookmarksInner() {
           description="Simpan lowongan yang menarik perhatianmu saat mencari lowongan agar lebih mudah dibandingkan dan dilamar nanti."
           action={
             <Link href="/jobs" className="btn btn-primary btn-sm">
-              Cari Lowongan Sekarang →
+              Cari Lowongan Sekarang
             </Link>
           }
         />
@@ -192,7 +192,7 @@ function BookmarksInner() {
 
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <Link href={`/jobs/${job.id}`} className="btn btn-primary btn-sm">
-                      Detail &amp; Sumber Asli →
+                      Detail &amp; Sumber Asli
                     </Link>
                     <Button
                       variant="outline"

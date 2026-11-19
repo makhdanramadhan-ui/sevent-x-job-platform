@@ -174,7 +174,7 @@ export default function SignupPage() {
         >
           <span style={{ color: 'var(--ink-secondary)' }}>Sudah punya akun {SITE_NAME}?</span>
           <Link href="/login" className="btn btn-outline btn-sm">
-            Masuk di Sini →
+            Masuk di Sini
           </Link>
         </div>
       </div>

@@ -290,7 +290,7 @@ export function AuthGuard({
               }}
             >
               <Link href="/" style={{ color: 'var(--ink-secondary)', fontWeight: 600 }}>
-                ← Kembali ke Beranda
+                Kembali ke Beranda
               </Link>
             </div>
           </div>
