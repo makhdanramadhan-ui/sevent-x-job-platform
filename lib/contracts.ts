@@ -39,6 +39,7 @@ export type Job = {
   id: string;
   title: string;
   company: string;
+  company_logo_url?: string | null;
   location: string | null;
   work_mode: WorkMode;
   employment_type: EmploymentType;

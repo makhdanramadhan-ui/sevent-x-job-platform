@@ -568,6 +568,7 @@ def build_ingest_payload(
     source_url: str,
     title: str,
     company: str,
+    company_logo_url: Optional[str] = None,
     fetched_at: Optional[str] = None,
     published_at: Any = None,
     location: Optional[str] = None,
@@ -606,6 +607,10 @@ def build_ingest_payload(
     norm_company = clean_whitespace(strip_html(company) or company, max_len=200)
     if not norm_company:
         raise ValueError("job.company wajib diisi (maks 200 karakter)")
+
+    norm_company_logo_url = clean_whitespace(company_logo_url, max_len=2048)
+    if norm_company_logo_url and not URL_RE.match(norm_company_logo_url):
+        norm_company_logo_url = None
 
     # Penting: fetched_at adalah waktu scraper mengambil data;
     # published_at adalah waktu lowongan diterbitkan di sumber (boleh None).
@@ -651,6 +656,8 @@ def build_ingest_payload(
         "skills": norm_skills,
         "status": norm_status,
     }
+    if norm_company_logo_url:
+        job_obj["company_logo_url"] = norm_company_logo_url
     if existing_job_id:
         job_obj["id"] = existing_job_id
 

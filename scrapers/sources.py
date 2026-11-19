@@ -144,6 +144,17 @@ def parse_linkedin_guest_search_html(raw_html: str) -> List[Dict[str, Optional[s
             block,
             re.DOTALL | re.IGNORECASE,
         )
+        logo_match = re.search(
+            r"<img[^>]*class=\"[^\"]*artdeco-entity-image[^\"]*\"[^>]*(?:data-delayed-url|src)=\"(https?://[^\"]+)\"",
+            block,
+            re.DOTALL | re.IGNORECASE,
+        )
+        if not logo_match:
+            logo_match = re.search(
+                r"<img[^>]*(?:data-delayed-url|src)=\"(https?://media\.licdn\.com/dms/image/[^\"]+)\"",
+                block,
+                re.DOTALL | re.IGNORECASE,
+            )
 
         title = strip_html(html.unescape(title_match.group(1))) if title_match else None
         company = strip_html(html.unescape(company_match.group(1))) if company_match else None
@@ -156,6 +167,7 @@ def parse_linkedin_guest_search_html(raw_html: str) -> List[Dict[str, Optional[s
         # Bersihkan query tracking panjang dari URL LinkedIn agar kanonik
         clean_url = raw_url.split("?")[0] if raw_url.startswith("http") else f"https://www.linkedin.com/jobs/view/{job_id}"
         published_at = time_match.group(1).strip() if time_match else None
+        logo_url = html.unescape(logo_match.group(1)).strip() if logo_match else None
 
         seen_ids.add(job_id)
         cards.append(
@@ -166,6 +178,7 @@ def parse_linkedin_guest_search_html(raw_html: str) -> List[Dict[str, Optional[s
                 "location": location,
                 "url": clean_url,
                 "published_at": published_at,
+                "logo_url": logo_url,
             }
         )
 
@@ -325,6 +338,7 @@ def fetch_linkedin_guest_jobs(
                 source_url=card.get("url") or f"https://www.linkedin.com/jobs/view/{job_id}",
                 title=card.get("title") or "",
                 company=card.get("company") or "",
+                company_logo_url=card.get("logo_url"),
                 fetched_at=now_iso,
                 published_at=card.get("published_at"),
                 location=card.get("location"),
@@ -394,6 +408,7 @@ def fetch_himalayas_public_api(
 
             categories = item.get("categories") if isinstance(item.get("categories"), list) else []
             cat_skills = [str(c).replace("-", " ").strip() for c in categories if c]
+            logo_url = str(item.get("companyLogo") or "").strip()
 
             payload = build_ingest_payload(
                 source_name="himalayas_api",
@@ -401,6 +416,7 @@ def fetch_himalayas_public_api(
                 source_url=source_url,
                 title=title,
                 company=company,
+                company_logo_url=logo_url or None,
                 fetched_at=now_iso,
                 published_at=item.get("pubDate"),
                 location=location_str,
@@ -472,6 +488,7 @@ def fetch_jobicy_public_api(
                 skills_hint.extend(str(x) for x in industries if x)
             elif isinstance(industries, str) and industries:
                 skills_hint.append(industries)
+            logo_url = str(item.get("companyLogo") or "").strip()
 
             payload = build_ingest_payload(
                 source_name="jobicy_api",
@@ -479,6 +496,7 @@ def fetch_jobicy_public_api(
                 source_url=source_url,
                 title=title,
                 company=company,
+                company_logo_url=logo_url or None,
                 fetched_at=now_iso,
                 published_at=item.get("pubDate"),
                 location=str(item.get("jobGeo") or "Remote"),
@@ -535,6 +553,7 @@ def fetch_remotive_public_api(
 
             tags = item.get("tags") if isinstance(item.get("tags"), list) else []
             candidate_loc = str(item.get("candidate_required_location") or "Remote").strip()
+            logo_url = str(item.get("company_logo") or item.get("company_logo_url") or "").strip()
 
             payload = build_ingest_payload(
                 source_name="remotive_api",
@@ -542,6 +561,7 @@ def fetch_remotive_public_api(
                 source_url=source_url,
                 title=title,
                 company=company,
+                company_logo_url=logo_url or None,
                 fetched_at=now_iso,
                 published_at=item.get("publication_date"),
                 location=candidate_loc,

@@ -151,6 +151,46 @@ function getCompanyInitials(company: string): string {
   return `${words[0][0]}${words[1][0]}`.toUpperCase();
 }
 
+function CompanyLogoBox({
+  company,
+  logoUrl,
+  className,
+}: {
+  company: string;
+  logoUrl?: string | null;
+  className: string;
+}) {
+  const [imgFailed, setImgFailed] = useState(false);
+
+  return (
+    <div
+      className={className}
+      aria-hidden="true"
+      title={company}
+      style={{ overflow: 'hidden' }}
+    >
+      {logoUrl && !imgFailed ? (
+        <img
+          src={logoUrl}
+          alt={company}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setImgFailed(true)}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            padding: 4,
+            backgroundColor: '#ffffff',
+          }}
+        />
+      ) : (
+        getCompanyInitials(company)
+      )}
+    </div>
+  );
+}
+
 function formatRelativeTimeId(dateIso: string | null | undefined): string {
   if (!dateIso) return 'Baru diperbarui';
   const parsed = new Date(dateIso);
@@ -778,13 +818,11 @@ function JobsFeedInner() {
                         ) : null}
                       </div>
 
-                      <div
+                      <CompanyLogoBox
+                        company={job.company}
+                        logoUrl={job.company_logo_url}
                         className="job-feed-card__logo"
-                        aria-hidden="true"
-                        title={job.company}
-                      >
-                        {getCompanyInitials(job.company)}
-                      </div>
+                      />
                     </div>
 
                     <div className="job-feed-card__footer">
@@ -916,9 +954,11 @@ function JobsFeedInner() {
                           <h3 className="jobs-saved-card__title">{title}</h3>
                           <p className="jobs-saved-card__company">{company}</p>
                         </div>
-                        <div className="jobs-saved-card__logo" aria-hidden="true">
-                          {getCompanyInitials(company)}
-                        </div>
+                        <CompanyLogoBox
+                          company={company}
+                          logoUrl={savedJob?.company_logo_url}
+                          className="jobs-saved-card__logo"
+                        />
                       </div>
 
                       {savedJob ? (
