@@ -21,6 +21,7 @@ import {
   WORK_MODE_LABELS,
 } from '@/components/ui';
 import type { BookmarkRecord, JobDetail } from '@/lib/contracts';
+import { displaySourceName } from '@/lib/job-source';
 
 function JobDetailInner() {
   const params = useParams<{ id: string }>();
@@ -156,7 +157,7 @@ function JobDetailInner() {
               rel="noopener noreferrer"
               className="btn btn-primary btn-sm"
             >
-              Lamar di Sumber Asli ({primarySource.source_name})
+              Lamar di Sumber Asli ({displaySourceName(primarySource.source_name)})
             </a>
           ) : null}
         </div>
@@ -305,7 +306,7 @@ function JobDetailInner() {
                         marginBottom: 8,
                       }}
                     >
-                      <strong style={{ fontSize: '1rem' }}>{src.source_name}</strong>
+                      <strong style={{ fontSize: '1rem' }}>{displaySourceName(src.source_name)}</strong>
                       <span className="font-mono" style={{ fontSize: '0.73rem', color: 'var(--ink-muted)' }}>
                         ID Sumber: {src.source_job_id}
                       </span>
@@ -350,7 +351,7 @@ function JobDetailInner() {
                         className="btn btn-primary"
                         style={{ width: '100%' }}
                       >
-                        Buka &amp; Lamar di Sumber Asli ({src.source_name})
+                        Buka &amp; Lamar di Sumber Asli ({displaySourceName(src.source_name)})
                       </a>
                     ) : (
                       <p className="form-error-text">

@@ -47,3 +47,13 @@ Hasil eksekusi nyata (`py -3 -m scrapers.run_ingest --live`) telah memasukkan lo
 - **Penanganan Data Kosong (`unknown`) & Pencegahan Presisi Palsu:**
   - Atribut yang kosong di lowongan maupun di profil pengguna tidak dihitung cocok (`matched`) dan tidak dianggap melanggar syarat (`missing`), melainkan dimasukkan ke daftar `unknown`.
   - Apabila profil pengguna masih kosong atau informasi pembanding yang dapat dievaluasi terlalu sedikit (`evaluatableWeight <= 20`), mesin mengembalikan `score: 0` dengan penjelasan `"Informasi belum cukup..."` pada `unknown`.
+
+
+---
+
+## 4. Runtime Ingest Aplikasi (TS, 2026-11-19)
+
+- **Probe Vercel (2026-11-19):** endpoint publik LinkedIn guest search dapat diakses dari fungsi Vercel produksi (`https://rakitkarier.vercel.app`) dengan respons `200`, HTML hasil (`urn:li:jobPosting`), tanpa authwall/CAPTCHA pada uji `backend developer, Indonesia`.
+- **Jalur utama runtime app/cron:** implementasi TypeScript di `lib/ingest/**` (normalisasi mengikuti `scrapers/normalizer.py`, fetch LinkedIn guest + Himalayas/Jobicy/Remotive, throttle per keyword via `public.consume_rate_limit`, tulis lewat RPC `public.ingest_job(jsonb)`).
+- **Pemicu:** simpan profil (non-blocking `after()`, keyword baru/berubah) dan Vercel Cron harian `/api/cron/refresh-jobs` (proteksi `CRON_SECRET`) atas union keyword seluruh profil.
+- **Pipeline Python `scrapers/`** tetap dipertahankan untuk CLI/manual, pengujian, dan referensi; jalur LinkedIn Python dianggap legacy/referensi agar tidak ada dua parser LinkedIn aktif yang divergen di runtime app.

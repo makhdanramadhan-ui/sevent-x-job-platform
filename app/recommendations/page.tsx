@@ -38,6 +38,11 @@ type JobsListPayload = {
   total: number;
 };
 
+type RecommendationsApiResponse = RecommendationOutput & {
+  reason?: 'profile_incomplete';
+  profile_state?: 'empty' | 'ready';
+};
+
 const WORK_MODE_FILTER_OPTS = WORK_MODES.map((value) => ({
   value,
   label: WORK_MODE_LABELS[value],
@@ -130,7 +135,7 @@ function parseCommaListLine(text: string): { prefix: string; items: string[] } |
 function RecommendationsInner() {
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
-  const [recOutput, setRecOutput] = useState<RecommendationOutput | null>(null);
+  const [recOutput, setRecOutput] = useState<RecommendationsApiResponse | null>(null);
   const [jobsMap, setJobsMap] = useState<Record<string, Job>>({});
   const [endpointMissing, setEndpointMissing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -162,7 +167,7 @@ function RecommendationsInner() {
 
     const [profileRes, recRes, jobsRes] = await Promise.all([
       apiFetch<ProfileRecord | null>('/api/profile'),
-      apiFetch<RecommendationOutput>('/api/recommendations'),
+      apiFetch<RecommendationsApiResponse>('/api/recommendations'),
       apiFetch<JobsListPayload>('/api/jobs?limit=50'),
     ]);
 
@@ -225,13 +230,13 @@ function RecommendationsInner() {
     });
   }, [recOutput, jobsMap, filters, activeFilterCount]);
 
-  const profileHasContent = Boolean(
-    profile &&
-      (profile.skills.length > 0 ||
-        profile.education.length > 0 ||
-        profile.experiences.length > 0 ||
-        profile.preferences.positions.length > 0),
-  );
+  const profileIncomplete =
+    recOutput?.reason === 'profile_incomplete' ||
+    !(
+      profile &&
+      ((profile.skills?.length ?? 0) > 0 ||
+        (profile.preferences?.positions?.length ?? 0) > 0)
+    );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
@@ -273,22 +278,14 @@ function RecommendationsInner() {
           onRetry={loadRecommendations}
           loginRedirectPath="/recommendations"
         />
-      ) : !profileHasContent ? (
+      ) : profileIncomplete ? (
         <EmptyState
-          title="Lengkapi Profilmu untuk Mendapatkan Rekomendasi"
-          description="Tambahkan keahlian, riwayat pendidikan, pengalaman, atau posisi yang kamu minati agar kami dapat mencocokkan profilmu dengan lowongan yang tersedia."
+          title="Lengkapi bidang dan keahlian di profil untuk melihat rekomendasi"
+          description="Isi bidang/posisi yang diminati dan keahlian di profil agar kami dapat menampilkan rekomendasi lowongan yang sesuai."
           action={
-            <>
-              <Link href="/onboarding" className="btn btn-primary btn-sm">
-                Lengkapi Profil Sekarang
-              </Link>
-              <Link href="/profile" className="btn btn-outline btn-sm">
-                Buka Halaman Profil
-              </Link>
-              <Link href="/jobs" className="btn btn-secondary btn-sm">
-                Cari Semua Lowongan
-              </Link>
-            </>
+            <Link href="/profile" className="btn btn-primary btn-sm">
+              Lengkapi Profil
+            </Link>
           }
         />
       ) : (

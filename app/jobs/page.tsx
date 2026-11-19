@@ -3,7 +3,15 @@
 import { motion, useReducedMotion } from 'motion/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { type FormEvent, type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type FormEvent,
+  type MouseEvent as ReactMouseEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   type ApiCallError,
   AuthGuard,
@@ -40,6 +48,8 @@ type JobsApiResponse = {
   page: number;
   limit: number;
   pages: number;
+  profile_state?: 'empty' | 'ingest_pending' | 'ready' | 'explicit_search';
+  reason?: 'profile_incomplete';
 };
 
 type FilterState = {
@@ -226,6 +236,7 @@ function JobsFeedInner() {
     type: 'success' | 'error';
     text: string;
   } | null>(null);
+  const [pendingPolled, setPendingPolled] = useState(false);
 
   const pillsRef = useRef<HTMLDivElement | null>(null);
   const prefersReducedMotion = useReducedMotion();
@@ -328,6 +339,32 @@ function JobsFeedInner() {
     loadJobs();
   }, [loadJobs, urlHydrated]);
 
+  const hasActiveFilters = Boolean(
+    appliedFilters.q ||
+      appliedFilters.location ||
+      appliedFilters.work_mode ||
+      appliedFilters.employment_type ||
+      appliedFilters.level ||
+      appliedFilters.status,
+  );
+
+  useEffect(() => {
+    setPendingPolled(false);
+  }, [appliedFilters, page]);
+
+  useEffect(() => {
+    if (loading || error || !data) return;
+    if (hasActiveFilters) return;
+    if (data.profile_state !== 'ingest_pending') return;
+    if ((data.items?.length ?? 0) > 0) return;
+    if (pendingPolled) return;
+    setPendingPolled(true);
+    const timer = window.setTimeout(() => {
+      void loadJobs();
+    }, 12000);
+    return () => window.clearTimeout(timer);
+  }, [data, error, hasActiveFilters, loadJobs, loading, pendingPolled]);
+
   function handleApplyFilters(e: FormEvent) {
     e.preventDefault();
     setOpenPill(null);
@@ -424,15 +461,6 @@ function JobsFeedInner() {
     }
   }
 
-  const hasActiveFilters = Boolean(
-    appliedFilters.q ||
-      appliedFilters.location ||
-      appliedFilters.work_mode ||
-      appliedFilters.employment_type ||
-      appliedFilters.level ||
-      appliedFilters.status,
-  );
-
   const visibleJobs = useMemo(
     () => (data?.items ?? []).filter((job) => !hiddenIds.has(job.id)),
     [data, hiddenIds],
@@ -502,6 +530,12 @@ function JobsFeedInner() {
     },
   ];
 
+  const profileIncomplete = !hasActiveFilters && data?.profile_state === 'empty';
+  const ingestPending =
+    !hasActiveFilters &&
+    data?.profile_state === 'ingest_pending' &&
+    (data.items?.length ?? 0) === 0;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
       <PageBanner
@@ -532,7 +566,6 @@ function JobsFeedInner() {
         </NoticeBanner>
       ) : null}
 
-      {/* Top Navy Search & Filter Pill Bar */}
       <section className="jobs-search-shell" aria-label="Pencarian dan filter lowongan">
         <form onSubmit={handleApplyFilters} className="jobs-search-form">
           <div className="jobs-search-row">
@@ -683,9 +716,7 @@ function JobsFeedInner() {
         </form>
       </section>
 
-      {/* Main 2-Column Portal Grid */}
       <div className="jobs-portal-grid">
-        {/* Left Column: Job Feed */}
         <section aria-label="Daftar hasil lowongan">
           <div className="jobs-feed-toolbar">
             <span className="jobs-feed-count">
@@ -723,8 +754,12 @@ function JobsFeedInner() {
 
           {loading ? (
             <LoadingState
-              title="Mengambil daftar lowongan..."
-              description="Memuat data lowongan terbaru untukmu."
+              title={ingestPending ? 'Mencari lowongan sesuai profilmu...' : 'Mengambil daftar lowongan...'}
+              description={
+                ingestPending
+                  ? 'Sedang mencari lowongan sesuai profilmu. Halaman akan dimuat ulang otomatis.'
+                  : 'Memuat data lowongan terbaru untukmu.'
+              }
               lines={5}
             />
           ) : error ? (
@@ -734,6 +769,26 @@ function JobsFeedInner() {
               onRetry={loadJobs}
               loginRedirectPath="/jobs"
             />
+          ) : profileIncomplete ? (
+            <EmptyState
+              title="Lengkapi bidang dan keahlian di profil untuk melihat rekomendasi"
+              description="Isi bidang/posisi yang diminati dan keahlian di profil agar kami dapat mencari lowongan yang sesuai untukmu."
+              action={
+                <Link href="/profile" className="btn btn-primary btn-sm">
+                  Lengkapi Profil
+                </Link>
+              }
+            />
+          ) : ingestPending ? (
+            <EmptyState
+              title="Sedang mencari lowongan sesuai profilmu…"
+              description="Kami sedang mengambil lowongan berdasarkan bidang dan keahlian di profilmu. Proses ini biasanya selesai dalam beberapa saat."
+              action={
+                <Button variant="outline" size="sm" onClick={loadJobs}>
+                  Muat Ulang Sekarang
+                </Button>
+              }
+            />
           ) : !data || visibleJobs.length === 0 ? (
             <EmptyState
               title={
@@ -741,14 +796,14 @@ function JobsFeedInner() {
                   ? 'Tidak Ada Lowongan yang Sesuai Filter'
                   : hiddenIds.size > 0
                     ? 'Semua Lowongan di Halaman Ini Disembunyikan'
-                    : 'Belum Ada Lowongan yang Tersedia Saat Ini'
+                    : 'Belum Ada Lowongan yang Sesuai Profilmu'
               }
               description={
                 hasActiveFilters
                   ? 'Coba ubah kata kunci atau longgarkan filter yang dipilih.'
                   : hiddenIds.size > 0
                     ? 'Kamu menyembunyikan seluruh lowongan di halaman ini.'
-                    : 'Daftar lowongan sedang diperbarui. Silakan periksa kembali beberapa saat lagi.'
+                    : 'Belum ada lowongan yang cocok dengan bidang dan keahlian di profilmu saat ini. Coba perbarui profil atau gunakan pencarian untuk menjelajah semua lowongan.'
               }
               action={
                 hasActiveFilters ? (
@@ -760,9 +815,9 @@ function JobsFeedInner() {
                     Tampilkan Kembali
                   </Button>
                 ) : (
-                  <Button variant="outline" size="sm" onClick={loadJobs}>
-                    Muat Ulang Data
-                  </Button>
+                  <Link href="/profile" className="btn btn-primary btn-sm">
+                    Perbarui Profil
+                  </Link>
                 )
               }
             />
@@ -884,7 +939,6 @@ function JobsFeedInner() {
                 );
               })}
 
-              {/* Pagination Controls */}
               {data.pages > 1 ? (
                 <nav
                   aria-label="Navigasi halaman lowongan"
@@ -923,7 +977,6 @@ function JobsFeedInner() {
           )}
         </section>
 
-        {/* Right Column: Saved Jobs Sidebar */}
         <aside className="jobs-saved-sidebar" aria-label="Lowongan kerja tersimpan">
           <h2 className="jobs-saved-heading">Lowongan kerja tersimpan</h2>
 

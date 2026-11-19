@@ -26,6 +26,16 @@ const JOB_RECOMMENDATION_COLUMNS =
 
 const QUERY_KEYS = ['limit', 'work_mode', 'employment_type', 'level'] as const;
 
+function hasBidangOrSkills(profile: RecommendationProfileInput): boolean {
+  const skills = Array.isArray(profile?.skills) ? profile.skills : [];
+  const positions = Array.isArray(profile?.preferences?.positions)
+    ? profile.preferences.positions
+    : [];
+  const hasSkills = skills.some((s) => typeof s === 'string' && s.trim().length > 0);
+  const hasBidang = positions.some((p) => typeof p === 'string' && p.trim().length > 0);
+  return hasBidang || hasSkills;
+}
+
 export async function GET(req: NextRequest) {
   return run(async () => {
     const auth = await requireAuth(req);
@@ -67,13 +77,23 @@ export async function GET(req: NextRequest) {
     if (jobsResult.error) throwDb(jobsResult.error);
 
     const profile = (profileResult.data as RecommendationProfileInput) ?? null;
-    const jobs = ((jobsResult.data as RecommendationJobInput[] | null) ?? []);
+    const jobs = (jobsResult.data as RecommendationJobInput[] | null) ?? [];
+
+    if (!hasBidangOrSkills(profile)) {
+      return ok({
+        contract_version: 1,
+        items: [],
+        reason: 'profile_incomplete',
+        profile_state: 'empty',
+      });
+    }
 
     const ranked = rankJobs({ profile, jobs }, { filters });
 
     return ok({
       contract_version: ranked.contract_version,
       items: ranked.items.slice(0, limit),
+      profile_state: 'ready',
     });
   });
 }

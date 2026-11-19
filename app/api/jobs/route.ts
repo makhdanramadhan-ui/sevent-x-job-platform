@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth';
 import { JOB_STATUSES, EMPLOYMENT_TYPES, EXPERIENCE_LEVELS, WORK_MODES } from '@/lib/contracts';
 import { throwDb } from '@/lib/db';
 import { ok, run } from '@/lib/http';
+import { extractProfileKeywords, jobMatchesKeywords } from '@/lib/profile-keywords';
 import {
   assertAllowedQuery,
   intValue,
@@ -14,6 +15,7 @@ export const dynamic = 'force-dynamic';
 
 const JOB_COLUMNS =
   'id, title, company, company_logo_url, location, work_mode, employment_type, level, education, skills, description, deadline, status, first_seen_at, last_seen_at, last_fetched_at, updated_at';
+const PROFILE_COLUMNS = 'skills, preferences, updated_at';
 
 const QUERY_KEYS = [
   'page',
@@ -25,6 +27,15 @@ const QUERY_KEYS = [
   'level',
   'status',
 ] as const;
+
+function hasExplicitSearch(params: URLSearchParams): boolean {
+  for (const key of QUERY_KEYS) {
+    if (key === 'page' || key === 'limit') continue;
+    const value = params.get(key);
+    if (value !== null && value.trim().length > 0) return true;
+  }
+  return false;
+}
 
 export async function GET(req: NextRequest) {
   return run(async () => {
@@ -40,6 +51,64 @@ export async function GET(req: NextRequest) {
     const employmentType = params.get('employment_type');
     const level = params.get('level');
     const status = params.get('status');
+
+    const explicit = hasExplicitSearch(params);
+
+    if (!explicit) {
+      const { data: profile, error: profileError } = await auth.supabase
+        .from('profiles')
+        .select(PROFILE_COLUMNS)
+        .eq('user_id', auth.user.id)
+        .maybeSingle();
+      if (profileError) throwDb(profileError);
+
+      const keywordState = extractProfileKeywords(profile as any);
+      if (keywordState.isEmpty) {
+        return ok({
+          items: [],
+          total: 0,
+          page,
+          limit,
+          pages: 0,
+          profile_state: 'empty',
+          reason: 'profile_incomplete',
+        });
+      }
+
+      const { data: jobs, error: jobsError } = await auth.supabase
+        .from('jobs')
+        .select(JOB_COLUMNS)
+        .order('last_fetched_at', { ascending: false, nullsFirst: false })
+        .order('id', { ascending: true })
+        .limit(300);
+      if (jobsError) throwDb(jobsError);
+
+      const matched = (jobs ?? []).filter((job) =>
+        jobMatchesKeywords(job as any, keywordState.keywords),
+      );
+      const total = matched.length;
+      const from = (page - 1) * limit;
+      const items = matched.slice(from, from + limit);
+      const pages = total === 0 ? 0 : Math.ceil(total / limit);
+
+      let profileState: 'ready' | 'ingest_pending' = 'ready';
+      if (total === 0) {
+        const updatedAtRaw = (profile as { updated_at?: string } | null)?.updated_at;
+        const updatedAt = updatedAtRaw ? Date.parse(updatedAtRaw) : NaN;
+        if (Number.isFinite(updatedAt) && Date.now() - updatedAt < 15 * 60 * 1000) {
+          profileState = 'ingest_pending';
+        }
+      }
+
+      return ok({
+        items,
+        total,
+        page,
+        limit,
+        pages,
+        profile_state: profileState,
+      });
+    }
 
     let query = auth.supabase.from('jobs').select(JOB_COLUMNS, { count: 'exact' });
     if (q) query = query.or(`title.ilike.%${q}%,company.ilike.%${q}%`);
@@ -68,6 +137,7 @@ export async function GET(req: NextRequest) {
       page,
       limit,
       pages: total === 0 ? 0 : Math.ceil(total / limit),
+      profile_state: 'explicit_search',
     });
   });
 }
