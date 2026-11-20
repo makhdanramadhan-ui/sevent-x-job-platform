@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { apiFetch } from './api-client';
 import { LoadingState, NoticeBanner } from './feedback';
-import { Button, FormField, TextInput } from './forms';
+import { Button, FormField, PasswordInput, TextInput } from './forms';
 import { AuthDivider, GoogleAuthButton } from './google-button';
 import { notifyAuthChanged, type SessionInfo } from './navigation';
 
@@ -26,6 +26,11 @@ export function AuthGuard({
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{
+    fullName?: string;
+    email?: string;
+    password?: string;
+  }>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -46,17 +51,29 @@ export function AuthGuard({
 
   async function handleModalSubmit(e: FormEvent) {
     e.preventDefault();
+    setFieldErrors({});
     setFormError(null);
 
     const trimmedEmail = email.trim();
     const trimmedName = fullName.trim();
+    const errors: { fullName?: string; email?: string; password?: string } = {};
 
-    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmedEmail)) {
-      setFormError('Masukkan alamat email yang valid.');
-      return;
+    if (activeTab === 'signup' && trimmedName.length > 120) {
+      errors.fullName = 'Nama lengkap maksimal 120 karakter.';
     }
-    if (password.length < 8 || password.length > 72) {
-      setFormError('Password harus terdiri dari 8 hingga 72 karakter.');
+    if (!trimmedEmail) {
+      errors.email = 'Email wajib diisi.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmedEmail)) {
+      errors.email = 'Masukkan alamat email yang valid.';
+    }
+    if (!password) {
+      errors.password = 'Password wajib diisi.';
+    } else if (password.length < 8 || password.length > 72) {
+      errors.password = 'Password harus terdiri dari 8 hingga 72 karakter.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
@@ -190,6 +207,7 @@ export function AuthGuard({
                 className={`auth-modal-tab ${activeTab === 'login' ? 'auth-modal-tab-active' : ''}`}
                 onClick={() => {
                   setActiveTab('login');
+                  setFieldErrors({});
                   setFormError(null);
                 }}
               >
@@ -202,6 +220,7 @@ export function AuthGuard({
                 className={`auth-modal-tab ${activeTab === 'signup' ? 'auth-modal-tab-active' : ''}`}
                 onClick={() => {
                   setActiveTab('signup');
+                  setFieldErrors({});
                   setFormError(null);
                 }}
               >
@@ -221,7 +240,7 @@ export function AuthGuard({
 
             <form onSubmit={handleModalSubmit} className="form-stack" noValidate>
               {activeTab === 'signup' ? (
-                <FormField id="modal-fullname" label="Nama Lengkap">
+                <FormField id="modal-fullname" label="Nama Lengkap" error={fieldErrors.fullName}>
                   <TextInput
                     id="modal-fullname"
                     type="text"
@@ -229,37 +248,52 @@ export function AuthGuard({
                     maxLength={120}
                     placeholder="Contoh: Nadia Pratama"
                     value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    hasError={Boolean(fieldErrors.fullName)}
+                    onChange={(e) => {
+                      setFullName(e.target.value);
+                      if (fieldErrors.fullName) {
+                        setFieldErrors((prev) => ({ ...prev, fullName: undefined }));
+                      }
+                    }}
                   />
                 </FormField>
               ) : null}
 
-              <FormField id="modal-email" label="Email" required>
+              <FormField id="modal-email" label="Email" error={fieldErrors.email}>
                 <TextInput
                   id="modal-email"
                   type="email"
                   autoComplete="email"
-                  required
                   placeholder="nama@email.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  hasError={Boolean(fieldErrors.email)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (fieldErrors.email) {
+                      setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                    }
+                  }}
                 />
               </FormField>
 
               <FormField
                 id="modal-password"
                 label="Password"
-                required
                 hint="Minimal 8 karakter"
+                error={fieldErrors.password}
               >
-                <TextInput
+                <PasswordInput
                   id="modal-password"
-                  type="password"
                   autoComplete={activeTab === 'login' ? 'current-password' : 'new-password'}
-                  required
                   placeholder="••••••••"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  hasError={Boolean(fieldErrors.password)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (fieldErrors.password) {
+                      setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                    }
+                  }}
                 />
               </FormField>
 

@@ -14,6 +14,7 @@ import {
   LoadingState,
   NoticeBanner,
   notifyAuthChanged,
+  PasswordInput,
   SITE_NAME,
   type SessionInfo,
   TextInput,
@@ -47,10 +48,14 @@ function LoginFormContent() {
     const trimmedEmail = email.trim();
     const errors: { email?: string; password?: string } = {};
 
-    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmedEmail)) {
+    if (!trimmedEmail) {
+      errors.email = 'Email wajib diisi.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmedEmail)) {
       errors.email = 'Masukkan alamat email yang valid.';
     }
-    if (password.length < 8 || password.length > 72) {
+    if (!password) {
+      errors.password = 'Password wajib diisi.';
+    } else if (password.length < 8 || password.length > 72) {
       errors.password = 'Password harus terdiri dari 8 hingga 72 karakter.';
     }
 
@@ -111,37 +116,42 @@ function LoginFormContent() {
           <FormField
             id="login-email"
             label="Alamat Email"
-            required
             error={fieldErrors.email}
           >
             <TextInput
               id="login-email"
               type="email"
               autoComplete="email"
-              required
               placeholder="nama@email.com"
               value={email}
               hasError={Boolean(fieldErrors.email)}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (fieldErrors.email) {
+                  setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                }
+              }}
             />
           </FormField>
 
           <FormField
             id="login-password"
             label="Password"
-            required
             hint="Minimal 8 karakter"
             error={fieldErrors.password}
           >
-            <TextInput
+            <PasswordInput
               id="login-password"
-              type="password"
               autoComplete="current-password"
-              required
               placeholder="••••••••"
               value={password}
               hasError={Boolean(fieldErrors.password)}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (fieldErrors.password) {
+                  setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                }
+              }}
             />
           </FormField>
 

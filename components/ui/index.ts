@@ -43,6 +43,8 @@ export {
   FormField,
   type FormFieldProps,
   JobStatusBadge,
+  PasswordInput,
+  type PasswordInputProps,
   SelectInput,
   type SelectInputProps,
   TagListInput,

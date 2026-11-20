@@ -12,6 +12,7 @@ import {
   FormField,
   GoogleAuthButton,
   notifyAuthChanged,
+  PasswordInput,
   SITE_NAME,
   TextInput,
 } from '@/components/ui';
@@ -41,10 +42,14 @@ export default function SignupPage() {
     if (trimmedName.length > 120) {
       errors.fullName = 'Nama lengkap maksimal 120 karakter.';
     }
-    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmedEmail)) {
+    if (!trimmedEmail) {
+      errors.email = 'Email wajib diisi.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmedEmail)) {
       errors.email = 'Masukkan alamat email yang valid.';
     }
-    if (password.length < 8 || password.length > 72) {
+    if (!password) {
+      errors.password = 'Password wajib diisi.';
+    } else if (password.length < 8 || password.length > 72) {
       errors.password = 'Password harus terdiri dari 8 hingga 72 karakter.';
     }
 
@@ -112,37 +117,42 @@ export default function SignupPage() {
           <FormField
             id="signup-email"
             label="Alamat Email"
-            required
             error={fieldErrors.email}
           >
             <TextInput
               id="signup-email"
               type="email"
               autoComplete="email"
-              required
               placeholder="nama@email.com"
               value={email}
               hasError={Boolean(fieldErrors.email)}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (fieldErrors.email) {
+                  setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                }
+              }}
             />
           </FormField>
 
           <FormField
             id="signup-password"
             label="Password"
-            required
             hint="Gunakan 8–72 karakter"
             error={fieldErrors.password}
           >
-            <TextInput
+            <PasswordInput
               id="signup-password"
-              type="password"
               autoComplete="new-password"
-              required
               placeholder="Minimal 8 karakter"
               value={password}
               hasError={Boolean(fieldErrors.password)}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (fieldErrors.password) {
+                  setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                }
+              }}
             />
           </FormField>
 

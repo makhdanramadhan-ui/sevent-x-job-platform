@@ -100,19 +100,37 @@ function AvatarMenu({ user, loggingOut, onNavigate, onLogout }: AvatarMenuProps)
         onClick={() => setOpen((prev) => !prev)}
       >
         {showImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={user.avatar_url ?? undefined}
-            alt={label}
-            className="avatar-image"
-            referrerPolicy="no-referrer"
-            onError={() => setImageFailed(true)}
-          />
+          <span className="avatar-circle">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={user.avatar_url ?? undefined}
+              alt={label}
+              className="avatar-image"
+              referrerPolicy="no-referrer"
+              onError={() => setImageFailed(true)}
+            />
+          </span>
         ) : (
-          <span className="avatar-initials" aria-hidden="true">
-            {getInitials(label)}
+          <span className="avatar-circle">
+            <span className="avatar-initials" aria-hidden="true">
+              {getInitials(label)}
+            </span>
           </span>
         )}
+        <svg
+          className="avatar-chevron"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
       </button>
       {open ? (
         <div className="avatar-dropdown" role="menu" aria-label="Menu akun">
@@ -218,7 +236,22 @@ export function SiteHeader() {
                 aria-label={menuOpen ? 'Tutup menu navigasi' : 'Buka menu navigasi'}
                 onClick={() => setMenuOpen((prev) => !prev)}
               >
-                <span aria-hidden="true">{menuOpen ? '✕' : '☰'}</span>
+                <svg
+                  className="nav-menu-icon"
+                  width={18}
+                  height={18}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M4 12L20 12" className="nav-menu-line nav-menu-line-top" />
+                  <path d="M4 12H20" className="nav-menu-line nav-menu-line-mid" />
+                  <path d="M4 12H20" className="nav-menu-line nav-menu-line-bot" />
+                </svg>
               </button>
             </div>
           </div>
@@ -419,7 +452,7 @@ export function SiteFooter() {
         {/* Bottom Copyright & Legal Row */}
         <div className="footer-bottom-bar">
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16 }}>
-            <span>© 2026 {SITE_NAME} · Proyek Tim SEVENT X.</span>
+            <span>© 2026 {SITE_NAME} · Proyek Tim cepetsubmitjurnalbentarlagimagang.</span>
             <span className="footer-status-pill">
               <span className="footer-status-dot" aria-hidden="true" />
               Sumber resmi terhubung
