@@ -4,8 +4,7 @@ import { requireAuth } from '@/lib/auth';
 import { throwDb } from '@/lib/db';
 import { readSupabaseAdminEnv } from '@/lib/env';
 import { ok, readJson, run } from '@/lib/http';
-import { collectUserKeywords, runKeywordIngest } from '@/lib/ingest';
-import { extractProfileKeywords } from '@/lib/profile-keywords';
+import { triggerProfileIngest } from '@/lib/ingest';
 import { parseProfile } from '@/lib/profile';
 import { canonicalizeSkillNames, tryLoadSkillCatalog } from '@/lib/skills';
 import { createAdminClient } from '@/lib/supabase';
@@ -15,19 +14,6 @@ export const maxDuration = 300;
 
 const PROFILE_COLUMNS =
   'user_id, full_name, headline, phone, location, links, skills, education, experiences, projects, organizations, achievements, preferences, created_at, updated_at';
-
-function keywordDiff(newKeywords: string[], oldKeywords: string[]): string[] {
-  const oldSet = new Set(oldKeywords.map((k) => k.toLowerCase()));
-  const result: string[] = [];
-  const seen = new Set<string>();
-  for (const kw of newKeywords) {
-    const key = kw.toLowerCase();
-    if (oldSet.has(key) || seen.has(key)) continue;
-    seen.add(key);
-    result.push(kw);
-  }
-  return result;
-}
 
 export async function GET(req: NextRequest) {
   return run(async () => {
@@ -50,16 +36,7 @@ export async function PUT(req: NextRequest) {
     const canonical = canonicalizeSkillNames(input.skills, catalog);
     const normalizedInput = { ...input, skills: canonical };
 
-    let oldKeywords: string[] = [];
     const adminEnv = readSupabaseAdminEnv();
-    if (adminEnv) {
-      try {
-        const admin = createAdminClient(adminEnv);
-        oldKeywords = await collectUserKeywords(admin, auth.user.id);
-      } catch {
-        oldKeywords = [];
-      }
-    }
 
     const { data, error } = await auth.supabase
       .from('profiles')
@@ -69,22 +46,12 @@ export async function PUT(req: NextRequest) {
     if (error) throwDb(error);
 
     if (adminEnv) {
-      const newKeywords = extractProfileKeywords({
-        skills: Array.isArray(data?.skills) ? data.skills : normalizedInput.skills,
-        preferences: (data?.preferences ?? normalizedInput.preferences) as any,
-      } as any).keywords;
-      const changed = keywordDiff(newKeywords, oldKeywords);
-      if (changed.length > 0) {
-        after(async () => {
-          try {
-            const admin = createAdminClient(adminEnv);
-            const ingestOptions = { respectThrottle: true, userId: auth.user.id };
-            await runKeywordIngest(admin, changed, ingestOptions);
-          } catch {
-            // background ingest failure must not affect profile save response
-          }
-        });
-      }
+      after(async () => {
+        try {
+          const admin = createAdminClient(adminEnv);
+          await triggerProfileIngest(admin, auth.user.id);
+        } catch {}
+      });
     }
 
     return ok(data);
