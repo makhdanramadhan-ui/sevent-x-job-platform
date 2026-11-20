@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { type MouseEvent as ReactMouseEvent, useCallback, useEffect, useRef, useState } from 'react';
 import {
   type ApiCallError,
   AuthGuard,
@@ -97,11 +98,18 @@ function MoreMenu({ busy, onRemove }: { busy: boolean; onRemove: () => void }) {
 }
 
 function BookmarksInner() {
+  const router = useRouter();
   const [items, setItems] = useState<BookmarkRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiCallError | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  function handleCardClick(event: ReactMouseEvent<HTMLElement>, jobId: string) {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('a, button, .more-menu')) return;
+    router.push(`/jobs/${jobId}`);
+  }
 
   const loadBookmarks = useCallback(async () => {
     setLoading(true);
@@ -237,7 +245,8 @@ function BookmarksInner() {
               <article
                 key={record.job_id}
                 className="surface-card-interactive"
-                style={{ position: 'relative' }}
+                style={{ position: 'relative', cursor: 'pointer' }}
+                onClick={(event) => handleCardClick(event, job.id)}
               >
                 <div className="more-menu-corner">
                   <MoreMenu
