@@ -388,12 +388,15 @@ function RecommendationsInner() {
 
               {filteredItems.length === 0 ? (
                 <EmptyState
-                  kicker="BELUM ADA HASIL REKOMENDASI"
-                  title="Tidak Ada Item Rekomendasi untuk Ditampilkan"
+                  title={
+                    recOutput?.empty_hint?.title ?? 'Tidak Ada Item Rekomendasi untuk Ditampilkan'
+                  }
                   description={
                     activeFilterCount > 0
                       ? 'Tidak ada rekomendasi yang cocok dengan kombinasi filter saat ini. Coba reset atau longgarkan filter.'
-                      : 'Endpoint rekomendasi tidak mengembalikan lowongan yang sesuai dengan profil saat ini.'
+                      : recOutput?.empty_hint
+                        ? `${recOutput.empty_hint.description} ${recOutput.empty_hint.loosen}`
+                        : 'Endpoint rekomendasi tidak mengembalikan lowongan yang sesuai dengan profil saat ini.'
                   }
                   action={
                     activeFilterCount > 0 ? (
@@ -492,8 +495,17 @@ function RecommendationsInner() {
                                 </h2>
                                 <p className="rec-card-company">
                                   {job.company} ·{' '}
-                                  <span>{job.location || 'Lokasi tidak dicantumkan'}</span> ·{' '}
-                                  <span>{WORK_MODE_LABELS[job.work_mode] ?? job.work_mode}</span>
+                                  <span>{job.location || 'Lokasi tidak dicantumkan'}</span>
+                                  {item.location_note ? (
+                                    <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
+                                      {' · '}
+                                      {item.location_note}
+                                    </span>
+                                  ) : null}
+                                  {' '}
+                                  ·{' '}
+                                  <span>{WORK_MODE_LABELS[job.work_mode] ?? job.work_mode}</span>{' '}
+                                  ·{' '}
                                   {item.source ? (
                                     <>
                                       {' · '}

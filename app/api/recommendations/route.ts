@@ -1,4 +1,4 @@
-import { after, type NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import {
   EMPLOYMENT_TYPES,
@@ -9,14 +9,11 @@ import {
   type WorkMode,
 } from '@/lib/contracts';
 import { throwDb } from '@/lib/db';
-import { readSupabaseAdminEnv } from '@/lib/env';
 import { ok, run } from '@/lib/http';
-import { triggerProfileIngest } from '@/lib/ingest';
 import { rankJobs } from '@/lib/recommendation';
 import { buildEmptyHint } from '@/lib/recommendation/empty-hint';
 import { attachJobContext, filterEligibleJobs, type JobSourceRow } from '@/lib/recommendation/job-context';
 import { asLocationPreference, isProfileLocationReady } from '@/lib/recommendation/location-filter';
-import { createAdminClient } from '@/lib/supabase';
 import type {
   RecommendationFilters,
   RecommendationJobInputWithContext,
@@ -141,17 +138,7 @@ export async function GET(req: NextRequest) {
       if (Number.isFinite(updatedAt) && Date.now() - updatedAt < 15 * 60 * 1000) {
         profileState = 'ingest_pending';
       }
-      const adminEnv = readSupabaseAdminEnv();
-      if (adminEnv) {
-        after(async () => {
-          try {
-            const admin = createAdminClient(adminEnv);
-            await triggerProfileIngest(admin, auth.user.id);
-          } catch {
-            // Background ingest failure must not affect the recommendation response.
-          }
-        });
-      }
+
     }
 
     const prefRecord = profile?.preferences ?? null;

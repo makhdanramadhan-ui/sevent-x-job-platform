@@ -1,15 +1,12 @@
-import { after, type NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { JOB_STATUSES, EMPLOYMENT_TYPES, EXPERIENCE_LEVELS, WORK_MODES } from '@/lib/contracts';
 import { throwDb } from '@/lib/db';
-import { readSupabaseAdminEnv } from '@/lib/env';
 import { ok, run } from '@/lib/http';
-import { triggerProfileIngest } from '@/lib/ingest';
 import { extractProfileKeywords, jobMatchesKeywords } from '@/lib/profile-keywords';
 import { buildEmptyHint } from '@/lib/recommendation/empty-hint';
 import { filterEligibleJobs } from '@/lib/recommendation/job-context';
 import { asLocationPreference, isProfileLocationReady } from '@/lib/recommendation/location-filter';
-import { createAdminClient } from '@/lib/supabase';
 import {
   assertAllowedQuery,
   intValue,
@@ -112,17 +109,7 @@ export async function GET(req: NextRequest) {
         if (Number.isFinite(updatedAt) && Date.now() - updatedAt < 15 * 60 * 1000) {
           profileState = 'ingest_pending';
         }
-        const adminEnv = readSupabaseAdminEnv();
-        if (adminEnv) {
-          after(async () => {
-            try {
-              const admin = createAdminClient(adminEnv);
-              await triggerProfileIngest(admin, auth.user.id);
-            } catch {
-              // Background ingest failure must not affect the feed response.
-            }
-          });
-        }
+
       }
 
       const prefRecord = preferenceRow.preferences ?? {};
