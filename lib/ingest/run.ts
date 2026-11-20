@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { IngestPayload } from './normalize';
+import { enrichMissingCompanyLogos } from './logo-fallback';
 import {
   fetchHimalayasPublicApi,
   fetchJobicyPublicApi,
@@ -115,6 +116,7 @@ export async function runKeywordIngest(
   }
 
   const uniquePayloads = dedupePayloads(allPayloads);
+  await enrichMissingCompanyLogos(uniquePayloads);
   for (const payload of uniquePayloads) {
     try {
       await ingestPayload(admin, payload);

@@ -201,8 +201,8 @@ class SupabaseIngestClient:
                 logo_map.setdefault(company, logo_url)
         return logo_map
 
-    def fetch_jobs_missing_logo(self, limit: int = 50) -> List[Dict[str, Any]]:
-        safe_limit = max(1, min(limit, 200))
+    def fetch_jobs_missing_logo(self, limit: int = 200) -> List[Dict[str, Any]]:
+        safe_limit = max(1, min(limit, 500))
         rows = self._rest_get_json(
             f"jobs?company_logo_url=is.null&select=id,title,company,job_sources(source_name,source_job_id,source_url,published_at)&order=last_fetched_at.desc.nullslast&limit={safe_limit}"
         )

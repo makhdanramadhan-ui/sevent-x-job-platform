@@ -117,7 +117,13 @@ function RecommendationCompanyLogo({
           referrerPolicy="no-referrer"
           onError={() => setFailedUrl(logoUrl ?? null)}
           onLoad={(e) => {
-            if (e.currentTarget.naturalWidth === 0) {
+            const { naturalWidth, naturalHeight } = e.currentTarget;
+            if (
+              naturalWidth === 0 ||
+              (logoUrl?.includes('google.com/s2/favicons') &&
+                naturalWidth <= 16 &&
+                naturalHeight <= 16)
+            ) {
               setFailedUrl(logoUrl ?? null);
             }
           }}
