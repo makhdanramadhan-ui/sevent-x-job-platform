@@ -325,6 +325,42 @@ export function ProfileEditorForm({
               })
             }
           />
+          <label
+            htmlFor="pref-email-match-alerts"
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 10,
+              padding: '12px 14px',
+              border: '1px solid #dde4ee',
+              borderRadius: 12,
+              cursor: 'pointer',
+            }}
+          >
+            <input
+              id="pref-email-match-alerts"
+              type="checkbox"
+              checked={draft.preferences.email_match_alerts !== false}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  preferences: {
+                    ...current.preferences,
+                    email_match_alerts: event.target.checked,
+                  },
+                }))
+              }
+              style={{ marginTop: 3 }}
+            />
+            <span>
+              <strong style={{ display: 'block', fontSize: '0.92rem' }}>
+                Kirim email saat ada lowongan dengan kecocokan ≥70%
+              </strong>
+              <span style={{ display: 'block', fontSize: '0.82rem', color: 'var(--ink-secondary)' }}>
+                Kamu bisa berhenti berlangganan lewat tautan di bawah email.
+              </span>
+            </span>
+          </label>
         </div>
       </section>
 

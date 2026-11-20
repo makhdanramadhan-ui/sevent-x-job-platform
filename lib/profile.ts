@@ -193,12 +193,21 @@ function parsePreferences(value: unknown): ProfilePreferences {
       levels: [],
       work_modes: [],
       employment_types: [],
+      email_match_alerts: true,
     };
   }
   const entry = asObject(value, 'preferences');
   rejectUnknownKeys(
     entry,
-    ['country', 'positions', 'locations', 'levels', 'work_modes', 'employment_types'],
+    [
+      'country',
+      'positions',
+      'locations',
+      'levels',
+      'work_modes',
+      'employment_types',
+      'email_match_alerts',
+    ],
     'preferences',
   );
   const country = parseCountry(entry.country);
@@ -218,6 +227,10 @@ function parsePreferences(value: unknown): ProfilePreferences {
       EMPLOYMENT_TYPES,
       10,
     ),
+    email_match_alerts:
+      entry.email_match_alerts === undefined || entry.email_match_alerts === null
+        ? true
+        : flag(entry.email_match_alerts, 'preferences.email_match_alerts'),
   };
 }
 

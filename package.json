@@ -11,18 +11,21 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "check": "node --env-file-if-exists=.env.local --import tsx scripts/smoke.mts",
-    "check:supabase": "node --env-file-if-exists=.env.local --import tsx scripts/integration-supabase.mts"
+    "check:supabase": "node --env-file-if-exists=.env.local --import tsx scripts/integration-supabase.mts",
+    "test:match-email": "node --import tsx scripts/test-match-email.mts"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.119.0",
     "motion": "^14.14.0",
     "next": "16.4.6",
+    "nodemailer": "^6.10.1",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@types/node": "24.19.2",
+    "@types/nodemailer": "^6.4.17",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "tsx": "4.23.15",
