@@ -75,11 +75,9 @@ function matchCountryCode(text: string): string | null {
 
 function resolveJobLocation(job: JobLocationContext): { country: string | null; entry: LocationEntry | null } {
   const location = job.location?.trim() ?? '';
-  const description = job.description?.trim() ?? '';
-  const text = [location, description.slice(0, 400)].filter(Boolean).join(' ');
-  if (!text) return { country: null, entry: null };
-  const entry = matchEntry(text);
-  const countryCode = entry && entry.country !== '*' ? entry.country : matchCountryCode(text);
+  if (!location) return { country: null, entry: null };
+  const entry = matchEntry(location);
+  const countryCode = entry && entry.country !== '*' ? entry.country : matchCountryCode(location);
   return { country: countryCode, entry };
 }
 
@@ -101,7 +99,7 @@ function matchesPreferredLocation(
   return prefs.some((p) => {
     if (p.country === '*') return false;
     if (p.country !== jobCountry) return false;
-    if (p.type === 'country') return true;
+    if (p.type === 'country' || p.name === 'Seluruh Indonesia') return true;
     return p.name === jobEntry.name || (Boolean(jobEntry.province) && p.name === jobEntry.province);
   });
 }
