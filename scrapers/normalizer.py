@@ -161,9 +161,26 @@ class _HTMLTextExtractor(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
         self._parts: List[str] = []
+        self._in_li = False
 
     def handle_starttag(self, tag: str, attrs: List[Tuple[str, Optional[str]]]) -> None:
-        if tag in {"p", "br", "li", "div", "h1", "h2", "h3", "h4", "tr"}:
+        if tag == "li":
+            self._in_li = True
+            self._parts.append("\n• ")
+        elif tag in {"p", "h1", "h2", "h3", "h4", "ul", "ol"}:
+            if not (self._in_li and tag == "p"):
+                self._parts.append("\n\n")
+        elif tag in {"br", "div", "tr"}:
+            self._parts.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "li":
+            self._in_li = False
+            self._parts.append("\n")
+        elif tag in {"p", "h1", "h2", "h3", "h4", "ul", "ol"}:
+            if not (self._in_li and tag == "p"):
+                self._parts.append("\n\n")
+        elif tag in {"div", "tr"}:
             self._parts.append("\n")
 
     def handle_data(self, data: str) -> None:
@@ -171,8 +188,14 @@ class _HTMLTextExtractor(HTMLParser):
 
     def get_text(self) -> str:
         raw = "".join(self._parts)
-        lines = [re.sub(r"[ \t]+", " ", line).strip() for line in raw.splitlines()]
-        cleaned = "\n".join(line for line in lines if line)
+        normalized_lines: List[str] = []
+        for raw_line in raw.splitlines():
+            line = re.sub(r"[ \t]+", " ", raw_line).strip()
+            line = re.sub(r"^•\s*(?:[•●▪\-*]\s+)+", "• ", line)
+            if line == "•":
+                continue
+            normalized_lines.append(line)
+        cleaned = re.sub(r"\n{3,}", "\n\n", "\n".join(normalized_lines))
         return cleaned.strip()
 
 
@@ -184,6 +207,21 @@ def strip_html(raw: Optional[str]) -> Optional[str]:
     parser.close()
     text = parser.get_text()
     return text if text else None
+
+
+def clean_description_whitespace(
+    value: Optional[str], max_len: Optional[int] = None
+) -> Optional[str]:
+    if value is None or not isinstance(value, str):
+        return None
+    normalized = value.replace("\r\n", "\n").replace("\r", "\n")
+    lines = [re.sub(r"[ \t]+", " ", line).strip() for line in normalized.split("\n")]
+    cleaned = re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+    if not cleaned:
+        return None
+    if max_len is not None and len(cleaned) > max_len:
+        cleaned = cleaned[:max_len].rstrip()
+    return cleaned
 
 
 def clean_whitespace(value: Optional[str], max_len: Optional[int] = None) -> Optional[str]:
@@ -632,7 +670,7 @@ def build_ingest_payload(
     )
     norm_published_at = normalize_iso_timestamp(published_at)
 
-    norm_description = clean_whitespace(strip_html(description), max_len=20000)
+    norm_description = clean_description_whitespace(strip_html(description), max_len=20000)
     norm_location = normalize_location(location)
     norm_work_mode = normalize_work_mode(
         work_mode,

@@ -161,7 +161,10 @@ export function stripHtml(raw: string | null | undefined): string | null {
   let text = raw;
   text = text.replace(/<script[\s\S]*?<\/script>/gi, ' ');
   text = text.replace(/<style[\s\S]*?<\/style>/gi, ' ');
-  text = text.replace(/<(p|br|li|div|h1|h2|h3|h4|tr)\b[^>]*>/gi, '\n');
+  text = text.replace(/<li\b[^>]*>(?:\s*<p\b[^>]*>)?/gi, '\n• ');
+  text = text.replace(/(?:<\/p>\s*)?<\/li>/gi, '\n');
+  text = text.replace(/<\/?(?:p|h1|h2|h3|h4|ul|ol)\b[^>]*>/gi, '\n\n');
+  text = text.replace(/<\/?(?:br|div|tr)\b[^>]*>/gi, '\n');
   text = text.replace(/<[^>]+>/g, ' ');
   text = text
     .replace(/&nbsp;/g, ' ')
@@ -177,9 +180,27 @@ export function stripHtml(raw: string | null | undefined): string | null {
   const lines = text
     .split(/\r?\n/)
     .map((line) => line.replace(/[ \t]+/g, ' ').trim())
-    .filter((line) => line.length > 0);
-  const cleaned = lines.join('\n').trim();
+    .map((line) => line.replace(/^•\s*(?:[•●▪\-*]\s+)+/, '• '))
+    .filter((line) => line !== '•');
+  const cleaned = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
   return cleaned.length > 0 ? cleaned : null;
+}
+
+export function cleanDescriptionWhitespace(
+  value: string | null | undefined,
+  maxLen: number = 20000,
+): string | null {
+  if (value === null || value === undefined || typeof value !== 'string') return null;
+  const lines = value
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.replace(/[ \t]+/g, ' ').trim());
+  let cleaned = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  if (!cleaned) return null;
+  if (cleaned.length > maxLen) {
+    cleaned = cleaned.slice(0, maxLen).trimEnd();
+  }
+  return cleaned;
 }
 
 export function cleanWhitespace(
@@ -447,7 +468,7 @@ export function buildIngestPayload(input: {
   const normFetchedAt = normalizeIsoTimestamp(input.fetchedAt ?? null) ?? nowIso();
   const normPublishedAt = normalizeIsoTimestamp(input.publishedAt ?? null);
 
-  const normDescription = cleanWhitespace(stripHtml(input.description ?? null), 20000);
+  const normDescription = cleanDescriptionWhitespace(stripHtml(input.description ?? null), 20000);
   const normLocation = cleanWhitespace(stripHtml(input.location ?? null) ?? input.location ?? null, 120);
   const normWorkMode = normalizeWorkMode(input.workMode, normLocation, normTitle);
   const normEmploymentType = normalizeEmploymentType(input.employmentType, normTitle);

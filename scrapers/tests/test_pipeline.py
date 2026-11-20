@@ -289,6 +289,26 @@ class TestNormalizerAndContract(unittest.TestCase):
         self.assertFalse(_is_valid_favicon_bytes(b"<!DOCTYPE html><html></html>", "text/html"))
         self.assertFalse(_is_valid_favicon_bytes(b"small", "image/x-icon"))
 
+    def test_description_preserves_paragraphs_and_bullet_lines(self) -> None:
+        html_desc = (
+            "<p>Kami membangun layanan finansial digital.</p>"
+            "<h3>Kualifikasi</h3>"
+            "<ul><li><p>Menguasai Python dan SQL.</p></li><li>• Pengalaman REST API.</li></ul>"
+        )
+        payload = build_ingest_payload(
+            source_name="linkedin_guest",
+            source_job_id="1001",
+            source_url="https://www.linkedin.com/jobs/view/1001",
+            title="Backend Engineer",
+            company="Traveloka",
+            description=html_desc,
+        )
+        desc = payload["job"]["description"]
+        self.assertIn("Kami membangun layanan finansial digital.\n\nKualifikasi", desc)
+        self.assertIn("• Menguasai Python dan SQL.", desc)
+        self.assertIn("• Pengalaman REST API.", desc)
+        self.assertNotIn("• •", desc)
+
 
 class TestConservativeDeduplication(unittest.TestCase):
     def test_same_title_and_company_with_different_or_unknown_attributes_are_not_merged(self) -> None:
