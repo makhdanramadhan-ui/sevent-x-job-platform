@@ -3024,6 +3024,17 @@ h4 {
 .tk-avatar-stack img:first-child {
   margin-left: 0;
 }
+.tk-avatar-stack .tk-company-logo {
+  margin-left: -10px;
+}
+
+.tk-avatar-stack .tk-company-logo:first-child {
+  margin-left: 0;
+}
+
+.tk-company-logo--skeleton {
+  border-color: transparent;
+}
 
 .tk-hero__visual {
   border-radius: var(--r-lg);

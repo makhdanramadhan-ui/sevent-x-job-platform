@@ -1,77 +1,95 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  apiFetch,
+  Badge,
+  EMPLOYMENT_TYPE_LABELS,
+  formatDateId,
+  JOB_STATUS_LABELS,
+  JobStatusBadge,
   ScrollReveal,
   ScrollStepsProgress,
   ScrollWordHighlight,
   SITE_NAME,
+  WORK_MODE_LABELS,
 } from '@/components/ui';
+import { CompanyLogo } from '@/components/ui/company-logo';
+import type { EmploymentType, ExperienceLevel, JobStatus, WorkMode } from '@/lib/contracts';
+import { displaySourceName } from '@/lib/job-source';
 
-type PreviewRole = {
+type LandingJob = {
   id: string;
   title: string;
   company: string;
-  location: string;
-  mode: string;
-  type: string;
-  level: string;
-  source: string;
-  fetched: string;
-  avatar: string;
-  avatarAlt: string;
-  matched: string[];
-  missing: string[];
+  company_logo_url: string | null;
+  location: string | null;
+  work_mode: WorkMode;
+  employment_type: EmploymentType;
+  level: ExperienceLevel;
+  status: JobStatus;
+  deadline: string | null;
+  last_fetched_at: string | null;
+  updated_at: string;
+  source_name: string | null;
+  source_published_at: string | null;
+  source_fetched_at: string | null;
+  matched?: string[];
+  missing?: string[];
 };
 
-const PREVIEW_ROLES: readonly PreviewRole[] = [
-  {
-    id: 'frontend',
-    title: 'Frontend Engineer',
-    company: 'PT Sentosa Teknologi',
-    location: 'Jakarta Selatan',
-    mode: 'Hybrid',
-    type: 'Penuh waktu',
-    level: 'Junior – Mid',
-    source: 'Portal Karier Perusahaan',
-    fetched: 'Diperbarui 2 jam lalu',
-    avatar: '/images/avatar-frontend.jpg',
-    avatarAlt: 'Avatar 3D pelamar bidang rekayasa perangkat lunak',
-    matched: ['TypeScript & React', 'Sistem kerja Hybrid', 'Domisili Jabodetabek'],
-    missing: ['Pengujian end-to-end (Playwright)'],
-  },
-  {
-    id: 'finance',
-    title: 'Analis Keuangan & Pelaporan',
-    company: 'PT Karya Mandiri Niaga',
-    location: 'Surabaya',
-    mode: 'Onsite',
-    type: 'Penuh waktu',
-    level: 'Fresh Graduate',
-    source: 'Laman Rekrutmen Resmi',
-    fetched: 'Diperbarui hari ini',
-    avatar: '/images/avatar-finance.jpg',
-    avatarAlt: 'Avatar 3D pelamar bidang keuangan dan bisnis',
-    matched: ['S1 Akuntansi / Manajemen', 'Analisis laporan keuangan', 'Microsoft Excel'],
-    missing: ['Sertifikasi Brevet Pajak A/B'],
-  },
-  {
-    id: 'design',
-    title: 'Product Designer',
-    company: 'PT Ruang Kreasi Digital',
-    location: 'Bandung',
-    mode: 'Remote',
-    type: 'Kontrak',
-    level: 'Mid-Level',
-    source: 'Portal Karier Resmi',
-    fetched: 'Diperbarui kemarin',
-    avatar: '/images/avatar-designer.jpg',
-    avatarAlt: 'Avatar 3D pelamar bidang desain produk',
-    matched: ['Figma & Design System', 'Riset pengguna', 'Sistem kerja Remote'],
-    missing: ['Studi kasus produk mobile B2B'],
-  },
-];
+type LandingPreviewPayload = {
+  mode: 'recommendations' | 'recent';
+  auth_state: 'guest' | 'without_profile' | 'ready';
+  count: number;
+  total_jobs: number;
+  source_count: number;
+  updated_at: string | null;
+  jobs: LandingJob[];
+  reason?: string;
+};
+
+const EMPTY_PREVIEW: LandingPreviewPayload = {
+  mode: 'recent',
+  auth_state: 'guest',
+  count: 0,
+  total_jobs: 0,
+  source_count: 0,
+  updated_at: null,
+  jobs: [],
+};
+
+function formatRelativeId(value: string | null | undefined): string {
+  if (!value) return 'waktu tidak diketahui';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return 'waktu tidak diketahui';
+  const minutes = Math.max(0, Math.floor((Date.now() - parsed.getTime()) / 60000));
+  if (minutes < 1) return 'baru saja';
+  if (minutes < 60) return `${minutes} menit yang lalu`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} jam yang lalu`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} hari yang lalu`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} bulan yang lalu`;
+  return `${Math.floor(months / 12)} tahun yang lalu`;
+}
+
+function jobMeta(job: LandingJob): string {
+  return [
+    job.location || 'Lokasi tidak dicantumkan',
+    WORK_MODE_LABELS[job.work_mode] ?? job.work_mode,
+    EMPLOYMENT_TYPE_LABELS[job.employment_type] ?? job.employment_type,
+  ].join(' · ');
+}
+
+function realStatusLabel(job: LandingJob | null): string {
+  if (!job) return 'Status tidak tersedia';
+  if (job.status === 'open' || job.status === 'closed') return JOB_STATUS_LABELS[job.status];
+  if (job.deadline) return `Tenggat ${formatDateId(job.deadline)}`;
+  return 'Status tidak tercantum';
+}
 
 const WORKFLOW_STEPS = [
   {
@@ -105,13 +123,57 @@ const WORKFLOW_STEPS = [
 ] as const;
 
 export default function HomePage() {
-  const [selectedId, setSelectedId] = useState<string>(PREVIEW_ROLES[0].id);
-  const selectedRole =
-    PREVIEW_ROLES.find((item) => item.id === selectedId) ?? PREVIEW_ROLES[0];
+  const [preview, setPreview] = useState<LandingPreviewPayload>(EMPTY_PREVIEW);
+  const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    async function loadPreview() {
+      const res = await apiFetch<LandingPreviewPayload>('/api/landing-preview');
+      if (!active) return;
+      if (res.ok) {
+        setPreview(res.data);
+        setSelectedId(res.data.jobs[0]?.id ?? null);
+      } else {
+        setPreview(EMPTY_PREVIEW);
+        setSelectedId(null);
+      }
+      setLoading(false);
+    }
+    void loadPreview();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const jobs = preview.jobs;
+  const selectedJob = jobs.find((job) => job.id === selectedId) ?? jobs[0] ?? null;
+  const statsText = loading
+    ? 'Memuat lowongan dari sumber resmi...'
+    : preview.total_jobs > 0 || jobs.length > 0
+      ? `${preview.total_jobs} lowongan dari ${preview.source_count} sumber${preview.updated_at ? ` · diperbarui ${formatRelativeId(preview.updated_at)}` : ''}`
+      : 'Belum ada lowongan dari sumber resmi.';
+  const headerMeta = loading
+    ? 'Memuat lowongan...'
+    : preview.mode === 'recommendations'
+      ? `${preview.count} rekomendasi`
+      : `${jobs.length} lowongan terbaru`;
+  const ctaHref = preview.auth_state === 'guest' ? '/login' : '/profile';
+  const ctaLabel =
+    preview.auth_state === 'guest'
+      ? 'Masuk untuk melihat kecocokan'
+      : 'Lengkapi bidang & keahlian di profil untuk melihat kecocokan';
+  const sourceTime = selectedJob
+    ? formatRelativeId(
+        selectedJob.source_published_at ??
+          selectedJob.source_fetched_at ??
+          selectedJob.last_fetched_at,
+      )
+    : '';
 
   return (
     <div>
-      {/* 1. HERO: Split with 3D Career Avatar + Interactive App-Frame */}
       <section className="tk-hero" aria-labelledby="hero-heading">
         <div className="tk-hero__top">
           <div className="tk-hero__text">
@@ -133,12 +195,22 @@ export default function HomePage() {
 
             <div className="tk-hero__avatars-row">
               <div className="tk-avatar-stack" aria-hidden="true">
-                <img src="/images/avatar-frontend.jpg" alt="" />
-                <img src="/images/avatar-finance.jpg" alt="" />
-                <img src="/images/avatar-designer.jpg" alt="" />
+                {loading
+                  ? [0, 1, 2].map((index) => (
+                      <span key={index} className="tk-company-logo tk-company-logo--skeleton">
+                        <span className="skeleton-line" style={{ width: 20, height: 14 }} />
+                      </span>
+                    ))
+                  : jobs.slice(0, 3).map((job) => (
+                      <CompanyLogo
+                        key={job.id}
+                        company={job.company}
+                        logoUrl={job.company_logo_url}
+                      />
+                    ))}
               </div>
               <span style={{ fontSize: '0.875rem', color: 'var(--p-muted)', lineHeight: 1.4 }}>
-                Terbuka untuk magang, fresh graduate, hingga profesional lintas bidang.
+                {statsText}
               </span>
             </div>
           </div>
@@ -151,7 +223,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Live HTML Application Window inside Calm Lit Frame */}
         <ScrollReveal delayMs={100}>
           <div className="tk-hero__stage" aria-label={`Pratinjau antarmuka ${SITE_NAME}`}>
           <div className="tk-app-window">
@@ -163,179 +234,355 @@ export default function HomePage() {
               </div>
               <span>{SITE_NAME} — Pencarian &amp; Pemetaan Lowongan</span>
               <span className="font-mono tk-app-bar-meta" style={{ fontSize: '0.75rem' }}>
-                3 bidang kerja
+                {headerMeta}
               </span>
             </div>
 
             <div className="tk-app-body">
-              {/* Interactive Sidebar List with 3D Avatars */}
-              <div className="tk-app-sidebar" role="tablist" aria-label="Pilih contoh posisi">
-                {PREVIEW_ROLES.map((role) => {
-                  const active = role.id === selectedRole.id;
-                  return (
-                    <button
-                      key={role.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={active}
-                      className={`tk-app-job-item ${active ? 'tk-app-job-item--active' : ''}`}
-                      onClick={() => setSelectedId(role.id)}
+              <div className="tk-app-sidebar" role="tablist" aria-label="Pilih lowongan">
+                {loading
+                  ? [0, 1, 2].map((index) => (
+                      <div key={index} className="tk-app-job-item" aria-hidden="true">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span
+                            className="skeleton-line"
+                            style={{ width: 40, height: 40, borderRadius: 10 }}
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <span
+                              className="skeleton-line"
+                              style={{ width: '85%', marginBottom: 7 }}
+                            />
+                            <span className="skeleton-line" style={{ width: '60%' }} />
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  : jobs.length > 0
+                    ? jobs.map((job) => {
+                        const active = selectedJob?.id === job.id;
+                        return (
+                          <button
+                            key={job.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={active}
+                            className={`tk-app-job-item ${active ? 'tk-app-job-item--active' : ''}`}
+                            onClick={() => setSelectedId(job.id)}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <CompanyLogo
+                                company={job.company}
+                                logoUrl={job.company_logo_url}
+                                size={40}
+                                rounded={10}
+                              />
+                              <div style={{ minWidth: 0 }}>
+                                <div
+                                  style={{
+                                    fontWeight: 500,
+                                    fontSize: '0.9rem',
+                                    color: 'var(--p-ink)',
+                                    marginBottom: 2,
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                  }}
+                                >
+                                  {job.title}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: '0.78rem',
+                                    color: 'var(--p-muted)',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                  }}
+                                >
+                                  {job.company} · {job.location || 'Lokasi tidak dicantumkan'}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })
+                    : (
+                        <div className="tk-app-job-item" aria-hidden="true">
+                          Belum ada lowongan
+                        </div>
+                      )}
+              </div>
+
+              <div className="tk-app-detail" role="tabpanel">
+                {loading ? (
+                  <>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        gap: 12,
+                        flexWrap: 'wrap',
+                      }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <img
-                          src={role.avatar}
-                          alt=""
-                          aria-hidden="true"
-                          className="tk-role-avatar"
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <span
+                          className="skeleton-line"
+                          style={{ width: 46, height: 46, borderRadius: 12 }}
+                        />
+                        <div>
+                          <span
+                            className="skeleton-line"
+                            style={{ width: 220, height: 18, marginBottom: 8 }}
+                          />
+                          <span className="skeleton-line" style={{ width: 300 }} />
+                        </div>
+                      </div>
+                      <span
+                        className="skeleton-line"
+                        style={{ width: 92, height: 26, borderRadius: 999 }}
+                      />
+                    </div>
+                    <div className="tk-app-match-grid">
+                      <div className="tk-app-match-box">
+                        <span className="skeleton-line" style={{ width: '70%', marginBottom: 8 }} />
+                        <span className="skeleton-line" style={{ width: '90%', marginBottom: 6 }} />
+                        <span className="skeleton-line" style={{ width: '75%' }} />
+                      </div>
+                      <div className="tk-app-match-box">
+                        <span className="skeleton-line" style={{ width: '70%', marginBottom: 8 }} />
+                        <span className="skeleton-line" style={{ width: '85%', marginBottom: 6 }} />
+                        <span className="skeleton-line" style={{ width: '65%' }} />
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        paddingTop: 12,
+                        borderTop: '1px solid var(--border-subtle)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                      }}
+                    >
+                      <span className="skeleton-line" style={{ width: 180 }} />
+                      <span className="skeleton-line" style={{ width: 150 }} />
+                    </div>
+                  </>
+                ) : !selectedJob ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      justifyContent: 'center',
+                      gap: 10,
+                      minHeight: 260,
+                    }}
+                  >
+                    <strong style={{ color: 'var(--p-ink)' }}>
+                      Belum ada lowongan untuk ditampilkan
+                    </strong>
+                    <p
+                      style={{
+                        margin: 0,
+                        color: 'var(--p-muted)',
+                        fontSize: '0.88rem',
+                        maxWidth: '46ch',
+                      }}
+                    >
+                      Data lowongan belum tersedia. Coba lihat halaman Lowongan untuk hasil
+                      terbaru.
+                    </p>
+                    <Link href="/jobs" className="btn btn-primary btn-sm">
+                      Lihat halaman Lowongan
+                    </Link>
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        gap: 12,
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                        <CompanyLogo
+                          company={selectedJob.company}
+                          logoUrl={selectedJob.company_logo_url}
+                          size={46}
+                          rounded={12}
                         />
                         <div style={{ minWidth: 0 }}>
                           <div
                             style={{
+                              fontSize: '1.2rem',
                               fontWeight: 500,
-                              fontSize: '0.9rem',
                               color: 'var(--p-ink)',
-                              marginBottom: 2,
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
+                              overflowWrap: 'anywhere',
                             }}
                           >
-                            {role.title}
+                            {selectedJob.title}
                           </div>
                           <div
                             style={{
-                              fontSize: '0.78rem',
+                              fontSize: '0.88rem',
                               color: 'var(--p-muted)',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
+                              marginTop: 2,
+                              overflowWrap: 'anywhere',
                             }}
                           >
-                            {role.location} · {role.mode}
+                            {selectedJob.company} · {jobMeta(selectedJob)}
                           </div>
                         </div>
                       </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Active Role Detail Pane */}
-              <div className="tk-app-detail" role="tabpanel">
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    gap: 12,
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <img
-                      src={selectedRole.avatar}
-                      alt={selectedRole.avatarAlt}
-                      className="tk-role-avatar"
-                      style={{ width: 46, height: 46, borderRadius: 12 }}
-                    />
-                    <div>
-                      <div style={{ fontSize: '1.2rem', fontWeight: 500, color: 'var(--p-ink)' }}>
-                        {selectedRole.title}
-                      </div>
-                      <div style={{ fontSize: '0.88rem', color: 'var(--p-muted)', marginTop: 2 }}>
-                        {selectedRole.company} · {selectedRole.location} · {selectedRole.mode} ·{' '}
-                        {selectedRole.type}
-                      </div>
+                      {selectedJob.status === 'open' || selectedJob.status === 'closed' ? (
+                        <JobStatusBadge status={selectedJob.status} />
+                      ) : selectedJob.deadline ? (
+                        <Badge variant="warning">Tenggat {formatDateId(selectedJob.deadline)}</Badge>
+                      ) : null}
                     </div>
-                  </div>
-                  <span className="badge badge-open">Masih dibuka</span>
-                </div>
 
-                <div className="tk-app-match-grid">
-                  <div className="tk-app-match-box tk-app-match-box--open">
+                    {preview.mode === 'recommendations' &&
+                    selectedJob.matched &&
+                    selectedJob.missing ? (
+                      <div className="tk-app-match-grid">
+                        <div className="tk-app-match-box tk-app-match-box--open">
+                          <div
+                            style={{
+                              fontSize: '0.8125rem',
+                              fontWeight: 500,
+                              color: 'var(--status-open)',
+                              marginBottom: 6,
+                            }}
+                          >
+                            Cocok dengan profilmu
+                          </div>
+                          <ul
+                            style={{
+                              margin: 0,
+                              paddingLeft: 16,
+                              fontSize: '0.84rem',
+                              color: 'var(--p-ink)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 4,
+                              maxHeight: 92,
+                              overflowY: 'auto',
+                            }}
+                          >
+                            {selectedJob.matched.map((item, index) => (
+                              <li key={`${item}-${index}`}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div className="tk-app-match-box tk-app-match-box--missing">
+                          <div
+                            style={{
+                              fontSize: '0.8125rem',
+                              fontWeight: 500,
+                              color: 'var(--status-warning)',
+                              marginBottom: 6,
+                            }}
+                          >
+                            Perlu dilengkapi di profil
+                          </div>
+                          <ul
+                            style={{
+                              margin: 0,
+                              paddingLeft: 16,
+                              fontSize: '0.84rem',
+                              color: 'var(--p-ink)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 4,
+                              maxHeight: 92,
+                              overflowY: 'auto',
+                            }}
+                          >
+                            {selectedJob.missing.map((item, index) => (
+                              <li key={`${item}-${index}`}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="tk-app-match-grid" style={{ gridTemplateColumns: '1fr' }}>
+                        <div
+                          className="tk-app-match-box"
+                          style={{
+                            gridColumn: '1 / -1',
+                            background: 'var(--p-accent-soft)',
+                            border: '1px solid rgba(26, 75, 224, 0.22)',
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: '0.8125rem',
+                              fontWeight: 500,
+                              color: 'var(--p-action)',
+                              marginBottom: 6,
+                            }}
+                          >
+                            {ctaLabel}
+                          </div>
+                          <p
+                            style={{
+                              margin: '0 0 8px',
+                              fontSize: '0.84rem',
+                              color: 'var(--p-ink)',
+                            }}
+                          >
+                            Isi profil untuk melihat syarat yang cocok dan yang masih perlu kamu
+                            lengkapi sebelum melamar.
+                          </p>
+                          <Link
+                            href={ctaHref}
+                            style={{
+                              color: 'var(--p-action)',
+                              fontWeight: 500,
+                              textDecoration: 'none',
+                            }}
+                          >
+                            {preview.auth_state === 'guest' ? 'Masuk' : 'Lengkapi Profil'}
+                          </Link>
+                        </div>
+                      </div>
+                    )}
+
                     <div
                       style={{
-                        fontSize: '0.8125rem',
-                        fontWeight: 500,
-                        color: 'var(--status-open)',
-                        marginBottom: 6,
-                      }}
-                    >
-                      Cocok dengan profilmu
-                    </div>
-                    <ul
-                      style={{
-                        margin: 0,
-                        paddingLeft: 16,
-                        fontSize: '0.84rem',
-                        color: 'var(--p-ink)',
                         display: 'flex',
-                        flexDirection: 'column',
-                        gap: 4,
-                      }}
-                    >
-                      {selectedRole.matched.map((m) => (
-                        <li key={m}>{m}</li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="tk-app-match-box tk-app-match-box--missing">
-                    <div
-                      style={{
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 10,
+                        paddingTop: 12,
+                        borderTop: '1px solid var(--border-subtle)',
                         fontSize: '0.8125rem',
-                        fontWeight: 500,
-                        color: 'var(--status-warning)',
-                        marginBottom: 6,
+                        color: 'var(--p-muted)',
                       }}
                     >
-                      Perlu dilengkapi di profil
+                      <span>
+                        {displaySourceName(selectedJob.source_name)} · {sourceTime}
+                      </span>
+                      <Link
+                        href={`/jobs/${selectedJob.id}`}
+                        style={{
+                          color: 'var(--p-action)',
+                          fontWeight: 500,
+                          textDecoration: 'none',
+                        }}
+                      >
+                        Buka di halaman Lowongan
+                      </Link>
                     </div>
-                    <ul
-                      style={{
-                        margin: 0,
-                        paddingLeft: 16,
-                        fontSize: '0.84rem',
-                        color: 'var(--p-ink)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 4,
-                      }}
-                    >
-                      {selectedRole.missing.map((ms) => (
-                        <li key={ms}>{ms}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: 10,
-                    paddingTop: 12,
-                    borderTop: '1px solid var(--border-subtle)',
-                    fontSize: '0.8125rem',
-                    color: 'var(--p-muted)',
-                  }}
-                >
-                  <span>
-                    {selectedRole.source} · {selectedRole.fetched}
-                  </span>
-                  <Link
-                    href="/jobs"
-                    style={{
-                      color: 'var(--p-action)',
-                      fontWeight: 500,
-                      textDecoration: 'none',
-                    }}
-                  >
-                    Buka di halaman Lowongan
-                  </Link>
-                </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -482,10 +729,16 @@ export default function HomePage() {
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
-                  <span className="badge badge-accent">Hybrid</span>
-                  <span className="badge">Jakarta</span>
-                  <span className="badge">Full-time</span>
-                  <span className="badge">Fresh Graduate</span>
+                  <span className="badge badge-accent">
+                    {selectedJob ? (WORK_MODE_LABELS[selectedJob.work_mode] ?? selectedJob.work_mode) : 'Mode kerja'}
+                  </span>
+                  <span className="badge">{selectedJob?.location || 'Lokasi tidak dicantumkan'}</span>
+                  <span className="badge">
+                    {selectedJob
+                      ? (EMPLOYMENT_TYPE_LABELS[selectedJob.employment_type] ?? selectedJob.employment_type)
+                      : 'Jenis kontrak'}
+                  </span>
+                  <span className="badge">{selectedJob ? realStatusLabel(selectedJob) : 'Status'}</span>
                 </div>
                 <div
                   style={{
@@ -499,17 +752,32 @@ export default function HomePage() {
                     fontSize: '0.8rem',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <img
-                      src="/images/avatar-designer.jpg"
-                      alt=""
-                      style={{ width: 28, height: 28, borderRadius: 7, objectFit: 'cover' }}
-                    />
-                    <strong style={{ color: 'var(--p-ink)', fontWeight: 500 }}>
-                      Product Designer · Bandung
-                    </strong>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    {selectedJob ? (
+                      <>
+                        <CompanyLogo
+                          company={selectedJob.company}
+                          logoUrl={selectedJob.company_logo_url}
+                          size={28}
+                          rounded={7}
+                        />
+                        <strong
+                          style={{
+                            color: 'var(--p-ink)',
+                            fontWeight: 500,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {selectedJob.title} · {selectedJob.location || 'Lokasi tidak dicantumkan'}
+                        </strong>
+                      </>
+                    ) : (
+                      <span className="skeleton-line" style={{ width: 180 }} />
+                    )}
                   </div>
-                  <span>Masih dibuka</span>
+                  <span>{selectedJob ? realStatusLabel(selectedJob) : 'Status tidak tersedia'}</span>
                 </div>
               </div>
             </div>
@@ -532,15 +800,30 @@ export default function HomePage() {
                     alignItems: 'center',
                     gap: 10,
                     marginBottom: 12,
+                    minWidth: 0,
                   }}
                 >
-                  <img
-                    src="/images/avatar-finance.jpg"
-                    alt=""
-                    style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover' }}
-                  />
-                  <div style={{ fontWeight: 500, color: 'var(--p-ink)' }}>
-                    Pemetaan profil terhadap syarat posisi
+                  {selectedJob ? (
+                    <CompanyLogo
+                      company={selectedJob.company}
+                      logoUrl={selectedJob.company_logo_url}
+                      size={32}
+                      rounded={8}
+                    />
+                  ) : (
+                    <span className="skeleton-line" style={{ width: 32, height: 32, borderRadius: 8 }} />
+                  )}
+                  <div
+                    style={{
+                      fontWeight: 500,
+                      color: 'var(--p-ink)',
+                      minWidth: 0,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {selectedJob ? `Pemetaan profil: ${selectedJob.title}` : 'Pemetaan profil terhadap syarat posisi'}
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -555,7 +838,16 @@ export default function HomePage() {
                       color: 'var(--status-open)',
                     }}
                   >
-                    <span>Keahlian SQL &amp; Pelaporan</span>
+                    <span
+                      style={{
+                        minWidth: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {selectedJob?.matched?.[0] ?? 'Isi profil untuk melihat kecocokan'}
+                    </span>
                     <strong>Cocok</strong>
                   </div>
                   <div
@@ -569,7 +861,16 @@ export default function HomePage() {
                       color: 'var(--status-warning)',
                     }}
                   >
-                    <span>Sertifikasi Brevet Pajak</span>
+                    <span
+                      style={{
+                        minWidth: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {selectedJob?.missing?.[0] ?? 'Belum ada data kekurangan'}
+                    </span>
                     <strong>Belum ada</strong>
                   </div>
                 </div>
@@ -616,10 +917,10 @@ export default function HomePage() {
                   }}
                 >
                   <strong style={{ fontWeight: 500, color: 'var(--p-ink)' }}>
-                    Portal Karier Resmi
+                    {selectedJob ? displaySourceName(selectedJob.source_name) : 'Sumber Asli'}
                   </strong>
                   <span className="font-mono" style={{ fontSize: '0.75rem', color: 'var(--p-muted)' }}>
-                    Diambil 19 Nov 2026
+                    {selectedJob ? `Diambil ${sourceTime}` : 'Waktu tidak tersedia'}
                   </span>
                 </div>
                 <p style={{ margin: '0 0 14px', color: 'var(--p-muted)', fontSize: '0.82rem' }}>

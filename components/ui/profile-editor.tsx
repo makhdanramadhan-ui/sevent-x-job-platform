@@ -173,7 +173,7 @@ export function ProfileEditorForm({
             <TextInput
               id="profile-headline"
               maxLength={200}
-              placeholder="Contoh: Frontend Engineer · Lulusan Teknik Informatika"
+              placeholder="Contoh: Backend Developer · Lulusan Teknik Informatika"
               value={draft.headline ?? ''}
               onChange={(e) => setDraft({ ...draft, headline: e.target.value })}
             />
