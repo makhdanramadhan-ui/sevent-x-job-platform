@@ -50,6 +50,7 @@ type PreviewJob = Omit<JobRow, 'skills' | 'education'> & {
   source_fetched_at: string | null;
   matched?: string[];
   missing?: string[];
+  unknown?: string[];
 };
 
 async function optionalAuth(req: NextRequest) {
@@ -95,6 +96,7 @@ function emptyPayload(reason?: string) {
     mode: 'recent' as PreviewMode,
     auth_state: 'guest' as AuthState,
     count: 0,
+    count_capped: false,
     total_jobs: 0,
     source_count: 0,
     updated_at: null,
@@ -185,7 +187,14 @@ export async function GET(req: NextRequest) {
     const previewJobs = selectedJobs.map((job) => {
       const base = toPreviewJob(job, sourcesByJob.get(job.id));
       const ranked = rankedByJob.get(job.id);
-      return ranked ? { ...base, matched: ranked.matched, missing: ranked.missing } : base;
+      return ranked
+        ? {
+            ...base,
+            matched: ranked.matched,
+            missing: ranked.missing,
+            unknown: ranked.unknown,
+          }
+        : base;
     });
 
     const sourceNames = new Set(
@@ -199,6 +208,7 @@ export async function GET(req: NextRequest) {
       mode,
       auth_state: authState,
       count: mode === 'recommendations' ? rankedItems.length : previewJobs.length,
+      count_capped: mode === 'recommendations' && rankedItems.length >= 50,
       total_jobs: countResult.count ?? 0,
       source_count: sourceNames.size,
       updated_at: latest,

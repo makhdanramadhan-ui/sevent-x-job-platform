@@ -37,12 +37,14 @@ type LandingJob = {
   source_fetched_at: string | null;
   matched?: string[];
   missing?: string[];
+  unknown?: string[];
 };
 
 type LandingPreviewPayload = {
   mode: 'recommendations' | 'recent';
   auth_state: 'guest' | 'without_profile' | 'ready';
   count: number;
+  count_capped: boolean;
   total_jobs: number;
   source_count: number;
   updated_at: string | null;
@@ -54,6 +56,7 @@ const EMPTY_PREVIEW: LandingPreviewPayload = {
   mode: 'recent',
   auth_state: 'guest',
   count: 0,
+  count_capped: false,
   total_jobs: 0,
   source_count: 0,
   updated_at: null,
@@ -89,6 +92,17 @@ function realStatusLabel(job: LandingJob | null): string {
   if (job.status === 'open' || job.status === 'closed') return JOB_STATUS_LABELS[job.status];
   if (job.deadline) return `Tenggat ${formatDateId(job.deadline)}`;
   return 'Status tidak tercantum';
+}
+function matchList(
+  items: string[] | undefined,
+  unknownItems: string[] | undefined,
+  emptyText: string,
+): string[] {
+  if (items && items.length > 0) return items;
+  if (unknownItems && unknownItems.length > 0) {
+    return unknownItems.slice(0, 3).map((item) => `Belum bisa dipastikan: ${item}`);
+  }
+  return [emptyText];
 }
 
 const WORKFLOW_STEPS = [
@@ -157,7 +171,7 @@ export default function HomePage() {
   const headerMeta = loading
     ? 'Memuat lowongan...'
     : preview.mode === 'recommendations'
-      ? `${preview.count} rekomendasi`
+      ? `${preview.count}${preview.count_capped ? '+' : ''} rekomendasi`
       : `${jobs.length} lowongan terbaru`;
   const ctaHref = preview.auth_state === 'guest' ? '/login' : '/profile';
   const ctaLabel =
@@ -172,6 +186,22 @@ export default function HomePage() {
       )
     : '';
 
+  const matchedItems =
+    selectedJob && preview.mode === 'recommendations'
+      ? matchList(
+          selectedJob.matched,
+          selectedJob.unknown,
+          'Belum ada poin kecocokan yang tercatat.',
+        )
+      : [];
+  const missingItems =
+    selectedJob && preview.mode === 'recommendations'
+      ? matchList(
+          selectedJob.missing,
+          selectedJob.unknown,
+          'Tidak ada syarat yang kurang dari profilmu.',
+        )
+      : [];
   return (
     <div>
       <section className="tk-hero" aria-labelledby="hero-heading">
@@ -474,7 +504,7 @@ export default function HomePage() {
                               overflowY: 'auto',
                             }}
                           >
-                            {selectedJob.matched.map((item, index) => (
+                            {matchedItems.map((item, index) => (
                               <li key={`${item}-${index}`}>{item}</li>
                             ))}
                           </ul>
@@ -504,7 +534,7 @@ export default function HomePage() {
                               overflowY: 'auto',
                             }}
                           >
-                            {selectedJob.missing.map((item, index) => (
+                            {missingItems.map((item, index) => (
                               <li key={`${item}-${index}`}>{item}</li>
                             ))}
                           </ul>
