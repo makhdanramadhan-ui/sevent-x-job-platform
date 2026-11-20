@@ -7,7 +7,7 @@ const SEGMENT_PATTERN = /^[A-Za-z0-9_-]+$/;
 export function readUnsubscribeSecret(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): string | null {
-  return env.EMAIL_UNSUBSCRIBE_SECRET?.trim() || env.CRON_SECRET?.trim() || null;
+  return env.EMAIL_UNSUBSCRIBE_SECRET?.trim() || null;
 }
 
 function signPayload(payload: string, secret: string): string {

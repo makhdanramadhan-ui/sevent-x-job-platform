@@ -1,7 +1,7 @@
 import type { SendMailOptions } from 'nodemailer';
 import { rankJobs } from '../recommendation';
 import { filterEligibleJobs, pickSource, type JobSourceRow } from '../recommendation/job-context';
-import { isProfileLocationReady } from '../recommendation/location-filter';
+import { isProfileRecommendationReady } from '../recommendation/profile-readiness';
 import type {
   RecommendationItem,
   RecommendationJobInputWithContext,
@@ -80,20 +80,6 @@ export class NotificationsTableUnavailableError extends Error {
   }
 }
 
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0;
-}
-
-function hasSkillsOrPositions(profile: EmailProfileRow): boolean {
-  const skills = Array.isArray(profile.skills) ? profile.skills : [];
-  const preferences =
-    profile.preferences && typeof profile.preferences === 'object'
-      ? (profile.preferences as Record<string, unknown>)
-      : {};
-  const positions = Array.isArray(preferences.positions) ? preferences.positions : [];
-  return skills.some(isNonEmptyString) || positions.some(isNonEmptyString);
-}
-
 function toProfileInput(profile: EmailProfileRow): RecommendationProfileInput {
   return {
     skills: Array.isArray(profile.skills) ? profile.skills : [],
@@ -109,13 +95,16 @@ function notificationKey(userId: string, jobId: string): string {
   return `${userId}|${jobId}`;
 }
 
-export function skippedMatchNotifyResult(reason: string): MatchNotifyResult {
+export function skippedMatchNotifyResult(
+  reason: string,
+  counts: { opted_in_profiles?: number } = {},
+): MatchNotifyResult {
   return {
     data: {
       ok: true,
       sent: 0,
       candidates: 0,
-      opted_in_profiles: 0,
+      opted_in_profiles: counts.opted_in_profiles ?? 0,
       skipped_users: 0,
       failed_sends: 0,
       record_errors: 0,
@@ -140,13 +129,14 @@ export async function runMatchNotify(options: {
   const readyProfiles = profiles.filter(
     (profile) =>
       isEmailAlertsEnabled(profile.preferences) &&
-      hasSkillsOrPositions(profile) &&
-      isProfileLocationReady(profile.preferences),
+      isProfileRecommendationReady(toProfileInput(profile)),
   );
   if (readyProfiles.length === 0) return skippedMatchNotifyResult('no_ready_profiles');
 
   const jobs = (await deps.listJobs()).filter((job) => job.status === 'open');
-  if (jobs.length === 0) return skippedMatchNotifyResult('no_open_jobs');
+  if (jobs.length === 0) {
+    return skippedMatchNotifyResult('no_open_jobs', { opted_in_profiles: readyProfiles.length });
+  }
 
   const jobsById = new Map(jobs.map((job) => [job.id, job]));
   const rankedByUser = new Map<string, { items: RecommendationItem[]; jobs: EmailJobRow[] }>();
@@ -169,7 +159,11 @@ export async function runMatchNotify(options: {
     rankedByUser.set(profile.user_id, { items, jobs: eligible });
   }
 
-  if (candidateJobIds.size === 0) return skippedMatchNotifyResult('no_matching_jobs');
+  if (candidateJobIds.size === 0) {
+    return skippedMatchNotifyResult('no_matching_jobs', {
+      opted_in_profiles: readyProfiles.length,
+    });
+  }
 
   let sentPairs: Set<string>;
   try {

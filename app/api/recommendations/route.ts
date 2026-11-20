@@ -14,7 +14,8 @@ import { rankJobs } from '@/lib/recommendation';
 import { buildEmptyHint } from '@/lib/recommendation/empty-hint';
 import { attachJobContext, filterEligibleJobs, type JobSourceRow } from '@/lib/recommendation/job-context';
 import { filterRelevantJobs } from '@/lib/recommendation/relevance';
-import { asLocationPreference, isProfileLocationReady } from '@/lib/recommendation/location-filter';
+import { asLocationPreference } from '@/lib/recommendation/location-filter';
+import { isProfileRecommendationReady } from '@/lib/recommendation/profile-readiness';
 import type {
   RecommendationFilters,
   RecommendationJobInputWithContext,
@@ -29,16 +30,6 @@ const JOB_RECOMMENDATION_COLUMNS =
   'id, title, company, company_logo_url, location, work_mode, employment_type, level, education, skills, status, deadline, last_fetched_at, description';
 
 const QUERY_KEYS = ['limit', 'work_mode', 'employment_type', 'level'] as const;
-
-function hasBidangOrSkills(profile: RecommendationProfileInput): boolean {
-  const skills = Array.isArray(profile?.skills) ? profile.skills : [];
-  const positions = Array.isArray(profile?.preferences?.positions)
-    ? profile.preferences.positions
-    : [];
-  const hasSkills = skills.some((s) => typeof s === 'string' && s.trim().length > 0);
-  const hasBidang = positions.some((p) => typeof p === 'string' && p.trim().length > 0);
-  return hasBidang || hasSkills;
-}
 
 export async function GET(req: NextRequest) {
   return run(async () => {
@@ -72,7 +63,7 @@ export async function GET(req: NextRequest) {
 
     const profile = (profileResult.data as RecommendationProfileInput) ?? null;
 
-    if (!hasBidangOrSkills(profile) || !isProfileLocationReady(profile?.preferences)) {
+    if (!isProfileRecommendationReady(profile)) {
       return ok({
         contract_version: 1,
         items: [],

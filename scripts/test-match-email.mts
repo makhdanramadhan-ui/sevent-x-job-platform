@@ -13,7 +13,7 @@ import {
   type SentNotificationRow,
 } from '../lib/email/runner';
 import { readSmtpConfig, type SmtpConfig } from '../lib/email/transport';
-import { signUnsubscribeToken, verifyUnsubscribeToken } from '../lib/email/unsubscribe';
+import { readUnsubscribeSecret, signUnsubscribeToken, verifyUnsubscribeToken } from '../lib/email/unsubscribe';
 
 const SMTP: SmtpConfig = {
   host: 'smtp.example.com',
@@ -97,6 +97,12 @@ function createDeps(overrides: Partial<MatchNotifyDeps> = {}) {
     ...overrides,
   };
   return { deps, state };
+}
+
+function withoutEmailFlag(profile: EmailProfileRow): EmailProfileRow {
+  const preferences = { ...(profile.preferences as Record<string, unknown>) };
+  delete preferences.email_match_alerts;
+  return { ...profile, preferences };
 }
 
 assert.equal(MATCH_EMAIL_THRESHOLD, 70, 'Ambang batas harus 70');
@@ -185,6 +191,35 @@ assert.equal(optedOut.state.records.length, 0);
 assert.equal(optedOut.state.jobCalls, 0);
 console.log('PASS opt-out: opted-out user gets no email and no write');
 
+const missingKeyRun = createDeps({
+  listProfiles: async () => [withoutEmailFlag(makeProfile())],
+  listJobs: async () => [makeJob()],
+});
+const missingKeyResult = await runMatchNotify({
+  smtpConfig: SMTP,
+  unsubscribeSecret: SECRET,
+  siteUrl: SITE_URL,
+  deps: missingKeyRun.deps,
+});
+assert.equal(missingKeyResult.data.opted_in_profiles, 1, 'Kunci yang hilang harus tetap opt-in');
+assert.equal(missingKeyResult.data.sent, 1);
+assert.equal(missingKeyRun.state.sends.length, 1);
+console.log('PASS default opt-in: missing email_match_alerts key still opts user in');
+
+const noJobsRun = createDeps({
+  listProfiles: async () => [makeProfile()],
+  listJobs: async () => [],
+});
+const noJobsResult = await runMatchNotify({
+  smtpConfig: SMTP,
+  unsubscribeSecret: SECRET,
+  siteUrl: SITE_URL,
+  deps: noJobsRun.deps,
+});
+assert.equal(noJobsResult.skipped, 'no_open_jobs');
+assert.equal(noJobsResult.data.opted_in_profiles, 1, 'Skip result harus mempertahankan jumlah profil');
+console.log('PASS skip reporting: opted-in profile count preserved on skip');
+
 assert.equal(readSmtpConfig({}), null);
 assert.equal(
   readSmtpConfig({
@@ -216,6 +251,10 @@ const tamperedToken = `${token.slice(0, -1)}${lastCharacter === 'A' ? 'B' : 'A'}
 assert.equal(verifyUnsubscribeToken(tamperedToken, SECRET), null);
 assert.equal(verifyUnsubscribeToken(token, 'another-secret'), null);
 console.log('PASS unsubscribe token: valid accepted, tampered/wrong secret rejected');
+
+assert.equal(readUnsubscribeSecret({ CRON_SECRET: 'cron-only-secret' }), null);
+assert.equal(readUnsubscribeSecret({ EMAIL_UNSUBSCRIBE_SECRET: 'dedicated-secret' }), 'dedicated-secret');
+console.log('PASS secret isolation: unsubscribe no longer falls back to CRON_SECRET');
 
 const message = buildDigestEmail(
   [
