@@ -492,107 +492,100 @@ export default function HomePage() {
                     selectedJob.matched &&
                     selectedJob.missing ? (
                       <div className="tk-app-match-grid">
-                        <div className="tk-app-match-box tk-app-match-box--open">
-                          <div
-                            style={{
-                              fontSize: '0.8125rem',
-                              fontWeight: 500,
-                              color: 'var(--status-open)',
-                              marginBottom: 6,
-                            }}
-                          >
-                            Cocok dengan profilmu
+                        <div className="tk-app-match-col">
+                          <div className="tk-app-match-head">
+                            <span
+                              className="tk-app-match-dot tk-app-match-dot--open"
+                              aria-hidden="true"
+                            />
+                            <span className="tk-app-match-title">Cocok dengan profilmu</span>
+                            <span className="tk-app-match-count">{matchedItems.length}</span>
                           </div>
-                          <ul
-                            style={{
-                              margin: 0,
-                              paddingLeft: 16,
-                              fontSize: '0.84rem',
-                              color: 'var(--p-ink)',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: 4,
-                              maxHeight: 92,
-                              overflowY: 'auto',
-                            }}
-                          >
-                            {matchedItems.map((item, index) => (
-                              <li key={`${item}-${index}`}>{item}</li>
+                          <ul className="tk-app-match-list">
+                            {matchedItems.slice(0, 3).map((item, index) => (
+                              <li key={`${item}-${index}`} className="tk-app-match-item">
+                                <svg
+                                  className="tk-app-match-icon tk-app-match-icon--open"
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.4"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden="true"
+                                >
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                                <span>{item}</span>
+                              </li>
                             ))}
+                            {matchedItems.length > 3 ? (
+                              <li className="tk-app-match-more">
+                                +{matchedItems.length - 3} poin kecocokan lainnya
+                              </li>
+                            ) : null}
                           </ul>
                         </div>
 
-                        <div className="tk-app-match-box tk-app-match-box--missing">
-                          <div
-                            style={{
-                              fontSize: '0.8125rem',
-                              fontWeight: 500,
-                              color: 'var(--status-warning)',
-                              marginBottom: 6,
-                            }}
-                          >
-                            Perlu dilengkapi di profil
+                        <div className="tk-app-match-col tk-app-match-col--right">
+                          <div className="tk-app-match-head">
+                            <span
+                              className="tk-app-match-dot tk-app-match-dot--missing"
+                              aria-hidden="true"
+                            />
+                            <span className="tk-app-match-title">Perlu dilengkapi</span>
+                            <span className="tk-app-match-count">{missingItems.length}</span>
                           </div>
-                          <ul
-                            style={{
-                              margin: 0,
-                              paddingLeft: 16,
-                              fontSize: '0.84rem',
-                              color: 'var(--p-ink)',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: 4,
-                              maxHeight: 92,
-                              overflowY: 'auto',
-                            }}
-                          >
-                            {missingItems.map((item, index) => (
-                              <li key={`${item}-${index}`}>{item}</li>
+                          <ul className="tk-app-match-list">
+                            {missingItems.slice(0, 3).map((item, index) => (
+                              <li key={`${item}-${index}`} className="tk-app-match-item">
+                                <svg
+                                  className="tk-app-match-icon tk-app-match-icon--missing"
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden="true"
+                                >
+                                  <circle cx="12" cy="12" r="9" />
+                                  <line x1="12" y1="8" x2="12" y2="12" />
+                                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                                </svg>
+                                <span>{item}</span>
+                              </li>
                             ))}
+                            {missingItems.length > 3 ? (
+                              <li className="tk-app-match-more">
+                                +{missingItems.length - 3} catatan lainnya
+                              </li>
+                            ) : null}
                           </ul>
                         </div>
                       </div>
                     ) : (
-                      <div className="tk-app-match-grid" style={{ gridTemplateColumns: '1fr' }}>
-                        <div
-                          className="tk-app-match-box"
+                      <div className="tk-app-match-cta">
+                        <div className="tk-app-match-cta__title">{ctaLabel}</div>
+                        <p className="tk-app-match-cta__desc">
+                          Isi profil untuk melihat syarat yang cocok dan yang masih perlu kamu
+                          lengkapi sebelum melamar.
+                        </p>
+                        <Link
+                          href={ctaHref}
                           style={{
-                            gridColumn: '1 / -1',
-                            background: 'var(--p-accent-soft)',
-                            border: '1px solid rgba(26, 75, 224, 0.22)',
+                            color: 'var(--p-action)',
+                            fontSize: '0.84rem',
+                            fontWeight: 600,
+                            textDecoration: 'none',
                           }}
                         >
-                          <div
-                            style={{
-                              fontSize: '0.8125rem',
-                              fontWeight: 500,
-                              color: 'var(--p-action)',
-                              marginBottom: 6,
-                            }}
-                          >
-                            {ctaLabel}
-                          </div>
-                          <p
-                            style={{
-                              margin: '0 0 8px',
-                              fontSize: '0.84rem',
-                              color: 'var(--p-ink)',
-                            }}
-                          >
-                            Isi profil untuk melihat syarat yang cocok dan yang masih perlu kamu
-                            lengkapi sebelum melamar.
-                          </p>
-                          <Link
-                            href={ctaHref}
-                            style={{
-                              color: 'var(--p-action)',
-                              fontWeight: 500,
-                              textDecoration: 'none',
-                            }}
-                          >
-                            Lengkapi Profil
-                          </Link>
-                        </div>
+                          Lengkapi Profil
+                        </Link>
                       </div>
                     )}
 
