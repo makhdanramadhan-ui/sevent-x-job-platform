@@ -9,6 +9,8 @@ type ProfileRow = {
     country?: string | null;
     positions?: string[];
     locations?: string[];
+    levels?: string[];
+    employment_types?: string[];
   } | null;
 };
 
@@ -43,6 +45,50 @@ export function resolveIngestLocationPolicy(
   if (chosen) return { location: chosen, includeRemoteSources };
   const countryName = countryCode ? findCountry(countryCode)?.name : null;
   return { location: countryName ?? 'Indonesia', includeRemoteSources };
+}
+
+export type ProfileIngestPreferences = {
+  positions: string[];
+  wantsIntern: boolean;
+};
+
+export function resolveProfileIngestPreferences(
+  row: ProfileRow | null,
+): ProfileIngestPreferences {
+  const positions = Array.isArray(row?.preferences?.positions)
+    ? row.preferences.positions.filter((p) => typeof p === 'string' && p.trim())
+    : [];
+  const levels = Array.isArray(row?.preferences?.levels) ? row.preferences.levels : [];
+  const employmentTypes = Array.isArray(row?.preferences?.employment_types)
+    ? row.preferences.employment_types
+    : [];
+  return {
+    positions,
+    wantsIntern: levels.includes('intern') || employmentTypes.includes('internship'),
+  };
+}
+
+export async function collectProfileIngestPreferences(
+  admin: SupabaseClient,
+  userId: string,
+): Promise<ProfileIngestPreferences> {
+  const { data, error } = await admin
+    .from('profiles')
+    .select('skills, preferences')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return resolveProfileIngestPreferences((data ?? null) as ProfileRow | null);
+}
+
+export function buildInternshipSearchKeywords(positions: ReadonlyArray<string>): string[] {
+  const keywords: string[] = [];
+  for (const position of positions) {
+    const clean = position.trim();
+    if (!clean) continue;
+    keywords.push(`${clean} intern`, `${clean} internship`, `${clean} magang`);
+  }
+  return keywords;
 }
 
 export async function collectIngestLocationPolicy(

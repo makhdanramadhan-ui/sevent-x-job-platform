@@ -45,8 +45,8 @@ const TIER_RANK: Record<LocationMatchTier, number> = { exact: 0, remote: 0, near
  * Fungsi utama mesin rekomendasi berbasis aturan (contract_version: 1).
  * Mengurutkan lowongan secara deterministik berdasarkan:
  * 1. Lowongan aktif/belum kedaluwarsa di atas lowongan tutup/kedaluwarsa
- * 2. Kecocokan lokasi persis/remote di atas lowongan lokasi terdekat
- * 3. Skor kecocokan tertinggi (0-100)
+ * 2. Skor kecocokan tertinggi (0-100)
+ * 3. Kecocokan lokasi persis/remote di atas lowongan lokasi terdekat
  * 4. Jumlah syarat yang terpenuhi (matchedRequirementCount) tertinggi
  * 5. Jumlah syarat yang belum terpenuhi (missing.length) terendah
  * 6. job_id secara leksikografis (penentu seri deterministik)
@@ -82,13 +82,13 @@ export function rankJobs(
     if (a.isInactiveOrExpired !== b.isInactiveOrExpired) {
       return a.isInactiveOrExpired ? 1 : -1;
     }
+    if (b.score !== a.score) {
+      return b.score - a.score;
+    }
     const tierA = options.locationTiers?.get(a.job_id) ?? 'exact';
     const tierB = options.locationTiers?.get(b.job_id) ?? 'exact';
     if (TIER_RANK[tierA] !== TIER_RANK[tierB]) {
       return TIER_RANK[tierA] - TIER_RANK[tierB];
-    }
-    if (b.score !== a.score) {
-      return b.score - a.score;
     }
     if (b.matchedRequirementCount !== a.matchedRequirementCount) {
       return b.matchedRequirementCount - a.matchedRequirementCount;

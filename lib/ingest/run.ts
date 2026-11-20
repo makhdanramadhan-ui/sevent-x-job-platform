@@ -3,7 +3,12 @@ import { canonicalizeCatalogValues, normalizeCatalogText } from '../catalog-core
 import { loadSkillCatalog } from '../skills';
 import type { IngestPayload } from './normalize';
 import { enrichMissingCompanyLogos } from './logo-fallback';
-import { collectIngestLocationPolicy, collectUserKeywords } from './keywords';
+import {
+  buildInternshipSearchKeywords,
+  collectIngestLocationPolicy,
+  collectProfileIngestPreferences,
+  collectUserKeywords,
+} from './keywords';
 import {
   fetchHimalayasPublicApi,
   fetchJobicyPublicApi,
@@ -17,6 +22,8 @@ export type IngestRunSummary = {
   keywords_requested: string[];
   keywords_fetched: string[];
   linkedin: SourceFetchResult | null;
+  internshipLinkedin: SourceFetchResult | null;
+  internshipKeywords: string[];
   fillers: SourceFetchResult[];
   ingested: number;
   ingest_errors: number;
@@ -55,7 +62,7 @@ function dedupePayloads(payloads: IngestPayload[]): IngestPayload[] {
 export async function runKeywordIngest(
   admin: SupabaseClient,
   keywords: string[],
-  options: { respectThrottle?: boolean; forceFillers?: boolean; userId?: string } = {},
+  options: { respectThrottle?: boolean; forceFillers?: boolean; userId?: string; internshipKeywords?: string[] } = {},
 ): Promise<IngestRunSummary> {
   const uniqueKeywords = Array.from(
     new Set(
@@ -74,6 +81,10 @@ export async function runKeywordIngest(
     keywords_requested: uniqueKeywords,
     keywords_fetched: keywordsToFetch,
     linkedin: null,
+    internshipLinkedin: null,
+    internshipKeywords: Array.from(
+      new Set((options.internshipKeywords ?? []).map((k) => k.trim()).filter(Boolean)),
+    ).slice(0, MAX_LINKEDIN_KEYWORDS_PER_RUN),
     fillers: [],
     ingested: 0,
     ingest_errors: 0,
@@ -99,6 +110,22 @@ export async function runKeywordIngest(
     summary.linkedin = linkedin;
     if (linkedin.payloads.length > 0) {
       allPayloads.push(...linkedin.payloads);
+    }
+  }
+
+  if (summary.internshipKeywords.length > 0) {
+    const internship = await fetchLinkedinGuestJobs({
+      keywords: summary.internshipKeywords,
+      location: locationPolicy.location,
+      limitPerKeyword: LINKEDIN_LIMIT_PER_KEYWORD,
+      fetchDetail: true,
+      delaySeconds: 1.2,
+      experienceLevel: '1',
+      jobType: 'I',
+    });
+    summary.internshipLinkedin = internship;
+    if (internship.payloads.length > 0) {
+      allPayloads.push(...internship.payloads);
     }
   }
 
@@ -178,12 +205,17 @@ export async function triggerProfileIngest(
   }
 
   let keywords: string[] = [];
+  let internshipKeywords: string[] = [];
   try {
     keywords = await collectUserKeywords(admin, userId);
+    const preferences = await collectProfileIngestPreferences(admin, userId);
+    internshipKeywords = preferences.wantsIntern
+      ? buildInternshipSearchKeywords(preferences.positions)
+      : [];
   } catch {
     return { started: false, reason: 'failed', keywords: [], summary: null };
   }
-  if (keywords.length === 0) {
+  if (keywords.length === 0 && internshipKeywords.length === 0) {
     return { started: false, reason: 'no_keywords', keywords: [], summary: null };
   }
 
@@ -191,6 +223,7 @@ export async function triggerProfileIngest(
     const summary = await runKeywordIngest(admin, keywords, {
       respectThrottle: false,
       userId,
+      internshipKeywords,
     });
     return { started: true, reason: 'started', keywords, summary };
   } catch {

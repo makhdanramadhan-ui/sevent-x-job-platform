@@ -3,10 +3,13 @@ import { requireAuth } from '@/lib/auth';
 import { JOB_STATUSES, EMPLOYMENT_TYPES, EXPERIENCE_LEVELS, WORK_MODES } from '@/lib/contracts';
 import { throwDb } from '@/lib/db';
 import { ok, run } from '@/lib/http';
-import { extractProfileKeywords, jobMatchesKeywords } from '@/lib/profile-keywords';
+import { extractProfileKeywords } from '@/lib/profile-keywords';
+import { rankJobs } from '@/lib/recommendation';
 import { buildEmptyHint } from '@/lib/recommendation/empty-hint';
 import { filterEligibleJobs } from '@/lib/recommendation/job-context';
 import { asLocationPreference, isProfileLocationReady } from '@/lib/recommendation/location-filter';
+import { filterRelevantJobs } from '@/lib/recommendation/relevance';
+import type { RecommendationProfileInput } from '@/lib/recommendation-contract';
 import {
   assertAllowedQuery,
   intValue,
@@ -87,14 +90,22 @@ export async function GET(req: NextRequest) {
         .limit(300);
       if (jobsError) throwDb(jobsError);
 
-      const matched = (jobs ?? []).filter((job) =>
-        jobMatchesKeywords(job as any, keywordState.keywords),
+      const relevance = filterRelevantJobs(jobs ?? [], profile as RecommendationProfileInput);
+      const selection = filterEligibleJobs(relevance.relevant, preferenceRow.preferences);
+      const ranked = rankJobs(
+        { profile: profile as RecommendationProfileInput, jobs: selection.eligible },
+        { locationTiers: selection.tiers, nearbyLabels: selection.nearbyLabels },
       );
-      const selection = filterEligibleJobs(matched, preferenceRow.preferences);
-      const total = selection.eligible.length;
+      const scoreById = new Map(ranked.items.map((item) => [item.job_id, item.score]));
+      const jobById = new Map(selection.eligible.map((job) => [job.id, job]));
+      const ordered = ranked.items
+        .map((item) => jobById.get(item.job_id))
+        .filter((job): job is NonNullable<typeof job> => Boolean(job));
+      const total = ordered.length;
       const from = (page - 1) * limit;
-      const items = selection.eligible.slice(from, from + limit).map((job) => ({
+      const items = ordered.slice(from, from + limit).map((job) => ({
         ...job,
+        match_score: scoreById.get(job.id) ?? 0,
         location_note: selection.nearbyLabels.get(job.id) ?? null,
       }));
       const pages = total === 0 ? 0 : Math.ceil(total / limit);
@@ -121,7 +132,7 @@ export async function GET(req: NextRequest) {
         total === 0
           ? buildEmptyHint({
               totalCandidates: jobs?.length ?? 0,
-              keywordMatches: matched.length,
+              keywordMatches: relevance.relevant.length,
               diagnostics: selection.diagnostics,
               locations: asLocationPreference(prefRecord)?.locations ?? [],
               positions,
@@ -139,6 +150,7 @@ export async function GET(req: NextRequest) {
         location_diagnostics: selection.diagnostics,
         location_counts: selection.locationCounts,
         location_notes: Object.fromEntries(selection.nearbyLabels),
+        relevance_diagnostics: relevance.diagnostics,
         empty_hint: emptyHint,
       });
     }

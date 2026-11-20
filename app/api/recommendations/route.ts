@@ -13,6 +13,7 @@ import { ok, run } from '@/lib/http';
 import { rankJobs } from '@/lib/recommendation';
 import { buildEmptyHint } from '@/lib/recommendation/empty-hint';
 import { attachJobContext, filterEligibleJobs, type JobSourceRow } from '@/lib/recommendation/job-context';
+import { filterRelevantJobs } from '@/lib/recommendation/relevance';
 import { asLocationPreference, isProfileLocationReady } from '@/lib/recommendation/location-filter';
 import type {
   RecommendationFilters,
@@ -89,9 +90,11 @@ export async function GET(req: NextRequest) {
     if (jobsResult.error) throwDb(jobsResult.error);
 
     const allJobs = (jobsResult.data as RecommendationJobInputWithContext[] | null) ?? [];
-    const selection = filterEligibleJobs(allJobs, profile?.preferences);
+    const relevance = filterRelevantJobs(allJobs, profile);
+    const selection = filterEligibleJobs(relevance.relevant, profile?.preferences);
     const eligible = selection.eligible;
     const diagnostics = selection.diagnostics;
+    const relevanceDiagnostics = relevance.diagnostics;
     const ranked = rankJobs({ profile, jobs: eligible }, {
       filters,
       locationTiers: selection.tiers,
@@ -161,6 +164,7 @@ export async function GET(req: NextRequest) {
       location_counts: selection.locationCounts,
       location_notes: Object.fromEntries(selection.nearbyLabels),
       empty_hint: emptyHint,
+      relevance_diagnostics: relevanceDiagnostics,
     });
   });
 }

@@ -44,7 +44,7 @@ import {
 import type { EmptyHint } from '@/lib/recommendation/empty-hint';
 
 type JobsApiResponse = {
-  items: Job[];
+  items: Array<Job & { match_score?: number; location_note?: string | null }>;
   total: number;
   page: number;
   limit: number;
@@ -869,6 +869,11 @@ function JobsFeedInner() {
                       <div className="job-feed-card__info">
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
                           <JobStatusBadge status={job.status} />
+                          {typeof job.match_score === 'number' ? (
+                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                              {job.match_score}% kecocokan
+                            </span>
+                          ) : null}
                           {job.deadline ? (
                             <span style={{ fontSize: '0.78rem', color: 'var(--status-warning)', fontWeight: 500 }}>
                               Tenggat {formatDateId(job.deadline)}

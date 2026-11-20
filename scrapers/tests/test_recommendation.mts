@@ -4,9 +4,11 @@ import {
   isJobEligibleForLocationPreferences,
   selectLocationEligibleJobs,
 } from '../../lib/recommendation/location-filter';
+import { isJobRelevantToProfile, filterRelevantJobs } from '../../lib/recommendation/relevance';
 import type {
   RecommendationJobInput,
   RecommendationProfileInput,
+  RecommendationJobInputWithContext,
 } from '../../lib/recommendation-contract';
 
 const REF_DATE = '2026-11-18';
@@ -401,6 +403,7 @@ function main(): void {
   testOptionalPreferencesNeverExclude();
   testRemoteViaWorkModeCheckbox();
   testBogorNearbyFallback();
+  testIrrelevantMarketingJobRejected();
   console.log('ALL RECOMMENDATION DETERMINISTIC TESTS PASSED');
 }
 
@@ -636,5 +639,62 @@ function testBogorNearbyFallback(): void {
   assert.equal(ranked.items[0].job_id, 'nearby-1', 'Lokasi persis harus berada di atas lokasi terdekat');
   assert.equal(ranked.items[1].location_note, selection.nearbyLabels.get('nearby-2'));
   console.log('PASS 11: Bogor jatuh ke lowongan terdekat Jawa Barat/Jabodetabek');
+}
+
+function testIrrelevantMarketingJobRejected(): void {
+  const profile: RecommendationProfileInput = {
+    skills: [
+      'Internet of Things',
+      'Pengujian Perangkat Lunak',
+      'Otomasi Industri',
+      'Backend Development',
+      'Frontend Development',
+      'A/B Testing',
+    ],
+    education: [],
+    experiences: [],
+    projects: [],
+    preferences: {
+      country: 'ID',
+      positions: ['Software Engineer', 'Data Analyst'],
+      locations: ['Bogor'],
+      levels: ['intern'],
+      work_modes: ['remote', 'hybrid'],
+      employment_types: ['internship'],
+    },
+  };
+  const marketingJob: RecommendationJobInputWithContext = {
+    id: '40000000-0000-4000-8000-000000000001',
+    title: 'Performance Marketing Executive (Shopee, Lazada, Tiktok Ads)',
+    company: 'Intrepid Asia',
+    location: 'Jakarta',
+    work_mode: 'unknown',
+    employment_type: 'full_time',
+    level: 'unknown',
+    education: null,
+    skills: [],
+    description: 'Kami mencari kandidat untuk menjalankan eksperimen A/B Testing pada kampanye digital.',
+    status: 'open',
+    deadline: null,
+  };
+  const relevantJob: RecommendationJobInputWithContext = {
+    ...marketingJob,
+    id: '40000000-0000-4000-8000-000000000002',
+    title: 'Software Engineer',
+    description: 'Membangun aplikasi web dengan React dan TypeScript.',
+    skills: ['React', 'TypeScript'],
+  };
+
+  const decision = isJobRelevantToProfile(marketingJob, profile);
+  assert.equal(decision.relevant, false, 'Lowongan pemasaran tidak boleh lolos hanya karena token A/B Testing');
+  assert.deepEqual(decision.roleGroups, []);
+  assert.deepEqual(decision.skillMatches, []);
+  assert.equal(decision.reason, 'no_match');
+
+  const filtered = filterRelevantJobs([marketingJob, relevantJob], profile);
+  assert.equal(filtered.relevant.length, 1);
+  assert.equal(filtered.relevant[0].id, relevantJob.id);
+  assert.equal(filtered.diagnostics.no_match, 1);
+  console.log('PASS 12: Lowongan pemasaran ditolak oleh gerbang relevansi profil');
 }
 main();
