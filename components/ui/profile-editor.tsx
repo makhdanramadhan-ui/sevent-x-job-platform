@@ -9,6 +9,7 @@ import {
   WORK_MODES,
 } from '@/lib/contracts';
 import type { ProfileInput } from '@/lib/profile';
+import { findCountry } from '@/lib/countries';
 import {
   type ApiCallError,
   apiFetch,
@@ -23,11 +24,11 @@ import {
   Button,
   CheckboxGroup,
   FormField,
-  TagListInput,
   TextArea,
   TextInput,
 } from './forms';
 import { SkillComboboxInput } from './skill-combobox';
+import { CatalogComboboxInput } from './catalog-combobox';
 
 const WORK_MODE_OPTIONS = WORK_MODES.filter((m) => m !== 'unknown').map((value) => ({
   value,
@@ -74,6 +75,14 @@ export function ProfileEditorForm({
     setSuccessMsg(null);
 
     const payload = sanitizeProfilePayload(draft);
+    if (!payload.preferences.country) {
+      setClientError('Negara wajib dipilih.');
+      return;
+    }
+    if (payload.preferences.locations.length < 1) {
+      setClientError('Pilih minimal satu lokasi kerja preferensi.');
+      return;
+    }
 
     // Client-side validation for URLs and dates before sending to server
     for (let i = 0; i < payload.links.length; i += 1) {
@@ -169,6 +178,27 @@ export function ProfileEditorForm({
             />
           </FormField>
 
+          <CatalogComboboxInput
+            id="profile-country"
+            label="Negara"
+            type="countries"
+            values={draft.preferences.country ? [draft.preferences.country] : []}
+            onChange={(next) =>
+              setDraft((current) => {
+                const code = next[0] ?? '';
+                if (code === current.preferences.country) return current;
+                return {
+                  ...current,
+                  preferences: { ...current.preferences, country: code, locations: [] },
+                };
+              })
+            }
+            labelForValue={(code) => findCountry(code)?.name ?? code}
+            hint="Pilih negara dari daftar. Indonesia adalah saran pertama."
+            multiple={false}
+            maxLength={50}
+          />
+
           <FormField id="profile-headline" label="Headline / Fokus Peran" hint="Maksimal 200 karakter">
             <TextInput
               id="profile-headline"
@@ -213,9 +243,10 @@ export function ProfileEditorForm({
           />
 
           <div className="form-grid-2">
-            <TagListInput
+            <CatalogComboboxInput
               id="pref-positions"
               label="Posisi yang Diminati"
+              type="positions"
               values={draft.preferences.positions}
               onChange={(positions) =>
                 setDraft({
@@ -223,14 +254,16 @@ export function ProfileEditorForm({
                   preferences: { ...draft.preferences, positions },
                 })
               }
-              placeholder="Contoh: Software Engineer, Data Analyst"
+              hint="Ketik untuk mencari, gunakan panah dan Enter untuk memilih dari daftar."
               maxItems={10}
-              maxLength={60}
+              maxLength={80}
             />
 
-            <TagListInput
+            <CatalogComboboxInput
               id="pref-locations"
               label="Lokasi Kerja Preferensi"
+              type="locations"
+              country={draft.preferences.country}
               values={draft.preferences.locations}
               onChange={(locations) =>
                 setDraft({
@@ -238,9 +271,9 @@ export function ProfileEditorForm({
                   preferences: { ...draft.preferences, locations },
                 })
               }
-              placeholder="Contoh: Jakarta, Yogyakarta, Remote"
+              hint="Wajib minimal satu. Pilih kota, provinsi, atau Remote dari daftar negara terpilih."
               maxItems={10}
-              maxLength={60}
+              maxLength={80}
             />
           </div>
 

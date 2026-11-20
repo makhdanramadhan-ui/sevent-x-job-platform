@@ -250,6 +250,7 @@ export function emptyProfileInput(): ProfileInput {
     organizations: [],
     achievements: [],
     preferences: {
+      country: '',
       positions: [],
       locations: [],
       levels: [],
@@ -318,6 +319,7 @@ export function recordToProfileInput(record: ProfileRecord | null | undefined): 
         }))
       : [],
     preferences: {
+      country: record.preferences?.country ?? '',
       positions: Array.isArray(record.preferences?.positions)
         ? [...record.preferences.positions]
         : [],
@@ -400,6 +402,7 @@ export function sanitizeProfilePayload(draft: ProfileInput): ProfileInput {
         description: cleanOptionalText(item.description),
       })),
     preferences: {
+      country: (draft.preferences.country ?? '').trim().toUpperCase(),
       positions: draft.preferences.positions.map((s) => s.trim()).filter((s) => s.length > 0),
       locations: draft.preferences.locations.map((s) => s.trim()).filter((s) => s.length > 0),
       levels: [...draft.preferences.levels],

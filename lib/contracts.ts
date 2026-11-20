@@ -107,6 +107,7 @@ export type ProfileAchievement = {
 };
 
 export type ProfilePreferences = {
+  country?: string;
   positions: string[];
   locations: string[];
   levels: ExperienceLevel[];

@@ -1,4 +1,4 @@
-import { catalogId, normalizeCatalogText, searchCatalog, type CatalogEntry } from './catalog';
+import { catalogId, normalizeCatalogText, searchCatalog, type CatalogEntry } from './catalog-core';
 
 export type Country = {
   code: string;

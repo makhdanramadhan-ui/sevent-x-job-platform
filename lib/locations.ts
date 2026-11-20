@@ -1,4 +1,4 @@
-import { catalogId, normalizeCatalogText, searchCatalog, type CatalogEntry } from './catalog';
+import { buildCanonicalIndex, catalogId, normalizeCatalogText, searchCatalog, type CatalogEntry } from './catalog';
 import { COUNTRIES } from './countries';
 
 export type LocationType = 'province' | 'city' | 'regency' | 'special' | 'country';
@@ -361,6 +361,8 @@ export const LOCATIONS: readonly LocationEntry[] = [
   ...FOREIGN_CITY_ROWS.map(toEntry),
   ...COUNTRY_LOCATION_ENTRIES,
 ];
+
+export const LOCATION_CANONICAL: ReadonlyMap<string, string> = buildCanonicalIndex(LOCATIONS);
 
 const LOCATION_INDEX = new Map<string, LocationEntry>();
 for (const location of LOCATIONS) {

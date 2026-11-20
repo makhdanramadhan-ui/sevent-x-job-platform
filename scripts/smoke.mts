@@ -2,6 +2,11 @@ import assert from 'node:assert/strict';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { canonicalizeCatalogValues } from '../lib/catalog-core';
+import { COUNTRIES } from '../lib/countries';
+import { findLocation, LOCATION_CANONICAL, LOCATIONS, searchLocations } from '../lib/locations';
+import { parseProfile } from '../lib/profile';
+import { POSITION_CANONICAL, POSITIONS, searchPositions } from '../lib/positions';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -110,7 +115,56 @@ async function expectError(
   console.log(`PASS ${label} -> ${status} ${code}`);
 }
 
+function captureError(action: () => void): Record<string, unknown> {
+  try {
+    action();
+  } catch (error) {
+    return error as Record<string, unknown>;
+  }
+  throw new Error('Expected validation error');
+}
+
+function checkCatalogs(): void {
+  assert.ok(POSITIONS.length >= 250 && POSITIONS.length <= 400, 'ukuran katalog posisi');
+  assert.ok(LOCATIONS.length >= 250, 'ukuran katalog lokasi');
+  assert.equal(LOCATIONS.filter((entry) => entry.type === 'province').length, 38, 'jumlah provinsi');
+  assert.equal(findLocation('Remote')?.country, '*', 'Remote country');
+  assert.equal(findLocation('Hybrid'), null, 'Hybrid bukan lokasi');
+  assert.ok(COUNTRIES.some((country) => country.code === 'ID'), 'katalog negara ID');
+  assert.deepEqual(
+    canonicalizeCatalogValues(['swe'], POSITION_CANONICAL).values,
+    ['Software Engineer'],
+    'alias swe',
+  );
+  assert.deepEqual(
+    canonicalizeCatalogValues(['jaksel'], LOCATION_CANONICAL).values,
+    ['Jakarta Selatan'],
+    'alias jaksel',
+  );
+  assert.equal(searchPositions('iot')[0]?.name, 'IoT Engineer', 'pencarian iot');
+  assert.equal(searchLocations('jogja', 'ID')[0]?.name, 'Yogyakarta', 'pencarian jogja');
+
+  const rejection = captureError(() =>
+    parseProfile({ preferences: { country: 'ID', positions: ['Anjing'], locations: ['Bogor'] } }),
+  );
+  assert.equal(rejection.status, 400, 'Anjing ditolak 400');
+  assert.equal(rejection.code, 'validation_error', 'Anjing kode error');
+  const details = rejection.details as Record<string, unknown> | undefined;
+  assert.ok(
+    (details?.invalid as string[] | undefined)?.includes('Anjing'),
+    'Anjing tercantum details.invalid',
+  );
+
+  const mismatch = captureError(() =>
+    parseProfile({ preferences: { country: 'ID', positions: [], locations: ['Kuala Lumpur'] } }),
+  );
+  assert.equal(mismatch.status, 400, 'lokasi luar negara ditolak 400');
+  console.log('PASS katalog: ' +
+    `${POSITIONS.length} posisi, ${LOCATIONS.length} lokasi, ${COUNTRIES.length} negara`);
+}
+
 async function main(): Promise<void> {
+  checkCatalogs();
   await waitForServer();
   const invalidBearer = `Bearer ${'x'.repeat(24)}`;
   const id = '00000000-0000-4000-8000-000000000000';
@@ -121,6 +175,37 @@ async function main(): Promise<void> {
   assert.match(home.text, /RakitKarier/, 'root: judul');
   assert.equal(home.headers.get('x-powered-by'), null, 'root: x-powered-by harus kosong');
   console.log('PASS GET / -> 200');
+  const catalogPositions = await call('GET', '/api/catalog?type=positions&q=iot&limit=8');
+  assert.equal(catalogPositions.status, 200, 'GET /api/catalog positions: status');
+  const positionData = objectAt(catalogPositions.json, 'GET /api/catalog positions: body').data;
+  assert.ok(Array.isArray(positionData), 'GET /api/catalog positions: data');
+  assert.equal(
+    objectAt((positionData as unknown[])[0], 'item posisi').name,
+    'IoT Engineer',
+    'GET /api/catalog positions: urutan pertama',
+  );
+  const catalogLocations = await call('GET', '/api/catalog?type=locations&q=jogja&country=ID');
+  assert.equal(catalogLocations.status, 200, 'GET /api/catalog locations: status');
+  const locationData = objectAt(catalogLocations.json, 'GET /api/catalog locations: body').data;
+  assert.equal(
+    objectAt((locationData as unknown[])[0], 'item lokasi').name,
+    'Yogyakarta',
+    'GET /api/catalog locations: jogja',
+  );
+  const catalogCountries = await call('GET', '/api/catalog?type=countries&q=');
+  assert.equal(catalogCountries.status, 200, 'GET /api/catalog countries: status');
+  const countryData = objectAt(catalogCountries.json, 'GET /api/catalog countries: body').data;
+  assert.equal(
+    objectAt((countryData as unknown[])[0], 'item negara').id,
+    'ID',
+    'GET /api/catalog countries: default Indonesia',
+  );
+  await expectError(
+    'GET /api/catalog type asing',
+    call('GET', '/api/catalog?type=asal'),
+    400,
+    'validation_error',
+  );
 
   await expectError('GET /api/auth/me anonim', call('GET', '/api/auth/me'), 401, 'unauthorized');
   await expectError('GET /api/jobs anonim', call('GET', '/api/jobs'), 401, 'unauthorized');

@@ -78,7 +78,8 @@ export async function PUT(req: NextRequest) {
         after(async () => {
           try {
             const admin = createAdminClient(adminEnv);
-            await runKeywordIngest(admin, changed, { respectThrottle: true });
+            const ingestOptions = { respectThrottle: true, userId: auth.user.id };
+            await runKeywordIngest(admin, changed, ingestOptions);
           } catch {
             // background ingest failure must not affect profile save response
           }
