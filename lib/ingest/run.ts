@@ -1,4 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { canonicalizeCatalogValues, normalizeCatalogText } from '../catalog-core';
+import { loadSkillCatalog } from '../skills';
 import type { IngestPayload } from './normalize';
 import { enrichMissingCompanyLogos } from './logo-fallback';
 import { collectIngestLocationPolicy } from './keywords';
@@ -82,7 +84,6 @@ export async function runKeywordIngest(
   try {
     locationPolicy = await collectIngestLocationPolicy(admin, options.userId);
   } catch {
-    // Location policy failures must not block LinkedIn-first ingest.
   }
 
   const allPayloads: IngestPayload[] = [];
@@ -124,6 +125,19 @@ export async function runKeywordIngest(
   }
 
   const uniquePayloads = dedupePayloads(allPayloads);
+  const skillRows = await loadSkillCatalog(admin).catch(() => []);
+  const skillIndex = new Map<string, string>();
+  for (const row of skillRows) {
+    for (const candidate of [row.name, ...(Array.isArray(row.aliases) ? row.aliases : [])]) {
+      const key = normalizeCatalogText(candidate);
+      if (key && !skillIndex.has(key)) skillIndex.set(key, row.name);
+    }
+  }
+  if (skillIndex.size > 0) {
+    for (const payload of uniquePayloads) {
+      payload.job.skills = canonicalizeCatalogValues(payload.job.skills, skillIndex).values;
+    }
+  }
   await enrichMissingCompanyLogos(uniquePayloads);
   for (const payload of uniquePayloads) {
     try {
