@@ -21,7 +21,42 @@ import {
   WORK_MODE_LABELS,
 } from '@/components/ui';
 import type { BookmarkRecord, JobDetail } from '@/lib/contracts';
+import { parseJobDescriptionBlocks } from '@/lib/job-description';
 import { displaySourceName } from '@/lib/job-source';
+
+function BackToFeedLink() {
+  return (
+    <Link
+      href="/jobs"
+      className="btn btn-outline btn-sm"
+      aria-label="Kembali ke Feed Lowongan"
+      title="Kembali ke Feed Lowongan"
+      style={{
+        width: 38,
+        height: 38,
+        padding: 0,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M19 12H5" />
+        <path d="m12 19-7-7 7-7" />
+      </svg>
+    </Link>
+  );
+}
 
 function getCompanyInitials(company: string): string {
   const words = company
@@ -185,9 +220,7 @@ function JobDetailInner() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>
-          <Link href="/jobs" className="btn btn-outline btn-sm">
-            Kembali ke Feed Lowongan
-          </Link>
+          <BackToFeedLink />
         </div>
         {error ? (
           <ErrorState
@@ -201,6 +234,8 @@ function JobDetailInner() {
     );
   }
 
+  const descriptionBlocks = job.description ? parseJobDescriptionBlocks(job.description) : [];
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Top Breadcrumb & Quick Actions */}
@@ -213,9 +248,7 @@ function JobDetailInner() {
           gap: 12,
         }}
       >
-        <Link href="/jobs" className="btn btn-outline btn-sm">
-          Kembali ke Feed Lowongan
-        </Link>
+        <BackToFeedLink />
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Button
             variant={isBookmarked ? 'secondary' : 'outline'}
@@ -317,16 +350,69 @@ function JobDetailInner() {
           <h2 id="heading-description" className="font-editorial" style={{ fontSize: '1.3rem', marginBottom: 12 }}>
             Deskripsi &amp; Kualifikasi Lowongan
           </h2>
-          {job.description ? (
-            <div
-              style={{
-                whiteSpace: 'pre-line',
-                fontSize: '0.94rem',
-                color: 'var(--ink-primary)',
-                lineHeight: 1.7,
-              }}
-            >
-              {job.description}
+          {descriptionBlocks.length > 0 ? (
+            <div style={{ fontSize: '0.94rem', color: 'var(--ink-primary)' }}>
+              {descriptionBlocks.map((block, index) => {
+                const isLast = index === descriptionBlocks.length - 1;
+                if (block.type === 'heading') {
+                  return (
+                    <h3
+                      key={`${index}-${block.text}`}
+                      style={{
+                        margin: index === 0 ? '0 0 8px' : '18px 0 8px',
+                        fontSize: '0.98rem',
+                        fontWeight: 700,
+                        color: 'var(--ink-primary)',
+                        lineHeight: 1.45,
+                        textAlign: 'left',
+                      }}
+                    >
+                      {block.text}
+                    </h3>
+                  );
+                }
+                if (block.type === 'list') {
+                  return (
+                    <ul
+                      key={`list-${index}`}
+                      style={{
+                        margin: isLast ? 0 : '0 0 12px',
+                        paddingLeft: '1.35rem',
+                        fontSize: '0.94rem',
+                        lineHeight: 1.7,
+                        textAlign: 'justify',
+                        hyphens: 'auto',
+                      }}
+                    >
+                      {block.items.map((item, itemIdx) => (
+                        <li
+                          key={`item-${index}-${itemIdx}`}
+                          style={{
+                            marginBottom: itemIdx === block.items.length - 1 ? 0 : 6,
+                          }}
+                        >
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  );
+                }
+                return (
+                  <p
+                    key={`para-${index}`}
+                    style={{
+                      margin: isLast ? 0 : '0 0 12px',
+                      fontSize: '0.94rem',
+                      lineHeight: 1.75,
+                      textAlign: 'justify',
+                      hyphens: 'auto',
+                      textIndent: '1.75rem',
+                    }}
+                  >
+                    {block.text}
+                  </p>
+                );
+              })}
             </div>
           ) : (
             <p style={{ margin: 0, color: 'var(--ink-secondary)', fontSize: '0.92rem' }}>
