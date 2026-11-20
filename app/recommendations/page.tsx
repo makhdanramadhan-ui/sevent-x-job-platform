@@ -2,7 +2,14 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  type MouseEvent as ReactMouseEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   type ApiCallError,
   AuthGuard,
@@ -63,6 +70,8 @@ const EMPTY_FILTERS: RecommendationFilters = {
   employment_types: [],
   levels: [],
 };
+
+const RECOMMENDATIONS_PER_PAGE = 8;
 
 function isRecommendationOutput(val: unknown): val is RecommendationOutput {
   if (!val || typeof val !== 'object') return false;
@@ -167,6 +176,13 @@ function RecommendationsInner() {
   const [expandedMissingKeys, setExpandedMissingKeys] = useState<Set<string>>(new Set());
 
   const [filters, setFilters] = useState<RecommendationFilters>(EMPTY_FILTERS);
+  const [page, setPage] = useState(1);
+  const listTopRef = useRef<HTMLDivElement | null>(null);
+
+  function updateFilters(next: RecommendationFilters) {
+    setFilters(next);
+    setPage(1);
+  }
 
   function toggleExpandedMissing(key: string) {
     setExpandedMissingKeys((prev) => {
@@ -252,6 +268,31 @@ function RecommendationsInner() {
       return true;
     });
   }, [recOutput, jobsMap, filters, activeFilterCount]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / RECOMMENDATIONS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * RECOMMENDATIONS_PER_PAGE;
+  const paginatedItems = useMemo(
+    () => filteredItems.slice(startIndex, startIndex + RECOMMENDATIONS_PER_PAGE),
+    [filteredItems, startIndex],
+  );
+  const rangeStart = filteredItems.length === 0 ? 0 : startIndex + 1;
+  const rangeEnd = Math.min(startIndex + paginatedItems.length, filteredItems.length);
+
+  function handlePageChange(nextPage: number) {
+    const clamped = Math.max(1, Math.min(totalPages, nextPage));
+    if (clamped === currentPage) return;
+    setPage(clamped);
+    if (listTopRef.current) {
+      const prefersReducedMotion =
+        typeof window !== 'undefined' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      listTopRef.current.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        block: 'start',
+      });
+    }
+  }
 
   const profileIncomplete =
     recOutput?.reason === 'profile_incomplete' ||
@@ -381,7 +422,7 @@ function RecommendationsInner() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => setFilters(EMPTY_FILTERS)}
+                        onClick={() => updateFilters(EMPTY_FILTERS)}
                       >
                         Reset Filter
                       </Button>
@@ -404,19 +445,21 @@ function RecommendationsInner() {
                       legend="Mode Kerja"
                       options={WORK_MODE_FILTER_OPTS}
                       selected={filters.work_modes}
-                      onChange={(work_modes) => setFilters({ ...filters, work_modes })}
+                      onChange={(work_modes) => updateFilters({ ...filters, work_modes })}
                     />
                     <CheckboxGroup
                       legend="Jenis Kontrak"
                       options={EMPLOYMENT_FILTER_OPTS}
                       selected={filters.employment_types}
-                      onChange={(employment_types) => setFilters({ ...filters, employment_types })}
+                      onChange={(employment_types) =>
+                        updateFilters({ ...filters, employment_types })
+                      }
                     />
                     <CheckboxGroup
                       legend="Tingkat Pengalaman"
                       options={LEVEL_FILTER_OPTS}
                       selected={filters.levels}
-                      onChange={(levels) => setFilters({ ...filters, levels })}
+                      onChange={(levels) => updateFilters({ ...filters, levels })}
                     />
                   </div>
                 ) : null}
@@ -437,7 +480,7 @@ function RecommendationsInner() {
                         type="button"
                         variant="primary"
                         size="sm"
-                        onClick={() => setFilters(EMPTY_FILTERS)}
+                        onClick={() => updateFilters(EMPTY_FILTERS)}
                       >
                         Reset Semua Filter
                       </Button>
@@ -449,8 +492,35 @@ function RecommendationsInner() {
                   }
                 />
               ) : (
-                <div className="jobs-list">
-                  {filteredItems.map((item: RecommendationItem) => {
+                <div
+                  ref={listTopRef}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 16, scrollMarginTop: 88 }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: 8,
+                    }}
+                  >
+                    <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+                      Menampilkan <strong>{rangeStart}</strong>–<strong>{rangeEnd}</strong> dari{' '}
+                      <strong>{filteredItems.length}</strong> rekomendasi lowongan
+                    </p>
+                    {totalPages > 1 ? (
+                      <span
+                        className="font-mono"
+                        style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}
+                      >
+                        Halaman <strong>{currentPage}</strong> dari <strong>{totalPages}</strong>
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="jobs-list">
+                    {paginatedItems.map((item: RecommendationItem) => {
                     const job = jobsMap[item.job_id];
                     const pct = Math.max(0, Math.min(100, Math.round(item.score)));
                     const isHighMatch = pct >= 70;
@@ -664,6 +734,42 @@ function RecommendationsInner() {
                       </article>
                     );
                   })}
+                  </div>
+
+                  {totalPages > 1 ? (
+                    <nav
+                      aria-label="Navigasi halaman rekomendasi"
+                      className="surface-card"
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 12,
+                        padding: '14px 18px',
+                      }}
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={currentPage <= 1}
+                        onClick={() => handlePageChange(currentPage - 1)}
+                      >
+                        Sebelumnya
+                      </Button>
+                      <span className="font-mono" style={{ fontSize: '0.82rem' }}>
+                        Halaman <strong>{currentPage}</strong> dari <strong>{totalPages}</strong>
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={currentPage >= totalPages}
+                        onClick={() => handlePageChange(currentPage + 1)}
+                      >
+                        Berikutnya
+                      </Button>
+                    </nav>
+                  ) : null}
                 </div>
               )}
             </>
