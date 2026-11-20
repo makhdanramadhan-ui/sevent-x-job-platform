@@ -8,6 +8,7 @@ Dapat dijalankan langsung dengan:
 
 from __future__ import annotations
 
+import struct
 import unittest
 from typing import Any, Dict
 
@@ -15,6 +16,11 @@ from scrapers.dedup import (
     build_conservative_cross_source_key,
 )
 from scrapers.ingest_client import SupabaseIngestClient, execute_ingest_pipeline
+from scrapers.logo_resolver import (
+    _is_valid_favicon_bytes,
+    clean_company_name_for_lookup,
+    extract_domain_from_company_or_url,
+)
 from scrapers.normalizer import (
     VALID_EMPLOYMENT_TYPES,
     VALID_LEVELS,
@@ -235,6 +241,53 @@ class TestNormalizerAndContract(unittest.TestCase):
             company_logo_url="https://static.licdn.com/aero-v1/sc/h/ghost",
         )
         self.assertNotIn("company_logo_url", payload["job"])
+
+    def test_logo_resolver_domain_extraction_and_ats_filtering(self) -> None:
+        self.assertEqual(extract_domain_from_company_or_url("Bibit.id"), "bibit.id")
+        self.assertEqual(extract_domain_from_company_or_url("Traveloka"), "traveloka.com")
+        self.assertEqual(extract_domain_from_company_or_url("Grab"), "grab.com")
+        self.assertEqual(extract_domain_from_company_or_url("CoverGo | Insurtech"), "covergo.com")
+        self.assertEqual(
+            extract_domain_from_company_or_url("PT Bank Digital BCA (BCA Digital)"),
+            "blubybcadigital.id",
+        )
+        self.assertEqual(
+            extract_domain_from_company_or_url(
+                "Acme Unknown Corp",
+                source_url="https://careers.acme-example.com/jobs/42",
+            ),
+            "acme-example.com",
+        )
+        self.assertIsNone(
+            extract_domain_from_company_or_url(
+                "Unknown NonCurated Co.",
+                source_url="https://www.linkedin.com/jobs/view/123",
+            )
+        )
+        self.assertIsNone(
+            extract_domain_from_company_or_url(
+                "Unknown ATS Co",
+                source_url="https://boards.greenhouse.io/unknown/jobs/777",
+            )
+        )
+        self.assertEqual(clean_company_name_for_lookup("Credit Wellness, LLC"), "Credit Wellness")
+
+    def test_logo_resolver_rejects_16x16_favicon_and_accepts_large_png(self) -> None:
+        def make_png(width: int, height: int) -> bytes:
+            return (
+                b"\x89PNG\r\n\x1a\n"
+                + struct.pack(">I", 13)
+                + b"IHDR"
+                + struct.pack(">II", width, height)
+                + b"\x08\x06\x00\x00\x00"
+                + b"\x00" * 4
+            )
+
+        self.assertFalse(_is_valid_favicon_bytes(make_png(16, 16), "image/png"))
+        self.assertTrue(_is_valid_favicon_bytes(make_png(64, 64), "image/png"))
+        self.assertTrue(_is_valid_favicon_bytes(make_png(128, 128), "image/png"))
+        self.assertFalse(_is_valid_favicon_bytes(b"<!DOCTYPE html><html></html>", "text/html"))
+        self.assertFalse(_is_valid_favicon_bytes(b"small", "image/x-icon"))
 
 
 class TestConservativeDeduplication(unittest.TestCase):

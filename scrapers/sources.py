@@ -395,6 +395,7 @@ def fetch_linkedin_guest_jobs(
 
 def fetch_himalayas_public_api(
     limit: int = 10,
+    offset: int = 0,
     reference_date: Optional[str] = None,
 ) -> SourceFetchResult:
     """
@@ -404,7 +405,12 @@ def fetch_himalayas_public_api(
     """
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     count = max(1, min(limit, 50))
-    url = f"https://himalayas.app/jobs/api?limit={count}"
+    safe_offset = max(0, offset)
+    url = (
+        f"https://himalayas.app/jobs/api?limit={count}&offset={safe_offset}"
+        if safe_offset > 0
+        else f"https://himalayas.app/jobs/api?limit={count}"
+    )
 
     try:
         data = _http_get_json(url)

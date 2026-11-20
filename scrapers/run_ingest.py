@@ -27,14 +27,18 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
 from .ingest_client import SupabaseIngestClient, execute_ingest_pipeline
+from .logo_resolver import resolve_company_logo_from_internet
 from .normalizer import is_placeholder_logo_url
 from .sources import (
     SourceFetchResult,
     _http_get_text,
     fetch_active_live_sources,
+    fetch_himalayas_public_api,
+    fetch_jobicy_public_api,
+    fetch_remotive_public_api,
     fetch_verified_partner_feed,
     parse_linkedin_guest_detail_html,
 )
@@ -54,28 +58,96 @@ def load_env_file_if_exists(env_path: Path) -> None:
             os.environ[key] = val
 
 
+def _collect_api_logos(
+    fetch_result: SourceFetchResult,
+    known_source_logos: Dict[Tuple[str, str], str],
+    api_company_logos: Dict[str, str],
+) -> None:
+    if fetch_result.status != "OK":
+        return
+    for payload in fetch_result.payloads:
+        src = payload.get("source") or {}
+        job = payload.get("job") or {}
+        src_name = str(src.get("name") or "").strip()
+        src_job_id = str(src.get("job_id") or "").strip()
+        company_key = str(job.get("company") or "").strip().lower()
+        logo_url = str(job.get("company_logo_url") or "").strip()
+        if not logo_url or is_placeholder_logo_url(logo_url):
+            continue
+        if src_name and src_job_id:
+            known_source_logos[(src_name, src_job_id)] = logo_url
+        if company_key:
+            api_company_logos.setdefault(company_key, logo_url)
+
+
 def run_logo_backfill(
     client: SupabaseIngestClient,
     *,
     dry_run: bool,
-    limit: int = 30,
+    limit: int = 200,
 ) -> Dict[str, Any]:
     """
     Mengisi ulang company_logo_url pada lowongan di Supabase yang masih NULL,
+    dari API publik (Himalayas, Jobicy, Remotive), perusahaan sama di DB, atau detail LinkedIn,
     lewat RPC public.ingest_job(jsonb) tanpa menimpa field existing (skills, deskripsi, dll).
     """
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     known_logos = client.fetch_existing_company_logo_map()
     missing_jobs = client.fetch_jobs_missing_logo(limit=limit)
 
+    needed_sources: set[str] = set()
+    missing_himalayas_ids: set[str] = set()
+    for job in missing_jobs:
+        if not isinstance(job, dict):
+            continue
+        sources = job.get("job_sources") or []
+        if not isinstance(sources, list):
+            continue
+        for s in sources:
+            if not isinstance(s, dict):
+                continue
+            s_name = str(s.get("source_name") or "").strip()
+            s_id = str(s.get("source_job_id") or "").strip()
+            if s_name:
+                needed_sources.add(s_name)
+            if s_name == "himalayas_api" and s_id:
+                missing_himalayas_ids.add(s_id)
+
+    known_source_logos: Dict[Tuple[str, str], str] = {}
+    api_company_logos: Dict[str, str] = {}
+
+    if "himalayas_api" in needed_sources:
+        remaining_himalayas = set(missing_himalayas_ids)
+        for off in range(0, 200, 20):
+            res = fetch_himalayas_public_api(limit=20, offset=off)
+            if res.status != "OK" or not res.payloads:
+                break
+            _collect_api_logos(res, known_source_logos, api_company_logos)
+            for payload in res.payloads:
+                s_id = str((payload.get("source") or {}).get("job_id") or "").strip()
+                if s_id:
+                    remaining_himalayas.discard(s_id)
+            if not remaining_himalayas:
+                break
+
+    if "jobicy_api" in needed_sources:
+        _collect_api_logos(fetch_jobicy_public_api(limit=50), known_source_logos, api_company_logos)
+
+    if "remotive_api" in needed_sources:
+        _collect_api_logos(fetch_remotive_public_api(limit=50), known_source_logos, api_company_logos)
+
     updated: List[Dict[str, str]] = []
     skipped: List[Dict[str, str]] = []
     still_missing: List[Dict[str, str]] = []
+    still_missing_by_source: Dict[str, int] = {}
     errors: List[Dict[str, str]] = []
+    public_api_count = 0
     reused_count = 0
     linkedin_fetched_count = 0
+    internet_fallback_count = 0
     linkedin_blocked = False
     linkedin_calls = 0
+    internet_logo_cache: Dict[str, Optional[str]] = {}
 
     for job in missing_jobs:
         if not isinstance(job, dict):
@@ -100,18 +172,39 @@ def run_logo_backfill(
             continue
 
         chosen_src = next(
+            (
+                s
+                for s in valid_sources
+                if (str(s.get("source_name")), str(s.get("source_job_id"))) in known_source_logos
+            ),
+            None,
+        ) or next(
             (s for s in valid_sources if str(s.get("source_name")) == "linkedin_guest"),
             valid_sources[0],
         )
-        company_key = company.lower()
-        logo_url = known_logos.get(company_key)
-        fetched_via = "same_company" if logo_url else None
 
-        if not logo_url and str(chosen_src.get("source_name")) == "linkedin_guest" and not linkedin_blocked:
+        src_name = str(chosen_src["source_name"])
+        src_job_id = str(chosen_src["source_job_id"])
+        company_key = company.lower()
+
+        logo_url = known_source_logos.get((src_name, src_job_id))
+        fetched_via = "public_api" if logo_url else None
+
+        if not logo_url:
+            logo_url = known_logos.get(company_key)
+            if logo_url:
+                fetched_via = "same_company"
+
+        if not logo_url:
+            logo_url = api_company_logos.get(company_key)
+            if logo_url:
+                fetched_via = "public_api"
+
+        if not logo_url and src_name == "linkedin_guest" and not linkedin_blocked:
             if linkedin_calls > 0:
-                time.sleep(1.5)
+                time.sleep(1.2)
             linkedin_calls += 1
-            detail_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{chosen_src['source_job_id']}"
+            detail_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{src_job_id}"
             try:
                 status_code, final_url, body_html = _http_get_text(detail_url)
                 if status_code in {429, 999} or "authwall" in final_url.lower():
@@ -124,20 +217,45 @@ def run_logo_backfill(
             except Exception as exc:
                 errors.append({"id": job_id, "company": company, "error": f"linkedin_fetch: {exc}"})
 
+        if not logo_url:
+            try:
+                candidate = resolve_company_logo_from_internet(
+                    company,
+                    source_url=str(chosen_src.get("source_url") or ""),
+                    cache=internet_logo_cache,
+                )
+                if candidate and not is_placeholder_logo_url(candidate):
+                    logo_url = candidate
+                    fetched_via = "internet_fallback"
+            except Exception as exc:
+                errors.append({"id": job_id, "company": company, "error": f"internet_fallback: {exc}"})
+
         if not logo_url or is_placeholder_logo_url(logo_url):
-            still_missing.append({"id": job_id, "title": title, "company": company})
+            still_missing.append(
+                {
+                    "id": job_id,
+                    "title": title,
+                    "company": company,
+                    "source_name": src_name,
+                }
+            )
+            still_missing_by_source[src_name] = still_missing_by_source.get(src_name, 0) + 1
             continue
 
         known_logos[company_key] = logo_url
-        if fetched_via == "same_company":
+        if fetched_via == "public_api":
+            public_api_count += 1
+        elif fetched_via == "same_company":
             reused_count += 1
         elif fetched_via == "linkedin_detail":
             linkedin_fetched_count += 1
+        elif fetched_via == "internet_fallback":
+            internet_fallback_count += 1
 
         patch_payload: Dict[str, Any] = {
             "source": {
-                "name": str(chosen_src["source_name"]),
-                "job_id": str(chosen_src["source_job_id"]),
+                "name": src_name,
+                "job_id": src_job_id,
                 "url": str(chosen_src["source_url"]),
                 "fetched_at": now_iso,
             },
@@ -155,6 +273,7 @@ def run_logo_backfill(
                     "id": job_id,
                     "title": title,
                     "company": company,
+                    "source_name": src_name,
                     "via": fetched_via or "unknown",
                     "company_logo_url": logo_url,
                 }
@@ -168,9 +287,12 @@ def run_logo_backfill(
         "summary": {
             "checked": len(missing_jobs),
             "updated": len(updated),
+            "updated_from_public_api": public_api_count,
             "reused_from_same_company": reused_count,
             "fetched_from_linkedin": linkedin_fetched_count,
+            "fetched_from_internet_fallback": internet_fallback_count,
             "still_missing": len(still_missing),
+            "still_missing_by_source": still_missing_by_source,
             "skipped": len(skipped),
             "linkedin_blocked": linkedin_blocked,
             "errors_count": len(errors),
@@ -253,7 +375,7 @@ def main(argv: List[str] | None = None) -> int:
         backfill_report = run_logo_backfill(
             client,
             dry_run=is_dry_run,
-            limit=max(1, min(args.limit if args.limit != 4 else 30, 100)),
+            limit=max(1, min(args.limit if args.limit != 4 else 200, 500)),
         )
         formatted_json = json.dumps(backfill_report, indent=2, ensure_ascii=False)
         if args.output:
