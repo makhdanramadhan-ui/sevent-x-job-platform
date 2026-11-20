@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 
 from .dedup import ConservativeDeduplicator, deduplicate_batch_in_memory
+from .normalizer import is_placeholder_logo_url
 from .sources import SourceFetchResult
 
 
@@ -151,6 +152,61 @@ class SupabaseIngestClient:
         if isinstance(result, str) and result.strip():
             return result.strip()
         raise RuntimeError(f"Respons RPC ingest_job tidak mengembalikan UUID valid: {result!r}")
+
+    def _rest_get_json(self, path_and_query: str) -> Any:
+        if not self.is_configured():
+            raise RuntimeError(
+                "Konfigurasi Supabase service_role belum lengkap. "
+                "Pastikan NEXT_PUBLIC_SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY tersedia."
+            )
+
+        endpoint = f"{self.supabase_url}/rest/v1/{path_and_query.lstrip('/')}"
+        headers = {
+            "Accept": "application/json",
+            "apikey": self.service_role_key,
+            "Authorization": f"Bearer {self.service_role_key}",
+        }
+
+        try:
+            import httpx  # type: ignore
+
+            with httpx.Client(timeout=self.timeout) as client:
+                resp = client.get(endpoint, headers=headers)
+                if resp.status_code >= 400:
+                    raise RuntimeError(f"GET {path_and_query} gagal (HTTP {resp.status_code}): {resp.text}")
+                return resp.json()
+        except ImportError:
+            req = urllib.request.Request(endpoint, headers=headers, method="GET")
+            try:
+                with urllib.request.urlopen(req, timeout=self.timeout) as response:
+                    raw = response.read().decode("utf-8")
+                    return json.loads(raw)
+            except urllib.error.HTTPError as err:
+                err_body = err.read().decode("utf-8", errors="replace")
+                raise RuntimeError(f"GET {path_and_query} gagal (HTTP {err.code}): {err_body}") from err
+
+    def fetch_existing_company_logo_map(self) -> Dict[str, str]:
+        rows = self._rest_get_json(
+            "jobs?company_logo_url=not.is.null&select=company,company_logo_url&limit=500"
+        )
+        logo_map: Dict[str, str] = {}
+        if not isinstance(rows, list):
+            return logo_map
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            company = str(row.get("company") or "").strip().lower()
+            logo_url = str(row.get("company_logo_url") or "").strip()
+            if company and logo_url and not is_placeholder_logo_url(logo_url):
+                logo_map.setdefault(company, logo_url)
+        return logo_map
+
+    def fetch_jobs_missing_logo(self, limit: int = 50) -> List[Dict[str, Any]]:
+        safe_limit = max(1, min(limit, 200))
+        rows = self._rest_get_json(
+            f"jobs?company_logo_url=is.null&select=id,title,company,job_sources(source_name,source_job_id,source_url,published_at)&order=last_fetched_at.desc.nullslast&limit={safe_limit}"
+        )
+        return rows if isinstance(rows, list) else []
 
 
 def execute_ingest_pipeline(

@@ -182,6 +182,60 @@ class TestNormalizerAndContract(unittest.TestCase):
         self.assertEqual(detail["employment_type"], "Full-time")
         self.assertIn("React", detail["description"] or "")
 
+    def test_linkedin_logo_extraction_handles_attribute_order_and_rejects_ghosts(self) -> None:
+        search_html = """
+        <li>
+          <div data-entity-urn="urn:li:jobPosting:1001">
+            <img data-delayed-url="https://media.licdn.com/dms/image/C4D0BAQ/logo?e=123&amp;t=abc" class="artdeco-entity-image" alt="Ajaib">
+            <a class="base-card__full-link" href="https://id.linkedin.com/jobs/view/1001"></a>
+            <h3 class="base-search-card__title">Backend Engineer</h3>
+            <h4 class="base-search-card__subtitle">Ajaib</h4>
+          </div>
+        </li>
+        <li>
+          <div data-entity-urn="urn:li:jobPosting:1002">
+            <img class="artdeco-entity-image" src="https://static.licdn.com/aero-v1/sc/h/ghost" data-delayed-url="https://media.licdn.com/dms/image/real">
+            <a class="base-card__full-link" href="https://id.linkedin.com/jobs/view/1002"></a>
+            <h3 class="base-search-card__title">QA Engineer</h3>
+            <h4 class="base-search-card__subtitle">CoverGo | Insurtech</h4>
+          </div>
+        </li>
+        <li>
+          <div data-entity-urn="urn:li:jobPosting:1003">
+            <img class="artdeco-entity-image" src="https://static.licdn.com/aero-v1/sc/h/ghost" data-ghost-url="https://static.licdn.com/aero-v1/sc/h/ghost2">
+            <a class="base-card__full-link" href="https://id.linkedin.com/jobs/view/1003"></a>
+            <h3 class="base-search-card__title">Product Manager</h3>
+            <h4 class="base-search-card__subtitle">PT Kosong</h4>
+          </div>
+        </li>
+        """
+        cards = parse_linkedin_guest_search_html(search_html)
+        self.assertEqual(len(cards), 3)
+        self.assertEqual(
+            cards[0]["logo_url"],
+            "https://media.licdn.com/dms/image/C4D0BAQ/logo?e=123&t=abc",
+        )
+        self.assertEqual(cards[1]["logo_url"], "https://media.licdn.com/dms/image/real")
+        self.assertIsNone(cards[2]["logo_url"])
+
+        detail_html = """
+        <img data-delayed-url="https://media.licdn.com/dms/image/detail-logo" class="artdeco-entity-image">
+        <div class="show-more-less-html__markup"><p>Deskripsi</p></div>
+        """
+        detail = parse_linkedin_guest_detail_html(detail_html)
+        self.assertEqual(detail["logo_url"], "https://media.licdn.com/dms/image/detail-logo")
+
+    def test_normalizer_rejects_placeholder_logo_url(self) -> None:
+        payload = build_ingest_payload(
+            source_name="linkedin_guest",
+            source_job_id="999",
+            source_url="https://www.linkedin.com/jobs/view/999",
+            title="QA Engineer",
+            company="CoverGo | Insurtech",
+            company_logo_url="https://static.licdn.com/aero-v1/sc/h/ghost",
+        )
+        self.assertNotIn("company_logo_url", payload["job"])
+
 
 class TestConservativeDeduplication(unittest.TestCase):
     def test_same_title_and_company_with_different_or_unknown_attributes_are_not_merged(self) -> None:

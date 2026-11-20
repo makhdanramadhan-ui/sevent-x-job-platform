@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from .normalizer import build_ingest_payload, strip_html
+from .normalizer import build_ingest_payload, is_placeholder_logo_url, strip_html
 
 USER_AGENT = "SeventX-JobPlatform-Ingest/1.0 (+https://github.com/makhdanramadhan-ui/sevent-x-job-platform)"
 BROWSER_LIKE_ACCEPT_LANGUAGE = "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
@@ -97,6 +97,46 @@ def _http_get_text(url: str, headers: Optional[Dict[str, str]] = None, timeout: 
             return err.code, url, err_body
 
 
+def _extract_html_attr(tag: str, attr_name: str) -> Optional[str]:
+    pattern = re.compile(rf"\b{re.escape(attr_name)}\s*=\s*(?:\"([^\"]*)\"|'([^']*)')", re.IGNORECASE)
+    match = pattern.search(tag)
+    if not match:
+        return None
+    raw_val = match.group(1) if match.group(1) is not None else match.group(2)
+    return html.unescape(raw_val).strip() if raw_val else None
+
+
+def _extract_linkedin_logo_url(raw_html: str) -> Optional[str]:
+    if not raw_html or not raw_html.strip():
+        return None
+    img_tags = re.findall(r"<img\b[^>]*>", raw_html, re.IGNORECASE | re.DOTALL)
+    fallback: Optional[str] = None
+
+    for tag in img_tags:
+        class_attr = (_extract_html_attr(tag, "class") or "").lower()
+        candidates = (
+            _extract_html_attr(tag, "data-delayed-url"),
+            _extract_html_attr(tag, "src"),
+        )
+        for raw_url in candidates:
+            if not raw_url:
+                continue
+            cleaned = raw_url.strip()
+            if is_placeholder_logo_url(cleaned):
+                continue
+            is_priority = (
+                "media.licdn.com/dms/image/" in cleaned.lower()
+                or "artdeco-entity-image" in class_attr
+                or "company" in class_attr
+            )
+            if is_priority:
+                return cleaned
+            if fallback is None:
+                fallback = cleaned
+
+    return fallback
+
+
 def parse_linkedin_guest_search_html(raw_html: str) -> List[Dict[str, Optional[str]]]:
     """
     Mengekstrak kartu lowongan dari HTML endpoint publik LinkedIn:
@@ -144,17 +184,7 @@ def parse_linkedin_guest_search_html(raw_html: str) -> List[Dict[str, Optional[s
             block,
             re.DOTALL | re.IGNORECASE,
         )
-        logo_match = re.search(
-            r"<img[^>]*class=\"[^\"]*artdeco-entity-image[^\"]*\"[^>]*(?:data-delayed-url|src)=\"(https?://[^\"]+)\"",
-            block,
-            re.DOTALL | re.IGNORECASE,
-        )
-        if not logo_match:
-            logo_match = re.search(
-                r"<img[^>]*(?:data-delayed-url|src)=\"(https?://media\.licdn\.com/dms/image/[^\"]+)\"",
-                block,
-                re.DOTALL | re.IGNORECASE,
-            )
+        logo_url = _extract_linkedin_logo_url(block)
 
         title = strip_html(html.unescape(title_match.group(1))) if title_match else None
         company = strip_html(html.unescape(company_match.group(1))) if company_match else None
@@ -167,7 +197,6 @@ def parse_linkedin_guest_search_html(raw_html: str) -> List[Dict[str, Optional[s
         # Bersihkan query tracking panjang dari URL LinkedIn agar kanonik
         clean_url = raw_url.split("?")[0] if raw_url.startswith("http") else f"https://www.linkedin.com/jobs/view/{job_id}"
         published_at = time_match.group(1).strip() if time_match else None
-        logo_url = html.unescape(logo_match.group(1)).strip() if logo_match else None
 
         seen_ids.add(job_id)
         cards.append(
@@ -187,16 +216,19 @@ def parse_linkedin_guest_search_html(raw_html: str) -> List[Dict[str, Optional[s
 
 def parse_linkedin_guest_detail_html(raw_html: str) -> Dict[str, Optional[str]]:
     """
-    Mengekstrak deskripsi, level senioritas, dan tipe pekerjaan dari halaman detail publik LinkedIn:
+    Mengekstrak deskripsi, level senioritas, tipe pekerjaan, dan logo dari halaman detail publik LinkedIn:
     /jobs-guest/jobs/api/jobPosting/<job_id>
     """
     result: Dict[str, Optional[str]] = {
         "description": None,
         "level": None,
         "employment_type": None,
+        "logo_url": None,
     }
     if not raw_html or not raw_html.strip():
         return result
+
+    result["logo_url"] = _extract_linkedin_logo_url(raw_html)
 
     desc_match = re.search(
         r"<div[^>]*class=\"[^\"]*show-more-less-html__markup[^\"]*\"[^>]*>(.*?)</div>",
@@ -318,6 +350,7 @@ def fetch_linkedin_guest_jobs(
                 "description": None,
                 "level": None,
                 "employment_type": None,
+                "logo_url": None,
             }
             if fetch_detail:
                 if delay_seconds > 0:
@@ -338,7 +371,7 @@ def fetch_linkedin_guest_jobs(
                 source_url=card.get("url") or f"https://www.linkedin.com/jobs/view/{job_id}",
                 title=card.get("title") or "",
                 company=card.get("company") or "",
-                company_logo_url=card.get("logo_url"),
+                company_logo_url=card.get("logo_url") or detail_info.get("logo_url"),
                 fetched_at=now_iso,
                 published_at=card.get("published_at"),
                 location=card.get("location"),
@@ -553,7 +586,7 @@ def fetch_remotive_public_api(
 
             tags = item.get("tags") if isinstance(item.get("tags"), list) else []
             candidate_loc = str(item.get("candidate_required_location") or "Remote").strip()
-            logo_url = str(item.get("company_logo") or item.get("company_logo_url") or "").strip()
+            logo_url = str(item.get("company_logo_url") or item.get("company_logo") or "").strip()
 
             payload = build_ingest_payload(
                 source_name="remotive_api",
