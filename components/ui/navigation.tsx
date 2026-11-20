@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { BrandMark } from './brand-mark';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch, SITE_NAME } from './api-client';
@@ -191,7 +192,7 @@ export function SiteHeader() {
         <div className="site-header-inner">
           <div className="site-header-bar">
             <Link href="/" className="brand-link" onClick={() => setMenuOpen(false)}>
-              <img src="/logo-mark.svg" alt="" width={30} height={30} className="brand-mark" />
+              <BrandMark size={30} className="brand-mark" />
               <span className="brand-title">{SITE_NAME}</span>
             </Link>
 
@@ -329,7 +330,7 @@ export function SiteFooter() {
           {/* Column 1: Brand & Description */}
           <div>
             <Link href="/" className="footer-brand-row">
-              <img src="/logo-mark.svg" alt="" width={34} height={34} className="brand-mark" />
+              <BrandMark size={30} className="brand-mark" />
               <span className="footer-brand-name">{SITE_NAME}</span>
             </Link>
             <p className="footer-brand-desc">

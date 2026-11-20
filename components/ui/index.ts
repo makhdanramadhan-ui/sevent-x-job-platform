@@ -25,6 +25,7 @@ export {
   type NoticeVariant,
 } from './feedback';
 export { AuthDivider, GoogleAuthButton } from './google-button';
+export { BrandMark } from './brand-mark';
 export {
   EmptyArchiveIllustration,
   HeroCareerIllustration,
