@@ -1511,12 +1511,22 @@ h4 {
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  background: rgba(24, 73, 214, 0.08);
+  background: var(--p-surface);
+  border: 1px solid var(--border-subtle);
   color: var(--p-action);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.job-source-card__logo-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  display: block;
+  border-radius: 4px;
 }
 
 .job-source-card__title-wrap {

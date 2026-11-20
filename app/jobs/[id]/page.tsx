@@ -88,6 +88,48 @@ function extractSourceHost(url: string): string {
   }
 }
 
+function SourceSiteLogo({ host, label }: { host: string | null; label: string }) {
+  const [failed, setFailed] = useState(false);
+  const faviconUrl = host
+    ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`
+    : null;
+
+  return (
+    <span className="job-source-card__icon" aria-hidden="true">
+      {faviconUrl && !failed ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={faviconUrl}
+          alt={label}
+          className="job-source-card__logo-img"
+          referrerPolicy="no-referrer"
+          onError={() => setFailed(true)}
+          onLoad={(e) => {
+            if (e.currentTarget.naturalWidth === 0) {
+              setFailed(true);
+            }
+          }}
+        />
+      ) : (
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        </svg>
+      )}
+    </span>
+  );
+}
+
 const EXTRA_HEADING_PREFIXES = [
   'Why Join',
   'Why Work With',
@@ -457,7 +499,22 @@ function JobDetailInner() {
             onClick={handleToggleBookmark}
             aria-pressed={isBookmarked}
           >
-            {isBookmarked ? '★ Tersimpan di Bookmark' : '☆ Simpan Lowongan'}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill={isBookmarked ? 'currentColor' : 'none'}
+                stroke="currentColor"
+                strokeWidth="2.1"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+              </svg>
+              <span>{isBookmarked ? 'Tersimpan di Bookmark' : 'Simpan Lowongan'}</span>
+            </span>
           </Button>
         </div>
       </div>
@@ -680,22 +737,7 @@ function JobDetailInner() {
                     <div key={src.id} className="job-source-card">
                       <div className="job-source-card__head">
                         <div className="job-source-card__brand">
-                          <span className="job-source-card__icon" aria-hidden="true">
-                            <svg
-                              width="18"
-                              height="18"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <circle cx="12" cy="12" r="10" />
-                              <line x1="2" y1="12" x2="22" y2="12" />
-                              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                            </svg>
-                          </span>
+                          <SourceSiteLogo host={sourceHost} label={sourceLabel} />
                           <div className="job-source-card__title-wrap">
                             <strong className="job-source-card__name">{sourceLabel}</strong>
                             {sourceHost ? (
