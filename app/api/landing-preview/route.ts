@@ -156,11 +156,12 @@ export async function GET(req: NextRequest) {
 
     const jobs = (jobsResult.data ?? []) as JobRow[];
     if (mode === 'recommendations' && profile) {
-      const eligibleJobs = filterEligibleJobs(jobs, profile.preferences).eligible;
-      rankedItems = rankJobs({
-        profile,
-        jobs: eligibleJobs as RecommendationJobInput[],
-      }).items;
+      const selection = filterEligibleJobs(jobs, profile.preferences);
+      rankedItems = rankJobs(
+        { profile, jobs: selection.eligible as RecommendationJobInput[] },
+        { locationTiers: selection.tiers, nearbyLabels: selection.nearbyLabels },
+      ).items;
+
     }
 
     const selectedJobs =

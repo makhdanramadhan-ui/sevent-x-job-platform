@@ -3,7 +3,7 @@ import { canonicalizeCatalogValues, normalizeCatalogText } from '../catalog-core
 import { loadSkillCatalog } from '../skills';
 import type { IngestPayload } from './normalize';
 import { enrichMissingCompanyLogos } from './logo-fallback';
-import { collectIngestLocationPolicy } from './keywords';
+import { collectIngestLocationPolicy, collectUserKeywords } from './keywords';
 import {
   fetchHimalayasPublicApi,
   fetchJobicyPublicApi,
@@ -11,7 +11,7 @@ import {
   fetchRemotivePublicApi,
   type SourceFetchResult,
 } from './sources';
-import { filterThrottledKeywords } from './throttle';
+import { claimProfileIngestTrigger, filterThrottledKeywords } from './throttle';
 
 export type IngestRunSummary = {
   keywords_requested: string[];
@@ -150,4 +150,50 @@ export async function runKeywordIngest(
   }
 
   return summary;
+}
+
+export type ProfileIngestTriggerResult = {
+  started: boolean;
+  reason: 'started' | 'already_running' | 'no_keywords' | 'failed';
+  keywords: string[];
+  summary: IngestRunSummary | null;
+};
+
+/**
+ * Memicu ingest LinkedIn untuk lokasi dan posisi pada profil pengguna.
+ * Kunci per pengguna mencegah dua permintaan menjalankan ingest bersamaan.
+ */
+export async function triggerProfileIngest(
+  admin: SupabaseClient,
+  userId: string,
+): Promise<ProfileIngestTriggerResult> {
+  let claimed: boolean;
+  try {
+    claimed = await claimProfileIngestTrigger(admin, userId);
+  } catch {
+    return { started: false, reason: 'already_running', keywords: [], summary: null };
+  }
+  if (!claimed) {
+    return { started: false, reason: 'already_running', keywords: [], summary: null };
+  }
+
+  let keywords: string[] = [];
+  try {
+    keywords = await collectUserKeywords(admin, userId);
+  } catch {
+    return { started: false, reason: 'failed', keywords: [], summary: null };
+  }
+  if (keywords.length === 0) {
+    return { started: false, reason: 'no_keywords', keywords: [], summary: null };
+  }
+
+  try {
+    const summary = await runKeywordIngest(admin, keywords, {
+      respectThrottle: false,
+      userId,
+    });
+    return { started: true, reason: 'started', keywords, summary };
+  } catch {
+    return { started: false, reason: 'failed', keywords, summary: null };
+  }
 }

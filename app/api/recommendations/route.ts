@@ -1,4 +1,4 @@
-import type { NextRequest } from 'next/server';
+import { after, type NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import {
   EMPLOYMENT_TYPES,
@@ -9,10 +9,14 @@ import {
   type WorkMode,
 } from '@/lib/contracts';
 import { throwDb } from '@/lib/db';
+import { readSupabaseAdminEnv } from '@/lib/env';
 import { ok, run } from '@/lib/http';
+import { triggerProfileIngest } from '@/lib/ingest';
 import { rankJobs } from '@/lib/recommendation';
+import { buildEmptyHint } from '@/lib/recommendation/empty-hint';
 import { attachJobContext, filterEligibleJobs, type JobSourceRow } from '@/lib/recommendation/job-context';
-import { isProfileLocationReady } from '@/lib/recommendation/location-filter';
+import { asLocationPreference, isProfileLocationReady } from '@/lib/recommendation/location-filter';
+import { createAdminClient } from '@/lib/supabase';
 import type {
   RecommendationFilters,
   RecommendationJobInputWithContext,
@@ -22,7 +26,7 @@ import { assertAllowedQuery, intValue, oneOf } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
 
-const PROFILE_RECOMMENDATION_COLUMNS = 'skills, education, experiences, projects, preferences';
+const PROFILE_RECOMMENDATION_COLUMNS = 'skills, education, experiences, projects, preferences, updated_at';
 const JOB_RECOMMENDATION_COLUMNS =
   'id, title, company, company_logo_url, location, work_mode, employment_type, level, education, skills, status, deadline, last_fetched_at, description';
 
@@ -88,8 +92,14 @@ export async function GET(req: NextRequest) {
     if (jobsResult.error) throwDb(jobsResult.error);
 
     const allJobs = (jobsResult.data as RecommendationJobInputWithContext[] | null) ?? [];
-    const { eligible, diagnostics } = filterEligibleJobs(allJobs, profile?.preferences);
-    const ranked = rankJobs({ profile, jobs: eligible }, { filters });
+    const selection = filterEligibleJobs(allJobs, profile?.preferences);
+    const eligible = selection.eligible;
+    const diagnostics = selection.diagnostics;
+    const ranked = rankJobs({ profile, jobs: eligible }, {
+      filters,
+      locationTiers: selection.tiers,
+      nearbyLabels: selection.nearbyLabels,
+    });
     const topItems = ranked.items.slice(0, limit);
     const topIds = topItems.map((item) => item.job_id);
     const cardsById = new Map(eligible.map((job) => [job.id, job]));
@@ -121,11 +131,49 @@ export async function GET(req: NextRequest) {
 
     const items = await attachJobContext(auth.supabase, topItems, sourceRows, jobCards);
 
+    let profileState: 'ready' | 'ingest_pending' = 'ready';
+    if (topItems.length === 0) {
+      const updatedAtRaw =
+        profile && typeof profile === 'object' && 'updated_at' in profile
+          ? profile.updated_at
+          : null;
+      const updatedAt = typeof updatedAtRaw === 'string' ? Date.parse(updatedAtRaw) : NaN;
+      if (Number.isFinite(updatedAt) && Date.now() - updatedAt < 15 * 60 * 1000) {
+        profileState = 'ingest_pending';
+      }
+      const adminEnv = readSupabaseAdminEnv();
+      if (adminEnv) {
+        after(async () => {
+          try {
+            const admin = createAdminClient(adminEnv);
+            await triggerProfileIngest(admin, auth.user.id);
+          } catch {
+            // Background ingest failure must not affect the recommendation response.
+          }
+        });
+      }
+    }
+
+    const prefRecord = profile?.preferences ?? null;
+    const emptyHint =
+      topItems.length === 0
+        ? buildEmptyHint({
+            totalCandidates: allJobs.length,
+            diagnostics,
+            locations: asLocationPreference(prefRecord)?.locations ?? [],
+            positions: Array.isArray(prefRecord?.positions) ? prefRecord.positions : [],
+            ingestPending: profileState === 'ingest_pending',
+          })
+        : null;
+
     return ok({
       contract_version: ranked.contract_version,
       items,
-      profile_state: 'ready',
+      profile_state: profileState,
       location_diagnostics: diagnostics,
+      location_counts: selection.locationCounts,
+      location_notes: Object.fromEntries(selection.nearbyLabels),
+      empty_hint: emptyHint,
     });
   });
 }

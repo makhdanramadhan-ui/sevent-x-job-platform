@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { RecommendationItem, RecommendationJobCard } from '../recommendation-contract';
-import { isJobEligibleForLocationPreferences } from './location-filter';
+import { selectLocationEligibleJobs, type LocationMatchTier } from './location-filter';
 
 const SOURCE_PRIORITY: Record<string, number> = {
   linkedin_guest: 0,
@@ -18,6 +18,14 @@ export type JobSourceRow = {
 
 export type LocationDiagnostics = Record<string, number>;
 
+export type EligibleJobsResult<T> = {
+  eligible: T[];
+  diagnostics: LocationDiagnostics;
+  tiers: Map<string, LocationMatchTier>;
+  nearbyLabels: Map<string, string>;
+  locationCounts: Record<LocationMatchTier, number>;
+};
+
 export function filterEligibleJobs<T extends {
   id: string;
   work_mode: string | null;
@@ -26,14 +34,15 @@ export function filterEligibleJobs<T extends {
 }>(
   jobs: T[],
   preferences: unknown,
-): { eligible: T[]; diagnostics: LocationDiagnostics } {
-  const diagnostics: LocationDiagnostics = {};
-  const eligible = jobs.filter((job) => {
-    const decision = isJobEligibleForLocationPreferences(job, preferences);
-    diagnostics[decision.reason] = (diagnostics[decision.reason] ?? 0) + 1;
-    return decision.eligible;
-  });
-  return { eligible, diagnostics };
+): EligibleJobsResult<T> {
+  const selection = selectLocationEligibleJobs(jobs, preferences);
+  return {
+    eligible: selection.jobs,
+    diagnostics: selection.diagnostics,
+    tiers: selection.tiers,
+    nearbyLabels: selection.nearbyLabels,
+    locationCounts: selection.counts,
+  };
 }
 
 export function pickSource(sources: JobSourceRow[]): JobSourceRow | null {

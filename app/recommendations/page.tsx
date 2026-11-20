@@ -29,6 +29,7 @@ import {
 } from '@/components/ui';
 import { CompanyLogo } from '@/components/ui/company-logo';
 import { displaySourceName } from '@/lib/job-source';
+import type { EmptyHint } from '@/lib/recommendation/empty-hint';
 import {
   EMPLOYMENT_TYPES,
   EXPERIENCE_LEVELS,
@@ -43,7 +44,10 @@ import type {
 
 type RecommendationsApiResponse = RecommendationOutput & {
   reason?: 'profile_incomplete';
-  profile_state?: 'empty' | 'ready';
+  profile_state?: 'empty' | 'ready' | 'ingest_pending';
+  empty_hint?: EmptyHint | null;
+  location_diagnostics?: Record<string, number>;
+  location_counts?: { exact: number; remote: number; nearby: number };
 };
 
 

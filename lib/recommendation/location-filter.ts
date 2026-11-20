@@ -10,6 +10,7 @@ export type JobLocationContext = {
 export type LocationPreference = {
   country?: string | null;
   locations: ReadonlyArray<string>;
+  wantsRemote?: boolean;
 };
 
 export function asLocationPreference(value: unknown): LocationPreference | null {
@@ -19,18 +20,45 @@ export function asLocationPreference(value: unknown): LocationPreference | null 
   const locations = Array.isArray(record.locations)
     ? record.locations.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
     : [];
-  return { country, locations };
+  const wantsRemote =
+    (Array.isArray(record.work_modes) &&
+      record.work_modes.some((mode) => typeof mode === 'string' && mode.trim().toLowerCase() === 'remote')) ||
+    locations.some((name) => name.trim().toLowerCase() === 'remote');
+  return { country, locations, wantsRemote };
 }
+
+export type LocationMatchTier = 'exact' | 'remote' | 'nearby';
 
 export type LocationFilterDecision = {
   eligible: boolean;
   reason: 'ok' | 'missing_preferences' | 'unknown_job_country' | 'country_mismatch' | 'location_mismatch' | 'remote_not_selected' | 'remote_not_open_to_country';
   jobCountry: string | null;
   jobEntry: LocationEntry | null;
+  matchTier: 'exact' | 'remote' | null;
 };
 
 const GLOBAL_REMOTE_RE = /\b(anywhere|worldwide|global|world|remote|seluruh dunia|semua negara|all countries|any country|international|global remote)\b/i;
 const COUNTRY_ONLY_RE = /\b(only|only in|hanya|terbatas|restricted|exclusive)\b/i;
+
+const JABODETABEK_NAMES: Record<string, true> = {
+  'DKI Jakarta': true,
+  'Jakarta Selatan': true,
+  'Jakarta Pusat': true,
+  'Jakarta Barat': true,
+  'Jakarta Timur': true,
+  'Jakarta Utara': true,
+  'Kepulauan Seribu': true,
+  Bogor: true,
+  Depok: true,
+  Bekasi: true,
+  Tangerang: true,
+  'Tangerang Selatan': true,
+  'Kabupaten Bogor': true,
+  'Kabupaten Bekasi': true,
+  'Kabupaten Tangerang': true,
+};
+
+export const NEARBY_FALLBACK_MIN_MATCHES = 6;
 
 function normalizeText(value: string): string {
   return value
@@ -104,51 +132,138 @@ function matchesPreferredLocation(
   });
 }
 
+function isJabodetabekEntry(entry: LocationEntry): boolean {
+  return entry.country === 'ID' && (entry.province === 'DKI Jakarta' || JABODETABEK_NAMES[entry.name] === true);
+}
+
 export function isJobEligibleForLocationPreferences(
   job: JobLocationContext,
   rawPreferences: unknown,
 ): LocationFilterDecision {
   const preferences = asLocationPreference(rawPreferences);
   if (!preferences) {
-    return { eligible: false, reason: 'missing_preferences', jobCountry: null, jobEntry: null };
+    return { eligible: false, reason: 'missing_preferences', jobCountry: null, jobEntry: null, matchTier: null };
   }
   const country = preferences.country?.trim().toUpperCase() ?? '';
   const prefs = preferredEntries(preferences);
   if (!isValidCountryCode(country) || prefs.length === 0) {
-    return { eligible: false, reason: 'missing_preferences', jobCountry: null, jobEntry: null };
+    return { eligible: false, reason: 'missing_preferences', jobCountry: null, jobEntry: null, matchTier: null };
   }
 
   const { country: jobCountry, entry: jobEntry } = resolveJobLocation(job);
-  const wantsRemote = prefs.some((p) => p.country === '*');
+  const wantsRemote = preferences.wantsRemote === true || prefs.some((p) => p.country === '*');
   const isRemote = job.work_mode === 'remote';
 
   if (isRemote) {
     if (!wantsRemote) {
-      return { eligible: false, reason: 'remote_not_selected', jobCountry, jobEntry };
+      return { eligible: false, reason: 'remote_not_selected', jobCountry, jobEntry, matchTier: null };
     }
     if (!jobCountry) {
       const description = `${job.location ?? ''} ${job.description ?? ''}`;
       if (GLOBAL_REMOTE_RE.test(description) && !COUNTRY_ONLY_RE.test(description)) {
-        return { eligible: true, reason: 'ok', jobCountry: null, jobEntry: null };
+        return { eligible: true, reason: 'ok', jobCountry: null, jobEntry: null, matchTier: 'remote' };
       }
-      return { eligible: false, reason: 'unknown_job_country', jobCountry, jobEntry };
+      return { eligible: false, reason: 'unknown_job_country', jobCountry, jobEntry, matchTier: null };
     }
     if (jobCountry !== country) {
-      return { eligible: false, reason: 'remote_not_open_to_country', jobCountry, jobEntry };
+      return { eligible: false, reason: 'remote_not_open_to_country', jobCountry, jobEntry, matchTier: null };
     }
-    return { eligible: true, reason: 'ok', jobCountry, jobEntry };
+    return { eligible: true, reason: 'ok', jobCountry, jobEntry, matchTier: 'remote' };
   }
 
   if (!jobCountry) {
-    return { eligible: false, reason: 'unknown_job_country', jobCountry, jobEntry };
+    return { eligible: false, reason: 'unknown_job_country', jobCountry, jobEntry, matchTier: null };
   }
   if (jobCountry !== country) {
-    return { eligible: false, reason: 'country_mismatch', jobCountry, jobEntry };
+    return { eligible: false, reason: 'country_mismatch', jobCountry, jobEntry, matchTier: null };
   }
   if (!matchesPreferredLocation(jobEntry, jobCountry, prefs)) {
-    return { eligible: false, reason: 'location_mismatch', jobCountry, jobEntry };
+    return { eligible: false, reason: 'location_mismatch', jobCountry, jobEntry, matchTier: null };
   }
-  return { eligible: true, reason: 'ok', jobCountry, jobEntry };
+  return { eligible: true, reason: 'ok', jobCountry, jobEntry, matchTier: 'exact' };
+}
+
+export type NearbyLocationMatch = { matched: boolean; label: string | null };
+
+/**
+ * Cocokan lowongan di provinsi induk atau wilayah Jabodetabek sebagai cadangan
+ * ketika lokasi persis preferensi tidak tersedia. Tidak pernah mencakup seluruh Indonesia.
+ */
+export function findNearbyLocationMatch(
+  job: JobLocationContext,
+  rawPreferences: unknown,
+): NearbyLocationMatch {
+  const preferences = asLocationPreference(rawPreferences);
+  if (!preferences) return { matched: false, label: null };
+  const country = preferences.country?.trim().toUpperCase() ?? '';
+  if (!isValidCountryCode(country)) return { matched: false, label: null };
+
+  const anchors = preferredEntries(preferences).filter(
+    (entry) => entry.country === 'ID' && entry.type !== 'country' && entry.name !== 'Seluruh Indonesia',
+  );
+  if (anchors.length === 0) return { matched: false, label: null };
+
+  const { country: jobCountry, entry: jobEntry } = resolveJobLocation(job);
+  if (jobCountry !== country || !jobEntry) return { matched: false, label: null };
+
+  for (const anchor of anchors) {
+    const sameProvince = Boolean(jobEntry.province) && jobEntry.province === anchor.province;
+    const sameRegion = isJabodetabekEntry(anchor) && isJabodetabekEntry(jobEntry);
+    if (sameProvince || sameRegion) {
+      return { matched: true, label: `Lokasi terdekat: ${jobEntry.name}` };
+    }
+  }
+  return { matched: false, label: null };
+}
+
+export type LocationSelection<T> = {
+  jobs: T[];
+  tiers: Map<string, LocationMatchTier>;
+  nearbyLabels: Map<string, string>;
+  diagnostics: Record<string, number>;
+  counts: Record<LocationMatchTier, number>;
+};
+
+/**
+ * Memilih lowongan yang lolos filter keras negara/lokasi. Lowongan di provinsi induk
+ * atau Jabodetabek hanya dimasukkan jika kecocokan persis + remote masih sedikit.
+ */
+export function selectLocationEligibleJobs<T extends { id: string } & JobLocationContext>(
+  jobs: ReadonlyArray<T>,
+  rawPreferences: unknown,
+): LocationSelection<T> {
+  const tiers = new Map<string, LocationMatchTier>();
+  const nearbyLabels = new Map<string, string>();
+  const diagnostics: Record<string, number> = {};
+  const primary: T[] = [];
+  const leftovers: T[] = [];
+
+  for (const job of jobs) {
+    const decision = isJobEligibleForLocationPreferences(job, rawPreferences);
+    diagnostics[decision.reason] = (diagnostics[decision.reason] ?? 0) + 1;
+    if (decision.eligible) {
+      primary.push(job);
+      tiers.set(job.id, decision.matchTier ?? 'exact');
+    } else {
+      leftovers.push(job);
+    }
+  }
+
+  if (primary.length < NEARBY_FALLBACK_MIN_MATCHES) {
+    for (const job of leftovers) {
+      const nearby = findNearbyLocationMatch(job, rawPreferences);
+      if (!nearby.matched) continue;
+      primary.push(job);
+      tiers.set(job.id, 'nearby');
+      if (nearby.label) nearbyLabels.set(job.id, nearby.label);
+      diagnostics.nearby_fallback = (diagnostics.nearby_fallback ?? 0) + 1;
+    }
+  }
+
+  const counts: Record<LocationMatchTier, number> = { exact: 0, remote: 0, nearby: 0 };
+  for (const tier of tiers.values()) counts[tier] += 1;
+
+  return { jobs: primary, tiers, nearbyLabels, diagnostics, counts };
 }
 
 export function isProfileLocationReady(rawPreferences: unknown): boolean {

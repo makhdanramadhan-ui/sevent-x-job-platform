@@ -41,6 +41,7 @@ import {
   WORK_MODES,
   type WorkMode,
 } from '@/lib/contracts';
+import type { EmptyHint } from '@/lib/recommendation/empty-hint';
 
 type JobsApiResponse = {
   items: Job[];
@@ -50,6 +51,10 @@ type JobsApiResponse = {
   pages: number;
   profile_state?: 'empty' | 'ingest_pending' | 'ready' | 'explicit_search';
   reason?: 'profile_incomplete';
+  empty_hint?: EmptyHint | null;
+  location_notes?: Record<string, string>;
+  location_diagnostics?: Record<string, number>;
+  location_counts?: { exact: number; remote: number; nearby: number };
 };
 
 type FilterState = {
@@ -804,8 +809,12 @@ function JobsFeedInner() {
             />
           ) : ingestPending ? (
             <EmptyState
-              title="Sedang mencari lowongan sesuai profilmu…"
-              description="Kami sedang mengambil lowongan berdasarkan bidang dan keahlian di profilmu. Proses ini biasanya selesai dalam beberapa saat."
+              title={data?.empty_hint?.title ?? 'Sedang mencari lowongan sesuai profilmu…'}
+              description={
+                data?.empty_hint
+                  ? `${data.empty_hint.description} ${data.empty_hint.loosen}`
+                  : 'Kami sedang mengambil lowongan berdasarkan bidang dan keahlian di profilmu. Proses ini biasanya selesai dalam beberapa saat.'
+              }
               action={
                 <Button variant="outline" size="sm" onClick={loadJobs}>
                   Muat Ulang Sekarang
@@ -819,14 +828,16 @@ function JobsFeedInner() {
                   ? 'Tidak Ada Lowongan yang Sesuai Filter'
                   : hiddenIds.size > 0
                     ? 'Semua Lowongan di Halaman Ini Disembunyikan'
-                    : 'Belum Ada Lowongan yang Sesuai Profilmu'
+                    : (data?.empty_hint?.title ?? 'Belum Ada Lowongan yang Sesuai Profilmu')
               }
               description={
                 hasActiveFilters
                   ? 'Coba ubah kata kunci atau longgarkan filter yang dipilih.'
                   : hiddenIds.size > 0
                     ? 'Kamu menyembunyikan seluruh lowongan di halaman ini.'
-                    : 'Belum ada lowongan yang cocok dengan bidang dan keahlian di profilmu saat ini. Coba perbarui profil atau gunakan pencarian untuk menjelajah semua lowongan.'
+                    : data?.empty_hint
+                      ? `${data.empty_hint.description} ${data.empty_hint.loosen}`
+                      : 'Belum ada lowongan yang cocok dengan profilmu saat ini. Coba perbarui profil atau gunakan pencarian untuk menjelajah semua lowongan.'
               }
               action={
                 hasActiveFilters ? (
@@ -876,7 +887,15 @@ function JobsFeedInner() {
                             {WORK_MODE_LABELS[job.work_mode]} ·{' '}
                             {EXPERIENCE_LEVEL_LABELS[job.level]}
                           </span>
-                          <span>{job.location || 'Lokasi tidak dicantumkan'}</span>
+                          <span>
+                            {job.location || 'Lokasi tidak dicantumkan'}
+                            {data?.location_notes?.[job.id] ? (
+                              <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
+                                {' · '}
+                                {data.location_notes[job.id]}
+                              </span>
+                            ) : null}
+                          </span>
                           {job.education ? <span>Pendidikan: {job.education}</span> : null}
                         </div>
 

@@ -51,6 +51,7 @@ export type RecommendationItem = {
   matched: string[];
   missing: string[];
   unknown: string[];
+  location_note?: string | null;
   job?: RecommendationJobCard | null;
   source?: RecommendationSource | null;
 };
