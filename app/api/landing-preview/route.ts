@@ -162,7 +162,7 @@ export async function GET(req: NextRequest) {
             .map((item) => jobs.find((job) => job.id === item.job_id))
             .filter((job): job is JobRow => Boolean(job))
             .slice(0, 3)
-        : jobs.slice(0, 3);
+        : [];
 
     const [countResult, sourceResult] = await Promise.all([
       admin.from('jobs').select('id', { count: 'exact', head: true }),
@@ -207,7 +207,7 @@ export async function GET(req: NextRequest) {
     return ok({
       mode,
       auth_state: authState,
-      count: mode === 'recommendations' ? rankedItems.length : previewJobs.length,
+      count: mode === 'recommendations' ? rankedItems.length : 0,
       count_capped: mode === 'recommendations' && rankedItems.length >= 50,
       total_jobs: countResult.count ?? 0,
       source_count: sourceNames.size,

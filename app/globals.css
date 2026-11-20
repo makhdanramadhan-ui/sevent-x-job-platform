@@ -3137,6 +3137,32 @@ h4 {
   grid-template-columns: 310px minmax(0, 1fr);
   min-height: 330px;
 }
+.tk-app-empty-state {
+  grid-column: 1 / -1;
+  min-height: 330px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.tk-app-empty-state strong {
+  max-width: 46ch;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--p-ink);
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .tk-app-empty-state {
+    min-height: 300px;
+    padding: 24px 16px;
+  }
+}
 
 .tk-app-sidebar {
   border-right: 1px solid var(--border-subtle);

@@ -169,15 +169,20 @@ export default function HomePage() {
       ? `${preview.total_jobs} lowongan dari ${preview.source_count} sumber${preview.updated_at ? ` · diperbarui ${formatRelativeId(preview.updated_at)}` : ''}`
       : 'Belum ada lowongan dari sumber resmi.';
   const headerMeta = loading
-    ? 'Memuat lowongan...'
-    : preview.mode === 'recommendations'
+    ? 'Memuat data...'
+    : preview.auth_state === 'ready'
       ? `${preview.count}${preview.count_capped ? '+' : ''} rekomendasi`
-      : `${jobs.length} lowongan terbaru`;
+      : 'Belum ada rekomendasi';
   const ctaHref = preview.auth_state === 'guest' ? '/login' : '/profile';
   const ctaLabel =
     preview.auth_state === 'guest'
       ? 'Masuk untuk melihat kecocokan'
       : 'Lengkapi bidang & keahlian di profil untuk melihat kecocokan';
+  const emptyText =
+    preview.auth_state === 'guest'
+      ? 'Masuk dan lengkapi bidang & keahlian untuk melihat lowongan yang sesuai profilmu'
+      : 'Lengkapi bidang & keahlian di profil untuk melihat lowongan yang sesuai';
+  const emptyActionLabel = preview.auth_state === 'guest' ? 'Masuk' : 'Lengkapi Profil';
   const sourceTime = selectedJob
     ? formatRelativeId(
         selectedJob.source_published_at ??
@@ -224,21 +229,17 @@ export default function HomePage() {
             </div>
 
             <div className="tk-hero__avatars-row">
-              <div className="tk-avatar-stack" aria-hidden="true">
-                {loading
-                  ? [0, 1, 2].map((index) => (
-                      <span key={index} className="tk-company-logo tk-company-logo--skeleton">
-                        <span className="skeleton-line" style={{ width: 20, height: 14 }} />
-                      </span>
-                    ))
-                  : jobs.slice(0, 3).map((job) => (
-                      <CompanyLogo
-                        key={job.id}
-                        company={job.company}
-                        logoUrl={job.company_logo_url}
-                      />
-                    ))}
-              </div>
+              {preview.auth_state === 'ready' && jobs.length > 0 ? (
+                <div className="tk-avatar-stack" aria-hidden="true">
+                  {jobs.slice(0, 3).map((job) => (
+                    <CompanyLogo
+                      key={job.id}
+                      company={job.company}
+                      logoUrl={job.company_logo_url}
+                    />
+                  ))}
+                </div>
+              ) : null}
               <span style={{ fontSize: '0.875rem', color: 'var(--p-muted)', lineHeight: 1.4 }}>
                 {statsText}
               </span>
@@ -269,6 +270,17 @@ export default function HomePage() {
             </div>
 
             <div className="tk-app-body">
+              {loading || preview.auth_state !== 'ready' ? (
+                <div className="tk-app-empty-state" role="status">
+                  <strong>{loading ? 'Memuat data lowongan...' : emptyText}</strong>
+                  {loading ? null : (
+                    <Link href={ctaHref} className="btn btn-primary btn-sm">
+                      {emptyActionLabel}
+                    </Link>
+                  )}
+                </div>
+              ) : (
+                <>
               <div className="tk-app-sidebar" role="tablist" aria-label="Pilih lowongan">
                 {loading
                   ? [0, 1, 2].map((index) => (
@@ -578,7 +590,7 @@ export default function HomePage() {
                               textDecoration: 'none',
                             }}
                           >
-                            {preview.auth_state === 'guest' ? 'Masuk' : 'Lengkapi Profil'}
+                            Lengkapi Profil
                           </Link>
                         </div>
                       </div>
@@ -614,6 +626,8 @@ export default function HomePage() {
                   </>
                 )}
               </div>
+                </>
+              )}
             </div>
           </div>
 
