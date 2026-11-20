@@ -60,6 +60,7 @@ export function ProfileEditorForm({
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState<ApiCallError | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
+  const [countryNotice, setCountryNotice] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [cvExtraOpen, setCvExtraOpen] = useState(
     () =>
@@ -187,9 +188,16 @@ export function ProfileEditorForm({
               setDraft((current) => {
                 const code = next[0] ?? '';
                 if (code === current.preferences.country) return current;
+                const kept = current.preferences.locations.filter((location) => location === 'Remote');
+                const dropped = current.preferences.locations.length - kept.length;
+                setCountryNotice(
+                  dropped > 0
+                    ? `${dropped} lokasi dihapus karena tidak sesuai negara baru. Remote tetap dipertahankan.`
+                    : null,
+                );
                 return {
                   ...current,
-                  preferences: { ...current.preferences, country: code, locations: [] },
+                  preferences: { ...current.preferences, country: code, locations: kept },
                 };
               })
             }
@@ -276,6 +284,11 @@ export function ProfileEditorForm({
               maxLength={80}
             />
           </div>
+          {countryNotice ? (
+            <p role="status" style={{ margin: 0, fontSize: '0.85rem', color: 'var(--ink-secondary)' }}>
+              {countryNotice}
+            </p>
+          ) : null}
 
           <CheckboxGroup
             legend="Preferensi Mode Kerja (Work Mode)"

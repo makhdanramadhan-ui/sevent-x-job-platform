@@ -85,7 +85,7 @@ export function CatalogComboboxInput({
 
   useEffect(() => {
     const query = inputValue.trim();
-    if (disabled || values.length >= (multiple ? maxItems : 1)) {
+    if (disabled || (multiple && values.length >= maxItems)) {
       requestIdRef.current += 1;
       setSuggestions([]);
       setLoading(false);
@@ -203,7 +203,8 @@ export function CatalogComboboxInput({
         selectSuggestion(activeIndex);
         return;
       }
-      setLocalError('Tidak ditemukan — pilih dari daftar.');
+      if (loading || !hasFetched || query.length === 0) return;
+      if (suggestions.length === 0) setLocalError('Tidak ditemukan — pilih dari daftar.');
       return;
     }
     if (e.key === 'Tab') {
@@ -278,7 +279,10 @@ export function CatalogComboboxInput({
               if (!disabled) setOpen(true);
             }}
             onBlur={() => {
-              blurTimeoutRef.current = window.setTimeout(() => closeList(), 120);
+              blurTimeoutRef.current = window.setTimeout(() => {
+                if (!inputValue.trim()) setLocalError(null);
+                closeList();
+              }, 120);
             }}
             onKeyDown={handleKeyDown}
           />
@@ -314,11 +318,11 @@ export function CatalogComboboxInput({
                       <span className="skill-combobox-option-category">{suggestion.category}</span>
                     </li>
                   ))
-                ) : (
+                ) : query.length > 0 && hasFetched ? (
                   <li id={statusId} className="skill-combobox-status" role="status" aria-live="polite">
                     Tidak ditemukan — pilih dari daftar
                   </li>
-                )}
+                ) : null}
               </ul>
             </div>
           ) : null}
