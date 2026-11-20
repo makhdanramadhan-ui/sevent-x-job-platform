@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { rankJobs, applyRecommendationFilters } from '../../lib/recommendation/index';
+import { isJobEligibleForLocationPreferences } from '../../lib/recommendation/location-filter';
 import type {
   RecommendationJobInput,
   RecommendationProfileInput,
@@ -393,7 +394,85 @@ function main(): void {
   testSeniorLevelAndUnknownRequirements();
   testNonTechCategoryAndDeterministicShift();
   testDuplicateJobsAndFilters();
+  testRoleMatchingStrictness();
+  testLocationHardFilter();
   console.log('ALL RECOMMENDATION DETERMINISTIC TESTS PASSED');
 }
 
+
+function testRoleMatchingStrictness(): void {
+  const iotProfile: RecommendationProfileInput = {
+    skills: ['Internet of Things', 'Firmware Development', 'C++'],
+    education: [],
+    experiences: [],
+    projects: [],
+    preferences: {
+      country: 'ID',
+      positions: ['IoT Engineer'],
+      locations: ['Bogor'],
+      levels: [],
+      work_modes: [],
+      employment_types: [],
+    },
+  };
+  const unrealJob: RecommendationJobInput = {
+    id: '20000000-0000-4000-8000-000000000001',
+    title: 'Unreal Engine Developer, Remote - Contract',
+    company: 'Xperteez Technology',
+    location: 'United States',
+    work_mode: 'remote',
+    employment_type: 'contract',
+    level: 'mid',
+    education: null,
+    skills: ['Unreal Engine Developer', 'Game Developer', 'C++ Developer'],
+    status: 'open',
+    deadline: null,
+  };
+  const iotJob: RecommendationJobInput = {
+    ...unrealJob,
+    id: '20000000-0000-4000-8000-000000000002',
+    title: 'IoT Firmware Engineer',
+    company: 'PT Contoh IoT',
+    location: 'Bogor',
+    work_mode: 'onsite',
+    employment_type: 'full_time',
+    skills: [],
+  };
+
+  const output = rankJobs({ profile: iotProfile, jobs: [unrealJob, iotJob] }, { referenceDate: REF_DATE });
+  const unrealScore = output.items.find((item) => item.job_id === unrealJob.id)!;
+  const iotScore = output.items.find((item) => item.job_id === iotJob.id)!;
+
+  assert.ok(unrealScore.score < 50, `Unreal tidak boleh mencapai ~50% (dapat ${unrealScore.score})`);
+  assert.ok(
+    !unrealScore.matched.some((m) => m.includes('Posisi sesuai bidang/preferensi')),
+    'Unreal Engine Developer tidak boleh cocok dengan IoT Engineer',
+  );
+  assert.ok(
+    iotScore.matched.some((m) => m.includes('Posisi sesuai bidang/preferensi')),
+    'IoT Firmware Engineer harus cocok dengan IoT Engineer',
+  );
+  console.log('PASS 7: Pencocokan posisi ketat (Unreal ditolak, IoT Firmware diterima)');
+}
+
+function testLocationHardFilter(): void {
+  const jakartaOnsite = { work_mode: 'onsite', location: 'Jakarta Pusat' };
+  const bogorOnsite = { work_mode: 'onsite', location: 'Bogor' };
+  const remoteBrazil = { work_mode: 'remote', location: 'Remote - Brazil' };
+  const remoteWorldwide = { work_mode: 'remote', location: 'Remote - Worldwide' };
+  const remoteUsaOnly = { work_mode: 'remote', location: 'USA only' };
+
+  const bogorPrefs = { country: 'ID', locations: ['Bogor'] };
+  assert.equal(isJobEligibleForLocationPreferences(jakartaOnsite, bogorPrefs).eligible, false);
+  assert.equal(isJobEligibleForLocationPreferences(bogorOnsite, bogorPrefs).eligible, true);
+  assert.equal(isJobEligibleForLocationPreferences(remoteBrazil, bogorPrefs).eligible, false);
+
+  const remotePrefs = { country: 'ID', locations: ['Remote'] };
+  assert.equal(isJobEligibleForLocationPreferences(remoteWorldwide, remotePrefs).eligible, true);
+  assert.equal(isJobEligibleForLocationPreferences(remoteUsaOnly, remotePrefs).eligible, false);
+
+  const provincePrefs = { country: 'ID', locations: ['Jawa Barat'] };
+  assert.equal(isJobEligibleForLocationPreferences(bogorOnsite, provincePrefs).eligible, true);
+  console.log('PASS 8: Filter keras negara & lokasi preferensi');
+}
 main();

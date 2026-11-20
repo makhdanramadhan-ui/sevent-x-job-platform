@@ -4,6 +4,8 @@ import { JOB_STATUSES, EMPLOYMENT_TYPES, EXPERIENCE_LEVELS, WORK_MODES } from '@
 import { throwDb } from '@/lib/db';
 import { ok, run } from '@/lib/http';
 import { extractProfileKeywords, jobMatchesKeywords } from '@/lib/profile-keywords';
+import { filterEligibleJobs } from '@/lib/recommendation/job-context';
+import { isProfileLocationReady } from '@/lib/recommendation/location-filter';
 import {
   assertAllowedQuery,
   intValue,
@@ -62,8 +64,9 @@ export async function GET(req: NextRequest) {
         .maybeSingle();
       if (profileError) throwDb(profileError);
 
+      const preferenceRow = (profile ?? {}) as { preferences?: Record<string, unknown> };
       const keywordState = extractProfileKeywords(profile as any);
-      if (keywordState.isEmpty) {
+      if (keywordState.isEmpty || !isProfileLocationReady(preferenceRow.preferences)) {
         return ok({
           items: [],
           total: 0,
@@ -86,9 +89,10 @@ export async function GET(req: NextRequest) {
       const matched = (jobs ?? []).filter((job) =>
         jobMatchesKeywords(job as any, keywordState.keywords),
       );
-      const total = matched.length;
+      const { eligible } = filterEligibleJobs(matched, preferenceRow.preferences);
+      const total = eligible.length;
       const from = (page - 1) * limit;
-      const items = matched.slice(from, from + limit);
+      const items = eligible.slice(from, from + limit);
       const pages = total === 0 ? 0 : Math.ceil(total / limit);
 
       let profileState: 'ready' | 'ingest_pending' = 'ready';

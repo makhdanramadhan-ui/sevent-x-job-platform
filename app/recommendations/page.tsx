@@ -27,10 +27,11 @@ import {
   PageBanner,
   WORK_MODE_LABELS,
 } from '@/components/ui';
+import { CompanyLogo } from '@/components/ui/company-logo';
+import { displaySourceName } from '@/lib/job-source';
 import {
   EMPLOYMENT_TYPES,
   EXPERIENCE_LEVELS,
-  type Job,
   type ProfileRecord,
   WORK_MODES,
 } from '@/lib/contracts';
@@ -40,15 +41,11 @@ import type {
   RecommendationOutput,
 } from '@/lib/recommendation-contract';
 
-type JobsListPayload = {
-  items: Job[];
-  total: number;
-};
-
 type RecommendationsApiResponse = RecommendationOutput & {
   reason?: 'profile_incomplete';
   profile_state?: 'empty' | 'ready';
 };
+
 
 const WORK_MODE_FILTER_OPTS = WORK_MODES.map((value) => ({
   value,
@@ -79,77 +76,7 @@ function isRecommendationOutput(val: unknown): val is RecommendationOutput {
   return obj.contract_version === 1 && Array.isArray(obj.items);
 }
 
-function getCompanyInitials(company: string): string {
-  const words = company
-    .replace(/\b(PT|CV|Tbk|Indonesia|Persero|Inc|Ltd|LLC|Corp|GmbH)\b\.?/gi, ' ')
-    .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
-    .trim()
-    .split(/\s+/)
-    .filter((word) => word.length > 0);
-  if (words.length === 0) {
-    const fallback = company.replace(/[^\p{L}\p{N}]+/gu, '').slice(0, 2).toUpperCase();
-    return fallback || 'RK';
-  }
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0][0]}${words[1][0]}`.toUpperCase();
-}
 
-function isUsableLogoUrl(url?: string | null): url is string {
-  if (!url) return false;
-  const trimmed = url.trim();
-  if (!/^https?:\/\//i.test(trimmed)) return false;
-  return !/static\.licdn\.com|ghost|spacer/i.test(trimmed);
-}
-
-function RecommendationCompanyLogo({
-  company,
-  logoUrl,
-}: {
-  company: string;
-  logoUrl?: string | null;
-}) {
-  const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  const canRenderLogo = isUsableLogoUrl(logoUrl) && failedUrl !== logoUrl;
-
-  return (
-    <div
-      className="job-feed-card__logo"
-      aria-hidden="true"
-      title={company}
-      style={{ overflow: 'hidden', flexShrink: 0 }}
-    >
-      {canRenderLogo ? (
-        <img
-          src={logoUrl}
-          alt={company}
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          onError={() => setFailedUrl(logoUrl ?? null)}
-          onLoad={(e) => {
-            const { naturalWidth, naturalHeight } = e.currentTarget;
-            if (
-              naturalWidth === 0 ||
-              (logoUrl?.includes('google.com/s2/favicons') &&
-                naturalWidth <= 16 &&
-                naturalHeight <= 16)
-            ) {
-              setFailedUrl(logoUrl ?? null);
-            }
-          }}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain',
-            padding: 4,
-            backgroundColor: '#ffffff',
-          }}
-        />
-      ) : (
-        getCompanyInitials(company)
-      )}
-    </div>
-  );
-}
 
 function parseCommaListLine(text: string): { prefix: string; items: string[] } | null {
   const colonIdx = text.indexOf(':');
@@ -168,7 +95,7 @@ function RecommendationsInner() {
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
   const [recOutput, setRecOutput] = useState<RecommendationsApiResponse | null>(null);
-  const [jobsMap, setJobsMap] = useState<Record<string, Job>>({});
+
   const [endpointMissing, setEndpointMissing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiCallError | null>(null);
@@ -204,23 +131,15 @@ function RecommendationsInner() {
     setError(null);
     setEndpointMissing(false);
 
-    const [profileRes, recRes, jobsRes] = await Promise.all([
+    const [profileRes, recRes] = await Promise.all([
       apiFetch<ProfileRecord | null>('/api/profile'),
       apiFetch<RecommendationsApiResponse>('/api/recommendations'),
-      apiFetch<JobsListPayload>('/api/jobs?limit=50'),
     ]);
 
     if (profileRes.ok) {
       setProfile(profileRes.data);
     }
 
-    const map: Record<string, Job> = {};
-    if (jobsRes.ok && Array.isArray(jobsRes.data.items)) {
-      for (const j of jobsRes.data.items) {
-        map[j.id] = j;
-      }
-    }
-    setJobsMap(map);
 
     if (recRes.ok && isRecommendationOutput(recRes.data)) {
       setRecOutput(recRes.data);
@@ -249,10 +168,8 @@ function RecommendationsInner() {
   const filteredItems = useMemo(() => {
     if (!recOutput) return [];
     return recOutput.items.filter((item) => {
-      const job = jobsMap[item.job_id];
-      if (!job) {
-        return activeFilterCount === 0;
-      }
+      const job = item.job;
+      if (!job) return false;
       if (filters.work_modes.length > 0 && !filters.work_modes.includes(job.work_mode)) {
         return false;
       }
@@ -267,7 +184,7 @@ function RecommendationsInner() {
       }
       return true;
     });
-  }, [recOutput, jobsMap, filters, activeFilterCount]);
+  }, [recOutput, filters, activeFilterCount]);
 
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / RECOMMENDATIONS_PER_PAGE));
   const currentPage = Math.min(page, totalPages);
@@ -344,8 +261,8 @@ function RecommendationsInner() {
         />
       ) : profileIncomplete ? (
         <EmptyState
-          title="Lengkapi bidang dan keahlian di profil untuk melihat rekomendasi"
-          description="Isi bidang/posisi yang diminati dan keahlian di profil agar kami dapat menampilkan rekomendasi lowongan yang sesuai."
+          title="Lengkapi negara & lokasi kerja preferensi untuk melihat rekomendasi"
+          description="Isi bidang/posisi, keahlian, negara, dan lokasi kerja preferensi di profil agar kami dapat menampilkan rekomendasi lowongan yang sesuai."
           action={
             <Link href="/profile" className="btn btn-primary btn-sm">
               Lengkapi Profil
@@ -521,7 +438,8 @@ function RecommendationsInner() {
 
                   <div className="jobs-list">
                     {paginatedItems.map((item: RecommendationItem) => {
-                    const job = jobsMap[item.job_id];
+                      const job = item.job;
+                      if (!job) return null;
                     const pct = Math.max(0, Math.min(100, Math.round(item.score)));
                     const isHighMatch = pct >= 70;
 
@@ -552,45 +470,55 @@ function RecommendationsInner() {
                                 <span className="rec-match-caption">kecocokan</span>
                               </span>
 
-                              {job ? <JobStatusBadge status={job.status} /> : null}
-                              {job ? (
-                                <span className="job-timestamp">
-                                  Diambil: {formatDateTimeId(job.last_fetched_at)}
-                                </span>
-                              ) : null}
+                              <JobStatusBadge status={job.status} />
+                              <span className="job-timestamp">
+                                Diambil: {formatDateTimeId(job.last_fetched_at)}
+                              </span>
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
-                              {job ? (
-                                <RecommendationCompanyLogo
-                                  company={job.company}
-                                  logoUrl={job.company_logo_url}
-                                />
-                              ) : null}
+                              <CompanyLogo
+                                company={job.company}
+                                logoUrl={job.company_logo_url}
+                                size={44}
+                              />
                               <div style={{ minWidth: 0 }}>
                                 <h2 className="rec-card-title" style={{ marginTop: 0 }}>
-                                  <Link href={`/jobs/${item.job_id}`}>
-                                    {job ? job.title : `Lowongan #${item.job_id}`}
-                                  </Link>
+                                  <Link href={`/jobs/${item.job_id}`}>{job.title}</Link>
                                 </h2>
-
-                                {job ? (
-                                  <p className="rec-card-company">
-                                    {job.company} ·{' '}
-                                    <span>{job.location || 'Lokasi tidak dicantumkan'}</span>
-                                  </p>
-                                ) : null}
+                                <p className="rec-card-company">
+                                  {job.company} ·{' '}
+                                  <span>{job.location || 'Lokasi tidak dicantumkan'}</span> ·{' '}
+                                  <span>{WORK_MODE_LABELS[job.work_mode] ?? job.work_mode}</span>
+                                  {item.source ? (
+                                    <>
+                                      {' · '}
+                                      <span>{displaySourceName(item.source.source_name)}</span>
+                                    </>
+                                  ) : null}
+                                </p>
                               </div>
                             </div>
                           </div>
 
                           <div className="rec-card-cta">
-                            <Link
-                              href={`/jobs/${item.job_id}`}
-                              className="btn btn-primary btn-sm"
-                            >
-                              Detail &amp; Sumber Asli
-                            </Link>
+                            {item.source?.source_url ? (
+                              <a
+                                href={item.source.source_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-primary btn-sm"
+                              >
+                                Detail &amp; Sumber Asli
+                              </a>
+                            ) : (
+                              <Link
+                                href={`/jobs/${item.job_id}`}
+                                className="btn btn-primary btn-sm"
+                              >
+                                Detail &amp; Sumber Asli
+                              </Link>
+                            )}
                           </div>
                         </div>
 

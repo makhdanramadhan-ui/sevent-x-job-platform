@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 import { readSupabaseAdminEnv, readSupabaseEnv } from '@/lib/env';
 import { ok, run } from '@/lib/http';
 import { rankJobs } from '@/lib/recommendation';
+import { filterEligibleJobs } from '@/lib/recommendation/job-context';
+import { isProfileLocationReady } from '@/lib/recommendation/location-filter';
 import type {
   RecommendationItem,
   RecommendationJobInput,
@@ -133,7 +135,11 @@ export async function GET(req: NextRequest) {
         .select(PROFILE_COLUMNS)
         .eq('user_id', auth.user.id)
         .maybeSingle();
-      if (!profileResult.error && hasBidangOrSkills(profileResult.data as RecommendationProfileInput)) {
+      if (
+        !profileResult.error &&
+        hasBidangOrSkills(profileResult.data as RecommendationProfileInput) &&
+        isProfileLocationReady((profileResult.data as RecommendationProfileInput)?.preferences)
+      ) {
         profile = (profileResult.data as RecommendationProfileInput) ?? null;
         mode = 'recommendations';
         authState = 'ready';
@@ -150,9 +156,10 @@ export async function GET(req: NextRequest) {
 
     const jobs = (jobsResult.data ?? []) as JobRow[];
     if (mode === 'recommendations' && profile) {
+      const eligibleJobs = filterEligibleJobs(jobs, profile.preferences).eligible;
       rankedItems = rankJobs({
         profile,
-        jobs: jobs as RecommendationJobInput[],
+        jobs: eligibleJobs as RecommendationJobInput[],
       }).items;
     }
 

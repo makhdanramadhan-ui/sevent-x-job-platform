@@ -209,6 +209,8 @@ export function scoreSingleJob(
   let totalPoints = 0;
   let evaluatableWeight = 0;
   let matchedRequirementCount = 0;
+  let hasSkillMatch = false;
+  let hasRoleMatch = false;
 
   // ============================================================================
   // 1. SYARAT WAJIB: SKILLS (Bobot: 40)
@@ -246,8 +248,8 @@ export function scoreSingleJob(
       const ratio = matchedSkills.length / totalRequired;
       totalPoints += ratio * SCORE_WEIGHTS.skills;
     }
-
     if (matchedSkills.length > 0) {
+      hasSkillMatch = true;
       matched.push(`Syarat skill terpenuhi: ${matchedSkills.join(', ')}`);
       matchedRequirementCount += matchedSkills.length;
     }
@@ -298,12 +300,13 @@ export function scoreSingleJob(
         overlappingTokens.push(t);
       }
     }
-
     if (groupMatched) {
+      hasRoleMatch = true;
       totalPoints += SCORE_WEIGHTS.position;
       matched.push(`Posisi sesuai bidang/preferensi: ${job.title}`);
       matchedRequirementCount += 1;
     } else if (overlappingTokens.length > 0) {
+      hasRoleMatch = true;
       const tokenRatio = Math.min(
         1,
         overlappingTokens.length / Math.max(1, jobRole.tokens.size),
@@ -482,7 +485,14 @@ export function scoreSingleJob(
   // tidak mendominasi lowongan yang informasinya lengkap).
   const proportionalScore = (totalPoints / evaluatableWeight) * 100;
   const coverageFactor = Math.min(1, evaluatableWeight / 65);
-  const finalScore = Math.max(0, Math.min(100, Math.round(proportionalScore * coverageFactor)));
+  let finalScore = Math.max(0, Math.min(100, Math.round(proportionalScore * coverageFactor)));
+
+  if (!hasSkillMatch && !hasRoleMatch) {
+    finalScore = Math.min(finalScore, 25);
+    if (!unknown.includes('Tidak ada kecocokan nyata pada skill maupun posisi')) {
+      unknown.push('Tidak ada kecocokan nyata pada skill maupun posisi');
+    }
+  }
 
   return {
     job_id: job.id,

@@ -11,9 +11,11 @@ import {
 import { throwDb } from '@/lib/db';
 import { ok, run } from '@/lib/http';
 import { rankJobs } from '@/lib/recommendation';
+import { attachJobContext, filterEligibleJobs, type JobSourceRow } from '@/lib/recommendation/job-context';
+import { isProfileLocationReady } from '@/lib/recommendation/location-filter';
 import type {
   RecommendationFilters,
-  RecommendationJobInput,
+  RecommendationJobInputWithContext,
   RecommendationProfileInput,
 } from '@/lib/recommendation-contract';
 import { assertAllowedQuery, intValue, oneOf } from '@/lib/validation';
@@ -22,7 +24,7 @@ export const dynamic = 'force-dynamic';
 
 const PROFILE_RECOMMENDATION_COLUMNS = 'skills, education, experiences, projects, preferences';
 const JOB_RECOMMENDATION_COLUMNS =
-  'id, title, company, location, work_mode, employment_type, level, education, skills, status, deadline';
+  'id, title, company, company_logo_url, location, work_mode, employment_type, level, education, skills, status, deadline, last_fetched_at, description';
 
 const QUERY_KEYS = ['limit', 'work_mode', 'employment_type', 'level'] as const;
 
@@ -59,27 +61,16 @@ export async function GET(req: NextRequest) {
         : [],
     };
 
-    const [profileResult, jobsResult] = await Promise.all([
-      auth.supabase
-        .from('profiles')
-        .select(PROFILE_RECOMMENDATION_COLUMNS)
-        .eq('user_id', auth.user.id)
-        .maybeSingle(),
-      auth.supabase
-        .from('jobs')
-        .select(JOB_RECOMMENDATION_COLUMNS)
-        .order('last_fetched_at', { ascending: false, nullsFirst: false })
-        .order('id', { ascending: true })
-        .limit(50),
-    ]);
-
+    const profileResult = await auth.supabase
+      .from('profiles')
+      .select(PROFILE_RECOMMENDATION_COLUMNS)
+      .eq('user_id', auth.user.id)
+      .maybeSingle();
     if (profileResult.error) throwDb(profileResult.error);
-    if (jobsResult.error) throwDb(jobsResult.error);
 
     const profile = (profileResult.data as RecommendationProfileInput) ?? null;
-    const jobs = (jobsResult.data as RecommendationJobInput[] | null) ?? [];
 
-    if (!hasBidangOrSkills(profile)) {
+    if (!hasBidangOrSkills(profile) || !isProfileLocationReady(profile?.preferences)) {
       return ok({
         contract_version: 1,
         items: [],
@@ -88,12 +79,53 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const ranked = rankJobs({ profile, jobs }, { filters });
+    const jobsResult = await auth.supabase
+      .from('jobs')
+      .select(JOB_RECOMMENDATION_COLUMNS)
+      .order('last_fetched_at', { ascending: false, nullsFirst: false })
+      .order('id', { ascending: true })
+      .limit(200);
+    if (jobsResult.error) throwDb(jobsResult.error);
+
+    const allJobs = (jobsResult.data as RecommendationJobInputWithContext[] | null) ?? [];
+    const { eligible, diagnostics } = filterEligibleJobs(allJobs, profile?.preferences);
+    const ranked = rankJobs({ profile, jobs: eligible }, { filters });
+    const topItems = ranked.items.slice(0, limit);
+    const topIds = topItems.map((item) => item.job_id);
+    const cardsById = new Map(eligible.map((job) => [job.id, job]));
+    const jobCards = topIds
+      .map((id) => cardsById.get(id))
+      .filter((job): job is RecommendationJobInputWithContext => Boolean(job))
+      .map((job) => ({
+        id: job.id,
+        title: job.title,
+        company: job.company,
+        company_logo_url: job.company_logo_url ?? null,
+        location: job.location,
+        work_mode: job.work_mode,
+        employment_type: job.employment_type,
+        level: job.level,
+        status: job.status,
+        last_fetched_at: job.last_fetched_at ?? null,
+      }));
+
+    let sourceRows: JobSourceRow[] = [];
+    if (topIds.length > 0) {
+      const sourceResult = await auth.supabase
+        .from('job_sources')
+        .select('job_id, source_name, source_url, fetched_at')
+        .in('job_id', topIds);
+      if (sourceResult.error) throwDb(sourceResult.error);
+      sourceRows = (sourceResult.data ?? []) as JobSourceRow[];
+    }
+
+    const items = await attachJobContext(auth.supabase, topItems, sourceRows, jobCards);
 
     return ok({
       contract_version: ranked.contract_version,
-      items: ranked.items.slice(0, limit),
+      items,
       profile_state: 'ready',
+      location_diagnostics: diagnostics,
     });
   });
 }

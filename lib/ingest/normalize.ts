@@ -309,6 +309,9 @@ export function normalizeEducation(
   return null;
 }
 
+const ROLE_TITLE_RE =
+  /\b(developer|engineer|manager|analyst|executive|specialist|officer|staff|staf|intern|magang|lead|consultant|designer|writer|administrator|architect|sales|account|recruiter|secretary|asisten)\b/i;
+
 export function normalizeSkills(
   rawSkills: unknown,
   titleHint?: string | null,
@@ -322,6 +325,7 @@ export function normalizeSkills(
     if (!cleaned) return;
     const key = cleaned.toLowerCase();
     const canonical = SKILL_CANONICAL_DISPLAY[key] ?? cleaned;
+    if (ROLE_TITLE_RE.test(canonical) && !(key in SKILL_CANONICAL_DISPLAY)) return;
     const canonicalKey = canonical.toLowerCase();
     if (!seenLower.has(canonicalKey) && result.length < 100) {
       seenLower.add(canonicalKey);
@@ -340,7 +344,7 @@ export function normalizeSkills(
   if (result.length === 0) {
     const combinedText = ` ${titleHint ?? ''} ${descriptionHint ?? ''} `.toLowerCase();
     for (const [alias, displayName] of Object.entries(SKILL_CANONICAL_DISPLAY)) {
-      if (alias.length < 2) continue;
+      if (alias.length < 2 || ROLE_TITLE_RE.test(alias)) continue;
       const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const pattern = new RegExp(`(^|[\\s,./()\\-])${escaped}($|[\\s,./()\\-])`, 'i');
       if (pattern.test(combinedText)) add(displayName);

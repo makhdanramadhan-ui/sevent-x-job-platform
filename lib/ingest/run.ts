@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { IngestPayload } from './normalize';
 import { enrichMissingCompanyLogos } from './logo-fallback';
+import { collectIngestLocationPolicy } from './keywords';
 import {
   fetchHimalayasPublicApi,
   fetchJobicyPublicApi,
@@ -52,7 +53,7 @@ function dedupePayloads(payloads: IngestPayload[]): IngestPayload[] {
 export async function runKeywordIngest(
   admin: SupabaseClient,
   keywords: string[],
-  options: { respectThrottle?: boolean; forceFillers?: boolean } = {},
+  options: { respectThrottle?: boolean; forceFillers?: boolean; userId?: string } = {},
 ): Promise<IngestRunSummary> {
   const uniqueKeywords = Array.from(
     new Set(
@@ -77,12 +78,19 @@ export async function runKeywordIngest(
     by_source: {},
   };
 
+  let locationPolicy = { location: 'Indonesia', includeRemoteSources: false };
+  try {
+    locationPolicy = await collectIngestLocationPolicy(admin, options.userId);
+  } catch {
+    // Location policy failures must not block LinkedIn-first ingest.
+  }
+
   const allPayloads: IngestPayload[] = [];
 
   if (keywordsToFetch.length > 0) {
     const linkedin = await fetchLinkedinGuestJobs({
       keywords: keywordsToFetch,
-      location: 'Indonesia',
+      location: locationPolicy.location,
       limitPerKeyword: LINKEDIN_LIMIT_PER_KEYWORD,
       fetchDetail: true,
       delaySeconds: 1.2,
@@ -95,11 +103,11 @@ export async function runKeywordIngest(
 
   const linkedinCount = summary.linkedin?.payloads.length ?? 0;
   const shouldFetchFillers =
-    options.forceFillers === true ||
-    keywordsToFetch.length === 0 ||
-    linkedinCount < LINKEDIN_MIN_RESULTS_BEFORE_FILLERS ||
-    summary.linkedin?.status === 'BLOCKED' ||
-    summary.linkedin?.status === 'FAILED';
+    locationPolicy.includeRemoteSources &&
+    (keywordsToFetch.length === 0 ||
+      linkedinCount < LINKEDIN_MIN_RESULTS_BEFORE_FILLERS ||
+      summary.linkedin?.status === 'BLOCKED' ||
+      summary.linkedin?.status === 'FAILED');
 
   if (shouldFetchFillers) {
     const [himalayas, jobicy, remotive] = await Promise.all([
