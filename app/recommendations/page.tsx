@@ -72,13 +72,24 @@ function isRecommendationOutput(val: unknown): val is RecommendationOutput {
 
 function getCompanyInitials(company: string): string {
   const words = company
-    .replace(/\b(PT|CV|Tbk|Indonesia|Persero)\b\.?/gi, '')
+    .replace(/\b(PT|CV|Tbk|Indonesia|Persero|Inc|Ltd|LLC|Corp|GmbH)\b\.?/gi, ' ')
+    .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
     .trim()
     .split(/\s+/)
-    .filter(Boolean);
-  if (words.length === 0) return company.slice(0, 2).toUpperCase() || 'RK';
+    .filter((word) => word.length > 0);
+  if (words.length === 0) {
+    const fallback = company.replace(/[^\p{L}\p{N}]+/gu, '').slice(0, 2).toUpperCase();
+    return fallback || 'RK';
+  }
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
   return `${words[0][0]}${words[1][0]}`.toUpperCase();
+}
+
+function isUsableLogoUrl(url?: string | null): url is string {
+  if (!url) return false;
+  const trimmed = url.trim();
+  if (!/^https?:\/\//i.test(trimmed)) return false;
+  return !/static\.licdn\.com|ghost|spacer/i.test(trimmed);
 }
 
 function RecommendationCompanyLogo({
@@ -88,7 +99,8 @@ function RecommendationCompanyLogo({
   company: string;
   logoUrl?: string | null;
 }) {
-  const [imgFailed, setImgFailed] = useState(false);
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const canRenderLogo = isUsableLogoUrl(logoUrl) && failedUrl !== logoUrl;
 
   return (
     <div
@@ -97,13 +109,18 @@ function RecommendationCompanyLogo({
       title={company}
       style={{ overflow: 'hidden', flexShrink: 0 }}
     >
-      {logoUrl && !imgFailed ? (
+      {canRenderLogo ? (
         <img
           src={logoUrl}
           alt={company}
           loading="lazy"
           referrerPolicy="no-referrer"
-          onError={() => setImgFailed(true)}
+          onError={() => setFailedUrl(logoUrl ?? null)}
+          onLoad={(e) => {
+            if (e.currentTarget.naturalWidth === 0) {
+              setFailedUrl(logoUrl ?? null);
+            }
+          }}
           style={{
             width: '100%',
             height: '100%',

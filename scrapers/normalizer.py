@@ -29,6 +29,19 @@ ISO_TIMESTAMP_RE = re.compile(
 )
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 URL_RE = re.compile(r"^https?://", re.IGNORECASE)
+PLACEHOLDER_LOGO_RE = re.compile(
+    r"static\.licdn\.com|data:image|ghost|spacer|blank|default-company|entity-ghost",
+    re.IGNORECASE,
+)
+
+
+def is_placeholder_logo_url(url: Optional[str]) -> bool:
+    if not url or not isinstance(url, str):
+        return True
+    cleaned = url.strip()
+    if not URL_RE.match(cleaned):
+        return True
+    return bool(PLACEHOLDER_LOGO_RE.search(cleaned))
 
 # Sinonim skill kanonik agar konsisten dengan lib/recommendation/synonyms.ts
 SKILL_CANONICAL_DISPLAY: Dict[str, str] = {
@@ -609,7 +622,7 @@ def build_ingest_payload(
         raise ValueError("job.company wajib diisi (maks 200 karakter)")
 
     norm_company_logo_url = clean_whitespace(company_logo_url, max_len=2048)
-    if norm_company_logo_url and not URL_RE.match(norm_company_logo_url):
+    if norm_company_logo_url and is_placeholder_logo_url(norm_company_logo_url):
         norm_company_logo_url = None
 
     # Penting: fetched_at adalah waktu scraper mengambil data;

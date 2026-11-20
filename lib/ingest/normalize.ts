@@ -397,6 +397,15 @@ export function nowIso(): string {
   return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
 
+export function isPlaceholderLogoUrl(url: string | null | undefined): boolean {
+  if (!url) return true;
+  const trimmed = url.trim();
+  if (!URL_RE.test(trimmed)) return true;
+  return /static\.licdn\.com|data:image|ghost|spacer|blank|default-company|entity-ghost/i.test(
+    trimmed,
+  );
+}
+
 export function buildIngestPayload(input: {
   sourceName: string;
   sourceJobId: string;
@@ -453,7 +462,9 @@ export function buildIngestPayload(input: {
   );
   const normCompanyLogoUrl = cleanWhitespace(input.companyLogoUrl ?? null, 2048);
   const safeCompanyLogoUrl =
-    normCompanyLogoUrl && URL_RE.test(normCompanyLogoUrl) ? normCompanyLogoUrl : null;
+    normCompanyLogoUrl && !isPlaceholderLogoUrl(normCompanyLogoUrl)
+      ? normCompanyLogoUrl
+      : null;
 
   const source: IngestSource = {
     name: normSourceName,

@@ -24,14 +24,19 @@ import argparse
 import json
 import os
 import sys
+import time
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
 from .ingest_client import SupabaseIngestClient, execute_ingest_pipeline
+from .normalizer import is_placeholder_logo_url
 from .sources import (
     SourceFetchResult,
+    _http_get_text,
     fetch_active_live_sources,
     fetch_verified_partner_feed,
+    parse_linkedin_guest_detail_html,
 )
 
 
@@ -47,6 +52,134 @@ def load_env_file_if_exists(env_path: Path) -> None:
         val = val.strip().strip('"').strip("'")
         if key and key not in os.environ:
             os.environ[key] = val
+
+
+def run_logo_backfill(
+    client: SupabaseIngestClient,
+    *,
+    dry_run: bool,
+    limit: int = 30,
+) -> Dict[str, Any]:
+    """
+    Mengisi ulang company_logo_url pada lowongan di Supabase yang masih NULL,
+    lewat RPC public.ingest_job(jsonb) tanpa menimpa field existing (skills, deskripsi, dll).
+    """
+    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    known_logos = client.fetch_existing_company_logo_map()
+    missing_jobs = client.fetch_jobs_missing_logo(limit=limit)
+
+    updated: List[Dict[str, str]] = []
+    skipped: List[Dict[str, str]] = []
+    still_missing: List[Dict[str, str]] = []
+    errors: List[Dict[str, str]] = []
+    reused_count = 0
+    linkedin_fetched_count = 0
+    linkedin_blocked = False
+    linkedin_calls = 0
+
+    for job in missing_jobs:
+        if not isinstance(job, dict):
+            continue
+        job_id = str(job.get("id") or "")
+        title = str(job.get("title") or "").strip()
+        company = str(job.get("company") or "").strip()
+        sources = job.get("job_sources") or []
+        if not isinstance(sources, list):
+            sources = []
+
+        valid_sources = [
+            s
+            for s in sources
+            if isinstance(s, dict)
+            and s.get("source_name")
+            and s.get("source_job_id")
+            and s.get("source_url")
+        ]
+        if not valid_sources or not title or not company:
+            skipped.append({"id": job_id, "title": title, "company": company, "reason": "no_valid_source"})
+            continue
+
+        chosen_src = next(
+            (s for s in valid_sources if str(s.get("source_name")) == "linkedin_guest"),
+            valid_sources[0],
+        )
+        company_key = company.lower()
+        logo_url = known_logos.get(company_key)
+        fetched_via = "same_company" if logo_url else None
+
+        if not logo_url and str(chosen_src.get("source_name")) == "linkedin_guest" and not linkedin_blocked:
+            if linkedin_calls > 0:
+                time.sleep(1.5)
+            linkedin_calls += 1
+            detail_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{chosen_src['source_job_id']}"
+            try:
+                status_code, final_url, body_html = _http_get_text(detail_url)
+                if status_code in {429, 999} or "authwall" in final_url.lower():
+                    linkedin_blocked = True
+                elif status_code == 200:
+                    candidate = parse_linkedin_guest_detail_html(body_html).get("logo_url")
+                    if candidate and not is_placeholder_logo_url(candidate):
+                        logo_url = candidate
+                        fetched_via = "linkedin_detail"
+            except Exception as exc:
+                errors.append({"id": job_id, "company": company, "error": f"linkedin_fetch: {exc}"})
+
+        if not logo_url or is_placeholder_logo_url(logo_url):
+            still_missing.append({"id": job_id, "title": title, "company": company})
+            continue
+
+        known_logos[company_key] = logo_url
+        if fetched_via == "same_company":
+            reused_count += 1
+        elif fetched_via == "linkedin_detail":
+            linkedin_fetched_count += 1
+
+        patch_payload: Dict[str, Any] = {
+            "source": {
+                "name": str(chosen_src["source_name"]),
+                "job_id": str(chosen_src["source_job_id"]),
+                "url": str(chosen_src["source_url"]),
+                "fetched_at": now_iso,
+            },
+            "job": {
+                "title": title,
+                "company": company,
+                "company_logo_url": logo_url,
+            },
+        }
+        try:
+            if not dry_run:
+                client.call_ingest_job(patch_payload)
+            updated.append(
+                {
+                    "id": job_id,
+                    "title": title,
+                    "company": company,
+                    "via": fetched_via or "unknown",
+                    "company_logo_url": logo_url,
+                }
+            )
+        except Exception as exc:
+            errors.append({"id": job_id, "company": company, "error": str(exc)})
+
+    return {
+        "started_at": now_iso,
+        "dry_run": dry_run,
+        "summary": {
+            "checked": len(missing_jobs),
+            "updated": len(updated),
+            "reused_from_same_company": reused_count,
+            "fetched_from_linkedin": linkedin_fetched_count,
+            "still_missing": len(still_missing),
+            "skipped": len(skipped),
+            "linkedin_blocked": linkedin_blocked,
+            "errors_count": len(errors),
+        },
+        "updated": updated,
+        "still_missing": still_missing,
+        "skipped": skipped,
+        "errors": errors,
+    }
 
 
 def main(argv: List[str] | None = None) -> int:
@@ -95,12 +228,41 @@ def main(argv: List[str] | None = None) -> int:
         default="",
         help="Path file opsional untuk menyimpan laporan JSON hasil eksekusi",
     )
+    parser.add_argument(
+        "--backfill-logos",
+        action="store_true",
+        default=False,
+        help="Isi ulang company_logo_url pada lowongan di Supabase yang masih kosong lewat RPC ingest_job",
+    )
     args = parser.parse_args(argv)
 
     repo_root = Path(__file__).resolve().parent.parent
     load_env_file_if_exists(repo_root / ".env.local")
 
     is_dry_run = True if not args.live else args.dry_run
+    client = SupabaseIngestClient()
+
+    if args.backfill_logos:
+        if not client.is_configured():
+            print(
+                "ERROR: Mode --backfill-logos membutuhkan NEXT_PUBLIC_SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY "
+                "yang valid di environment atau .env.local.",
+                file=sys.stderr,
+            )
+            return 1
+        backfill_report = run_logo_backfill(
+            client,
+            dry_run=is_dry_run,
+            limit=max(1, min(args.limit if args.limit != 4 else 30, 100)),
+        )
+        formatted_json = json.dumps(backfill_report, indent=2, ensure_ascii=False)
+        if args.output:
+            out_path = Path(args.output)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_text(formatted_json, encoding="utf-8")
+        print(formatted_json)
+        return 0 if len(backfill_report.get("errors") or []) == 0 else 1
+
     use_online_sources = args.live or args.include_live_apis
 
     keywords = [k.strip() for k in args.linkedin_keywords.split(",") if k.strip()]
@@ -117,7 +279,6 @@ def main(argv: List[str] | None = None) -> int:
         # Mode --dry-run offline murni (untuk test tanpa internet)
         results = [fetch_verified_partner_feed()]
 
-    client = SupabaseIngestClient()
     if not is_dry_run and not client.is_configured():
         print(
             "ERROR: Mode --live membutuhkan NEXT_PUBLIC_SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY "

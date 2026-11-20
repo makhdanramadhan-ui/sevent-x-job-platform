@@ -1,4 +1,10 @@
-import { buildIngestPayload, nowIso, stripHtml, type IngestPayload } from './normalize';
+import {
+  buildIngestPayload,
+  isPlaceholderLogoUrl,
+  nowIso,
+  stripHtml,
+  type IngestPayload,
+} from './normalize';
 
 export type SourceFetchResult = {
   source_name: string;
@@ -82,6 +88,42 @@ function extractTagInner(html: string, pattern: RegExp): string | null {
   return decodeHtmlEntities(match[1] ?? '');
 }
 
+function extractHtmlAttr(tag: string, attrName: string): string | null {
+  const pattern = new RegExp(`\\b${attrName}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, 'i');
+  const match = pattern.exec(tag);
+  if (!match) return null;
+  return decodeHtmlEntities((match[1] ?? match[2] ?? '').trim());
+}
+
+export function extractLinkedinLogoUrl(rawHtml: string): string | null {
+  if (!rawHtml || !rawHtml.trim()) return null;
+  const imgTags = rawHtml.match(/<img\b[^>]*>/gi) ?? [];
+  let fallback: string | null = null;
+
+  for (const tag of imgTags) {
+    const classAttr = (extractHtmlAttr(tag, 'class') ?? '').toLowerCase();
+    const candidates = [
+      extractHtmlAttr(tag, 'data-delayed-url'),
+      extractHtmlAttr(tag, 'src'),
+    ];
+
+    for (const rawUrl of candidates) {
+      if (!rawUrl) continue;
+      const cleaned = rawUrl.trim();
+      if (isPlaceholderLogoUrl(cleaned)) continue;
+
+      const isPriority =
+        cleaned.toLowerCase().includes('media.licdn.com/dms/image/') ||
+        classAttr.includes('artdeco-entity-image') ||
+        classAttr.includes('company');
+      if (isPriority) return cleaned;
+      if (!fallback) fallback = cleaned;
+    }
+  }
+
+  return fallback;
+}
+
 export function parseLinkedinGuestSearchHtml(
   rawHtml: string,
 ): Array<Record<string, string | null>> {
@@ -113,6 +155,7 @@ export function parseLinkedinGuestSearchHtml(
       block,
     );
     const timeMatch = /<time[^>]*datetime="([^"]+)"/i.exec(block);
+    const logoUrl = extractLinkedinLogoUrl(block);
 
     const title = stripHtml(titleHtml);
     const company = stripHtml(companyHtml);
@@ -126,7 +169,15 @@ export function parseLinkedinGuestSearchHtml(
     const publishedAt = timeMatch ? (timeMatch[1] ?? '').trim() : null;
 
     seenIds.add(jobId);
-    cards.push({ job_id: jobId, title, company, location, url: cleanUrl, published_at: publishedAt });
+    cards.push({
+      job_id: jobId,
+      title,
+      company,
+      location,
+      url: cleanUrl,
+      published_at: publishedAt,
+      logo_url: logoUrl,
+    });
   }
 
   return cards;
@@ -136,14 +187,22 @@ export function parseLinkedinGuestDetailHtml(rawHtml: string): {
   description: string | null;
   level: string | null;
   employment_type: string | null;
+  logo_url: string | null;
 } {
-  const result: { description: string | null; level: string | null; employment_type: string | null } =
-    {
-      description: null,
-      level: null,
-      employment_type: null,
-    };
+  const result: {
+    description: string | null;
+    level: string | null;
+    employment_type: string | null;
+    logo_url: string | null;
+  } = {
+    description: null,
+    level: null,
+    employment_type: null,
+    logo_url: null,
+  };
   if (!rawHtml || !rawHtml.trim()) return result;
+
+  result.logo_url = extractLinkedinLogoUrl(rawHtml);
 
   const descMatch =
     /<div[^>]*class="[^"]*show-more-less-html__markup[^"]*"[^>]*>([\s\S]*?)<\/div>/i.exec(rawHtml);
@@ -268,10 +327,16 @@ export async function fetchLinkedinGuestJobs(options: {
       if (!jobId || seenJobIds.has(jobId)) continue;
       seenJobIds.add(jobId);
 
-      let detailInfo: { description: string | null; level: string | null; employment_type: string | null } = {
+      let detailInfo: {
+        description: string | null;
+        level: string | null;
+        employment_type: string | null;
+        logo_url: string | null;
+      } = {
         description: null,
         level: null,
         employment_type: null,
+        logo_url: null,
       };
       if (fetchDetail) {
         if (delayMs > 0) await delay(Math.min(1000, delayMs));
@@ -297,6 +362,7 @@ export async function fetchLinkedinGuestJobs(options: {
             sourceUrl: card.url ?? `https://www.linkedin.com/jobs/view/${jobId}`,
             title: card.title ?? '',
             company: card.company ?? '',
+            companyLogoUrl: card.logo_url || detailInfo.logo_url,
             fetchedAt,
             publishedAt: card.published_at,
             location: card.location,
@@ -358,6 +424,7 @@ export async function fetchHimalayasPublicApi(options: {
       else if (typeof seniority === 'string') levelRaw = seniority;
       const categories = Array.isArray(rec.categories) ? (rec.categories as unknown[]) : [];
       const catSkills = categories.map((c) => String(c).replace(/-/g, ' ').trim()).filter(Boolean);
+      const logoUrl = String(rec.companyLogo || '').trim() || null;
       try {
         payloads.push(
           buildIngestPayload({
@@ -366,6 +433,7 @@ export async function fetchHimalayasPublicApi(options: {
             sourceUrl,
             title,
             company,
+            companyLogoUrl: logoUrl,
             fetchedAt,
             publishedAt: rec.pubDate,
             location: locationStr,
@@ -421,6 +489,7 @@ export async function fetchJobicyPublicApi(options: {
       const skillsHint: string[] = [];
       if (Array.isArray(industries)) skillsHint.push(...industries.map((x) => String(x)).filter(Boolean));
       else if (typeof industries === 'string' && industries) skillsHint.push(industries);
+      const logoUrl = String(rec.companyLogo || '').trim() || null;
       try {
         payloads.push(
           buildIngestPayload({
@@ -429,6 +498,7 @@ export async function fetchJobicyPublicApi(options: {
             sourceUrl,
             title,
             company,
+            companyLogoUrl: logoUrl,
             fetchedAt,
             publishedAt: rec.pubDate,
             location: String(rec.jobGeo || 'Remote'),
@@ -478,6 +548,7 @@ export async function fetchRemotivePublicApi(options: {
       if (!jobId || !title || !company || !sourceUrl) continue;
       const tags = Array.isArray(rec.tags) ? (rec.tags as unknown[]).map((t) => String(t)) : [];
       const candidateLoc = String(rec.candidate_required_location || 'Remote').trim();
+      const logoUrl = String(rec.company_logo_url || rec.company_logo || '').trim() || null;
       try {
         payloads.push(
           buildIngestPayload({
@@ -486,6 +557,7 @@ export async function fetchRemotivePublicApi(options: {
             sourceUrl,
             title,
             company,
+            companyLogoUrl: logoUrl,
             fetchedAt,
             publishedAt: rec.publication_date,
             location: candidateLoc,
