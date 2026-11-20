@@ -215,7 +215,6 @@ export function SiteHeader() {
                 onClick={() => setMenuOpen((prev) => !prev)}
               >
                 <span aria-hidden="true">{menuOpen ? '✕' : '☰'}</span>
-                <span>{menuOpen ? 'Tutup' : 'Menu'}</span>
               </button>
             </div>
           </div>
