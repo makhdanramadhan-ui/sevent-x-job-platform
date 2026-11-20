@@ -390,7 +390,8 @@ function ProfileAvatarSection({ session }: { session: SessionInfo }) {
   );
 }
 
-function ProfileInner({ session }: { session: SessionInfo }) {
+function ProfileInner({ session: initialSession }: { session: SessionInfo }) {
+  const [session, setSession] = useState(initialSession);
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
   const [formVersion, setFormVersion] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -415,6 +416,16 @@ function ProfileInner({ session }: { session: SessionInfo }) {
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
+
+  useEffect(() => {
+    const handler = () => {
+      apiFetch<SessionInfo>('/api/auth/me').then((res) => {
+        if (res.ok) setSession(res.data);
+      });
+    };
+    window.addEventListener('seventx:auth-changed', handler);
+    return () => window.removeEventListener('seventx:auth-changed', handler);
+  }, []);
 
   async function handleDeleteProfileData() {
     setClearing(true);
@@ -448,8 +459,8 @@ function ProfileInner({ session }: { session: SessionInfo }) {
         subtitle={
           <>
             Kelola riwayat pendidikan, pengalaman kerja, keahlian, portofolio, serta preferensi
-            pencarian kerja untuk akun{' '}
-            <strong className="font-mono">{session.user.email ?? session.user.id}</strong>.
+            pencarian kerja untuk{' '}
+            <strong>{session.user.name ?? session.user.email ?? session.user.id}</strong>.
           </>
         }
         tone="sand"

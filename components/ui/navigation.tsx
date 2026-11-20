@@ -117,7 +117,9 @@ function AvatarMenu({ user, loggingOut, onNavigate, onLogout }: AvatarMenuProps)
       {open ? (
         <div className="avatar-dropdown" role="menu" aria-label="Menu akun">
           <div className="avatar-dropdown-header">
-            {user.name ? <span className="avatar-dropdown-name">{user.name}</span> : null}
+            {user.name && user.name !== user.email ? (
+              <span className="avatar-dropdown-name">{user.name}</span>
+            ) : null}
             <span className="avatar-dropdown-email">{user.email ?? 'Akun Aktif'}</span>
           </div>
           <Link href="/profile" role="menuitem" className="avatar-dropdown-item" onClick={handleNavigate}>

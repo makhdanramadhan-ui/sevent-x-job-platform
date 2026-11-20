@@ -12,14 +12,17 @@ export async function GET(req: NextRequest) {
     const auth = await requireAuth(req);
     const { data, error } = await auth.supabase
       .from('profiles')
-      .select('user_id, updated_at')
+      .select('user_id, full_name, updated_at')
       .eq('user_id', auth.user.id)
       .maybeSingle();
     if (error) throwDb(error);
 
     const meta = (auth.user.user_metadata ?? {}) as Record<string, unknown>;
-    const nameRaw = meta.full_name ?? meta.name;
-    const name = typeof nameRaw === 'string' && nameRaw.trim() ? nameRaw.trim() : null;
+    const profileRaw = data?.full_name;
+    const metaRaw = meta.full_name ?? meta.name;
+    const profileName = typeof profileRaw === 'string' ? profileRaw.trim() : '';
+    const metaName = typeof metaRaw === 'string' ? metaRaw.trim() : '';
+    const name = profileName || metaName || auth.user.email || null;
     const { avatar_url, avatar_source } = resolveAvatar(readSupabaseAdminEnv(), auth.user);
 
     return ok({
