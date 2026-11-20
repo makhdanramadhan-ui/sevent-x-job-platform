@@ -574,7 +574,7 @@ function JobsFeedInner() {
               Cek Kecocokan Profil
             </Link>
             <Link href="/bookmarks" className="btn btn-outline btn-sm">
-              Lowongan Tersimpan ({bookmarks.length})
+              Lowongan Tersimpan
             </Link>
           </>
         }
