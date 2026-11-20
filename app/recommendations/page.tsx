@@ -505,7 +505,7 @@ function RecommendationsInner() {
                                   {' '}
                                   ·{' '}
                                   <span>{WORK_MODE_LABELS[job.work_mode] ?? job.work_mode}</span>{' '}
-                                  ·{' '}
+                                  {' '}
                                   {item.source ? (
                                     <>
                                       {' · '}
