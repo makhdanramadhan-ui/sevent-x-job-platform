@@ -23,6 +23,84 @@ import {
 import type { BookmarkRecord, JobDetail } from '@/lib/contracts';
 import { displaySourceName } from '@/lib/job-source';
 
+function getCompanyInitials(company: string): string {
+  const words = company
+    .replace(/\b(PT|CV|Tbk|Indonesia|Persero|Inc|Ltd|LLC|Corp|GmbH)\b\.?/gi, ' ')
+    .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0);
+  if (words.length === 0) {
+    const fallback = company.replace(/[^\p{L}\p{N}]+/gu, '').slice(0, 2).toUpperCase();
+    return fallback || 'RK';
+  }
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return `${words[0][0]}${words[1][0]}`.toUpperCase();
+}
+
+function isUsableLogoUrl(url?: string | null): url is string {
+  if (!url) return false;
+  const trimmed = url.trim();
+  if (!/^https?:\/\//i.test(trimmed)) return false;
+  return !/static\.licdn\.com|ghost|spacer/i.test(trimmed);
+}
+
+function DetailCompanyLogo({
+  company,
+  logoUrl,
+}: {
+  company: string;
+  logoUrl?: string | null;
+}) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const canRenderLogo = isUsableLogoUrl(logoUrl) && failedUrl !== logoUrl;
+
+  return (
+    <div
+      className="job-feed-card__logo"
+      aria-hidden="true"
+      title={company}
+      style={{
+        width: 'clamp(52px, 8vw, 68px)',
+        height: 'clamp(52px, 8vw, 68px)',
+        borderRadius: 14,
+        fontSize: '1.15rem',
+        overflow: 'hidden',
+        flexShrink: 0,
+      }}
+    >
+      {canRenderLogo ? (
+        <img
+          src={logoUrl}
+          alt={company}
+          referrerPolicy="no-referrer"
+          onError={() => setFailedUrl(logoUrl ?? null)}
+          onLoad={(e) => {
+            const { naturalWidth, naturalHeight } = e.currentTarget;
+            if (
+              naturalWidth === 0 ||
+              (logoUrl?.includes('google.com/s2/favicons') &&
+                naturalWidth <= 16 &&
+                naturalHeight <= 16)
+            ) {
+              setFailedUrl(logoUrl ?? null);
+            }
+          }}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            padding: 6,
+            backgroundColor: '#ffffff',
+          }}
+        />
+      ) : (
+        getCompanyInitials(company)
+      )}
+    </div>
+  );
+}
+
 function JobDetailInner() {
   const params = useParams<{ id: string }>();
   const jobId = typeof params?.id === 'string' ? params.id : '';
@@ -123,8 +201,6 @@ function JobDetailInner() {
     );
   }
 
-  const primarySource = job.job_sources?.[0] ?? null;
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Top Breadcrumb & Quick Actions */}
@@ -150,16 +226,6 @@ function JobDetailInner() {
           >
             {isBookmarked ? '★ Tersimpan di Bookmark' : '☆ Simpan Lowongan'}
           </Button>
-          {primarySource?.source_url ? (
-            <a
-              href={primarySource.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-primary btn-sm"
-            >
-              Lamar di Sumber Asli ({displaySourceName(primarySource.source_name)})
-            </a>
-          ) : null}
         </div>
       </div>
 
@@ -192,13 +258,26 @@ function JobDetailInner() {
           </span>
         </div>
 
-        <h1 className="page-title" style={{ marginBottom: 6 }}>
-          {job.title}
-        </h1>
-        <p style={{ margin: '0 0 18px', fontSize: '1.08rem', fontWeight: 600, color: 'var(--ink-secondary)' }}>
-          {job.company} ·{' '}
-          <span style={{ fontWeight: 400 }}>{job.location || 'Lokasi tidak dicantumkan'}</span>
-        </p>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: 16,
+            marginBottom: 18,
+          }}
+        >
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h1 className="page-title" style={{ marginBottom: 6 }}>
+              {job.title}
+            </h1>
+            <p style={{ margin: 0, fontSize: '1.08rem', fontWeight: 600, color: 'var(--ink-secondary)' }}>
+              {job.company} ·{' '}
+              <span style={{ fontWeight: 400 }}>{job.location || 'Lokasi tidak dicantumkan'}</span>
+            </p>
+          </div>
+          <DetailCompanyLogo company={job.company} logoUrl={job.company_logo_url} />
+        </div>
 
         {/* Key Metadata Grid */}
         <div
