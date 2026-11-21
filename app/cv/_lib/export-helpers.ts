@@ -41,8 +41,7 @@ export function formatCvPeriod(
       const monthNames = language === 'id' ? monthNamesId : monthNamesEn;
       const monthIdx = parseInt(parts[1], 10) - 1;
       const monthName = monthNames[monthIdx] || parts[1];
-      const shortYear = parts[0].slice(-2); // e.g. 25
-      return `${monthName} ${shortYear}`;
+      return `${monthName} ${parts[0]}`;
     }
     return iso;
   };
@@ -55,7 +54,7 @@ export function formatCvPeriod(
     : formatMonthOrYear(endDate);
 
   if (startFormatted && endFormatted) {
-    return `${startFormatted} – ${endFormatted}`;
+    return `${startFormatted} - ${endFormatted}`;
   }
   return startFormatted || endFormatted;
 }

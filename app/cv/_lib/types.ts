@@ -15,10 +15,11 @@ export type CvProfileInfo = {
   email: string;
   phone: string;
   location: string;
+  photo_url?: string | null;
   links: ProfileLink[];
 };
 
-export type CvSectionId =
+export type CvBuiltinSectionId =
   | 'profile'
   | 'summary'
   | 'experience'
@@ -29,6 +30,23 @@ export type CvSectionId =
   | 'certifications'
   | 'achievements'
   | 'custom';
+
+export type CvCustomSectionId = `custom:${string}`;
+
+export type CvSectionId = CvBuiltinSectionId | CvCustomSectionId;
+
+export const BUILTIN_SECTION_IDS: readonly CvBuiltinSectionId[] = [
+  'profile',
+  'summary',
+  'experience',
+  'education',
+  'organization',
+  'projects',
+  'skills',
+  'certifications',
+  'achievements',
+  'custom',
+] as const;
 
 export type CvCustomSection = {
   id: string;
@@ -53,39 +71,66 @@ export type CvContent = {
   skills: string[];
   projects: ProfileProject[];
   custom_sections?: CvCustomSection[];
+  section_titles?: Partial<Record<string, string>>;
   section_order: CvSectionId[];
   hidden_sections: CvSectionId[];
   raw_unmapped?: CvRawUnmappedItem[];
 };
 
-export const SECTION_LABELS: Record<CvLanguage, Record<CvSectionId, string>> = {
+export const SECTION_LABELS: Record<CvLanguage, Record<CvBuiltinSectionId, string>> = {
   id: {
-    profile: 'IDENTITAS & KONTAK',
-    summary: 'PROFIL',
-    experience: 'PENGALAMAN KERJA',
-    education: 'PENDIDIKAN',
-    organization: 'PENGALAMAN ORGANISASI',
-    projects: 'PROYEK & PORTOFOLIO',
-    skills: 'KEAHLIAN & TOOLS',
-    certifications: 'KURSUS & SERTIFIKASI',
-    achievements: 'PENCAPAIAN & PENGHARGAAN',
-    custom: 'BAGIAN TAMBAHAN',
+    profile: 'Identitas & Kontak',
+    summary: 'Ringkasan Profil',
+    experience: 'Pengalaman Kerja',
+    education: 'Pendidikan',
+    organization: 'Pengalaman Organisasi',
+    projects: 'Proyek & Portofolio',
+    skills: 'Keahlian & Tools',
+    certifications: 'Kursus & Sertifikasi',
+    achievements: 'Penghargaan & Sertifikasi',
+    custom: 'Bagian Tambahan',
   },
   en: {
-    profile: 'IDENTITY & CONTACT',
-    summary: 'PROFILE',
-    experience: 'WORK EXPERIENCE',
-    education: 'EDUCATION',
-    organization: 'ORGANIZATION EXPERIENCE',
-    projects: 'PROJECTS & PORTFOLIO',
-    skills: 'SKILLS & TOOLS',
-    certifications: 'COURSE & CERTIFICATION',
-    achievements: 'AWARDS & ACHIEVEMENTS',
-    custom: 'ADDITIONAL SECTION',
+    profile: 'Identity & Contact',
+    summary: 'Profile Summary',
+    experience: 'Work Experience',
+    education: 'Education',
+    organization: 'Organization Experience',
+    projects: 'Projects',
+    skills: 'Skills & Tools',
+    certifications: 'Courses & Certifications',
+    achievements: 'Awards & Achievements',
+    custom: 'Additional Section',
   },
 };
 
-export const DEFAULT_SECTION_ORDER: CvSectionId[] = [
+export const SECTION_DISPLAY_LABELS: Record<CvBuiltinSectionId, string> = {
+  profile: 'Identitas & Kontak',
+  summary: 'Ringkasan Profil',
+  experience: 'Pengalaman Kerja',
+  education: 'Pendidikan',
+  organization: 'Pengalaman Organisasi',
+  projects: 'Proyek & Portofolio',
+  skills: 'Keahlian & Tools',
+  certifications: 'Kursus & Sertifikasi',
+  achievements: 'Penghargaan & Sertifikasi',
+  custom: 'Bagian Tambahan',
+};
+
+export const SECTION_SHORT_LABELS: Record<CvBuiltinSectionId, string> = {
+  profile: 'Identitas',
+  summary: 'Ringkasan',
+  experience: 'Pengalaman',
+  education: 'Pendidikan',
+  organization: 'Organisasi',
+  projects: 'Proyek',
+  skills: 'Keahlian',
+  certifications: 'Sertifikasi',
+  achievements: 'Sertifikasi',
+  custom: 'Lainnya',
+};
+
+export const DEFAULT_SECTION_ORDER: CvBuiltinSectionId[] = [
   'profile',
   'summary',
   'experience',
@@ -95,3 +140,49 @@ export const DEFAULT_SECTION_ORDER: CvSectionId[] = [
   'skills',
   'certifications',
 ];
+
+export function isBuiltinSectionId(secId: string): secId is CvBuiltinSectionId {
+  return (BUILTIN_SECTION_IDS as readonly string[]).includes(secId);
+}
+
+export function isCustomSectionId(secId: string): secId is CvCustomSectionId {
+  return secId.startsWith('custom:') && secId.length > 'custom:'.length;
+}
+
+export function getCustomSectionKey(secId: CvCustomSectionId): string {
+  return secId.slice('custom:'.length);
+}
+
+export function findCustomSection(content: CvContent, secId: CvSectionId): CvCustomSection | undefined {
+  if (!isCustomSectionId(secId)) return undefined;
+  const key = getCustomSectionKey(secId);
+  return content.custom_sections?.find((item) => item.id === key);
+}
+
+export function getSectionDisplayTitle(content: CvContent, secId: CvSectionId): string {
+  if (isCustomSectionId(secId)) {
+    return findCustomSection(content, secId)?.title.trim() || 'Bagian Tambahan';
+  }
+  const customTitle = content.section_titles?.[secId]?.trim();
+  if (customTitle) return customTitle;
+  return SECTION_DISPLAY_LABELS[secId] ?? String(secId);
+}
+
+export function getSectionTabTitle(content: CvContent, secId: CvSectionId): string {
+  if (isCustomSectionId(secId)) {
+    return findCustomSection(content, secId)?.title.trim() || 'Tambahan';
+  }
+  const customTitle = content.section_titles?.[secId]?.trim();
+  if (customTitle) return customTitle;
+  return SECTION_SHORT_LABELS[secId] ?? String(secId);
+}
+
+export function getSectionAtsHeading(content: CvContent, secId: CvSectionId): string {
+  if (isCustomSectionId(secId)) {
+    return findCustomSection(content, secId)?.title.trim() || 'Bagian Tambahan';
+  }
+  const customTitle = content.section_titles?.[secId]?.trim();
+  if (customTitle) return customTitle;
+  const langLabels = SECTION_LABELS[content.language || 'en'] || SECTION_LABELS.en;
+  return langLabels[secId] ?? String(secId);
+}

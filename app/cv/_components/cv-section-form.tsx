@@ -1,9 +1,17 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { type ReactNode, useRef, useState } from 'react';
 import { Button, FormField, TextArea, TextInput } from '@/components/ui/forms';
 import { SkillComboboxInput } from '@/components/ui/skill-combobox';
-import type { CvContent, CvSectionId } from '../_lib/types';
+import { processPasFotoFile } from '../_lib/photo-helpers';
+import {
+  type CvContent,
+  type CvSectionId,
+  findCustomSection,
+  getSectionDisplayTitle,
+  getSectionTabTitle,
+  isCustomSectionId,
+} from '../_lib/types';
 
 function SectionTabIcon({ secId }: { secId: CvSectionId }): ReactNode {
   const props = {
@@ -94,19 +102,6 @@ function SectionTabIcon({ secId }: { secId: CvSectionId }): ReactNode {
   }
 }
 
-const SECTION_SHORT_LABELS: Record<CvSectionId, string> = {
-  profile: 'Identitas',
-  summary: 'Ringkasan',
-  experience: 'Pengalaman',
-  education: 'Pendidikan',
-  organization: 'Organisasi',
-  projects: 'Proyek',
-  skills: 'Keahlian',
-  certifications: 'Sertifikasi',
-  achievements: 'Sertifikasi',
-  custom: 'Lainnya',
-};
-
 export function CvSectionForm({
   content,
   onChange,
@@ -129,9 +124,43 @@ export function CvSectionForm({
     projects,
   } = content;
 
-  const activeIndex = Math.max(0, content.section_order.indexOf(activeSection));
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    setPhotoError(null);
+    setPhotoUploading(true);
+    const result = await processPasFotoFile(file);
+    setPhotoUploading(false);
+
+    if (!result.ok) {
+      setPhotoError(result.error);
+      return;
+    }
+
+    onChange({
+      ...content,
+      profile: { ...profile, photo_url: result.dataUrl },
+    });
+  }
+
+  const effectiveActiveSection: CvSectionId = content.section_order.includes(activeSection)
+    ? activeSection
+    : (content.section_order[0] ?? 'profile');
+  const activeIndex = Math.max(0, content.section_order.indexOf(effectiveActiveSection));
+  const activeCustomSection = isCustomSectionId(effectiveActiveSection)
+    ? findCustomSection(content, effectiveActiveSection)
+    : undefined;
 
   function getSectionStatus(secId: CvSectionId): { count?: number; filled?: boolean } {
+    if (isCustomSectionId(secId)) {
+      return { filled: Boolean(findCustomSection(content, secId)?.content.trim()) };
+    }
     switch (secId) {
       case 'profile':
         return { filled: Boolean(profile.full_name.trim()) };
@@ -174,8 +203,8 @@ export function CvSectionForm({
           aria-label="Pilih bagian CV untuk diedit"
         >
           {content.section_order.map((secId) => {
-            const isActive = activeSection === secId;
-            const label = SECTION_SHORT_LABELS[secId] || secId;
+            const isActive = effectiveActiveSection === secId;
+            const label = getSectionTabTitle(content, secId);
             const status = getSectionStatus(secId);
 
             return (
@@ -184,6 +213,7 @@ export function CvSectionForm({
                 type="button"
                 role="tab"
                 aria-selected={isActive}
+                title={label}
                 className={`cv-section-tab${isActive ? ' cv-section-tab--active' : ''}`}
                 onClick={() => onSelectSection(secId)}
               >
@@ -205,11 +235,84 @@ export function CvSectionForm({
       </div>
 
       {/* 1. PROFIL & IDENTITAS */}
-      {activeSection === 'profile' ? (
+      {effectiveActiveSection === 'profile' ? (
         <div className="ledger-card">
           <h3 className="cv-section-heading" style={{ marginBottom: 14 }}>
-            Identitas &amp; Kontak (Header CV)
+            {getSectionDisplayTitle(content, 'profile')} (Header CV)
           </h3>
+
+          {/* Unggah Pas Foto 3:4 Opsional */}
+          <div className="cv-photo-upload-card">
+            <div className="cv-photo-thumb">
+              {profile.photo_url ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={profile.photo_url} alt="Pratinjau pas foto CV" />
+              ) : (
+                <svg
+                  width="28"
+                  height="28"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              )}
+            </div>
+
+            <div className="cv-photo-body">
+              <strong className="cv-photo-title">Pas Foto CV (Opsional)</strong>
+              <p className="cv-photo-hint">
+                Otomatis dipotong ke rasio 3:4 &middot; JPG, PNG, atau WEBP (maks. 5 MB). Kosongkan
+                jika ingin CV tanpa foto.
+              </p>
+
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handlePhotoChange}
+                style={{ display: 'none' }}
+              />
+
+              <div className="cv-photo-actions">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  loading={photoUploading}
+                  onClick={() => photoInputRef.current?.click()}
+                >
+                  {profile.photo_url ? 'Ganti Pas Foto' : 'Unggah Pas Foto'}
+                </Button>
+                {profile.photo_url ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={photoUploading}
+                    onClick={() => {
+                      setPhotoError(null);
+                      onChange({
+                        ...content,
+                        profile: { ...profile, photo_url: null },
+                      });
+                    }}
+                  >
+                    Hapus Foto
+                  </Button>
+                ) : null}
+              </div>
+
+              {photoError ? <p className="cv-photo-error">{photoError}</p> : null}
+            </div>
+          </div>
+
           <div className="form-grid-2">
             <FormField id="cv-full-name" label="Nama Lengkap" required>
               <TextInput
@@ -269,14 +372,97 @@ export function CvSectionForm({
               />
             </FormField>
           </div>
+
+          <div className="cv-links-section">
+            <div className="cv-links-head">
+              <span className="cv-photo-title">Tautan Profil (LinkedIn / Portofolio)</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={profile.links.length >= 10}
+                onClick={() =>
+                  onChange({
+                    ...content,
+                    profile: {
+                      ...profile,
+                      links: [...profile.links, { label: '', url: '' }],
+                    },
+                  })
+                }
+              >
+                + Tambah Tautan
+              </Button>
+            </div>
+
+            {profile.links.length === 0 ? (
+              <p className="form-hint" style={{ margin: 0 }}>
+                Belum ada tautan ditambahkan (opsional).
+              </p>
+            ) : (
+              <div className="form-stack" style={{ gap: 10 }}>
+                {profile.links.map((link, idx) => (
+                  <div key={idx} className="cv-link-row">
+                    <FormField id={`cv-link-label-${idx}`} label="Label Tautan">
+                      <TextInput
+                        id={`cv-link-label-${idx}`}
+                        maxLength={60}
+                        placeholder="Contoh: LinkedIn atau URL pendek"
+                        value={link.label}
+                        onChange={(e) => {
+                          const nextLinks = [...profile.links];
+                          nextLinks[idx] = { ...link, label: e.target.value };
+                          onChange({
+                            ...content,
+                            profile: { ...profile, links: nextLinks },
+                          });
+                        }}
+                      />
+                    </FormField>
+
+                    <FormField id={`cv-link-url-${idx}`} label="Alamat URL">
+                      <TextInput
+                        id={`cv-link-url-${idx}`}
+                        placeholder="https://linkedin.com/in/username"
+                        value={link.url}
+                        onChange={(e) => {
+                          const nextLinks = [...profile.links];
+                          nextLinks[idx] = { ...link, url: e.target.value };
+                          onChange({
+                            ...content,
+                            profile: { ...profile, links: nextLinks },
+                          });
+                        }}
+                      />
+                    </FormField>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const nextLinks = profile.links.filter((_, i) => i !== idx);
+                        onChange({
+                          ...content,
+                          profile: { ...profile, links: nextLinks },
+                        });
+                      }}
+                    >
+                      Hapus
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       ) : null}
 
       {/* 2. SUMMARY / PROFILE */}
-      {activeSection === 'summary' ? (
+      {effectiveActiveSection === 'summary' ? (
         <div className="ledger-card">
           <div className="cv-section-header" style={{ marginBottom: 10 }}>
-            <h3 className="cv-section-heading">Ringkasan Profil (PROFILE)</h3>
+            <h3 className="cv-section-heading">{getSectionDisplayTitle(content, 'summary')}</h3>
           </div>
           <p style={{ margin: '0 0 12px', fontSize: '0.86rem', color: 'var(--ink-secondary)' }}>
             Tuliskan 2–4 kalimat mengenai latar belakang pendidikan, kontribusi organisasi, keahlian
@@ -296,11 +482,11 @@ export function CvSectionForm({
       ) : null}
 
       {/* 3. ORGANIZATION EXPERIENCE */}
-      {activeSection === 'organization' ? (
+      {effectiveActiveSection === 'organization' ? (
         <div className="ledger-card">
           <div className="cv-section-header">
             <h3 className="cv-section-heading">
-              Pengalaman Organisasi ({organizations.length})
+              {getSectionDisplayTitle(content, 'organization')} ({organizations.length})
             </h3>
             <Button
               variant="outline"
@@ -427,10 +613,12 @@ export function CvSectionForm({
       ) : null}
 
       {/* 4. WORK EXPERIENCE */}
-      {activeSection === 'experience' ? (
+      {effectiveActiveSection === 'experience' ? (
         <div className="ledger-card">
           <div className="cv-section-header">
-            <h3 className="cv-section-heading">Pengalaman Kerja ({experiences.length})</h3>
+            <h3 className="cv-section-heading">
+              {getSectionDisplayTitle(content, 'experience')} ({experiences.length})
+            </h3>
             <Button
               variant="outline"
               size="sm"
@@ -503,6 +691,21 @@ export function CvSectionForm({
                       />
                     </FormField>
 
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <FormField id={`exp-loc-${idx}`} label="Lokasi">
+                        <TextInput
+                          id={`exp-loc-${idx}`}
+                          placeholder="Contoh: Kota Bogor, Indonesia"
+                          value={exp.location ?? ''}
+                          onChange={(e) => {
+                            const next = [...experiences];
+                            next[idx] = { ...exp, location: e.target.value || null };
+                            onChange({ ...content, experiences: next });
+                          }}
+                        />
+                      </FormField>
+                    </div>
+
                     <FormField id={`exp-start-${idx}`} label="Mulai (YYYY-MM)">
                       <TextInput
                         id={`exp-start-${idx}`}
@@ -572,11 +775,11 @@ export function CvSectionForm({
       ) : null}
 
       {/* 5. COURSE & CERTIFICATION / AWARDS */}
-      {activeSection === 'certifications' || activeSection === 'achievements' ? (
+      {effectiveActiveSection === 'certifications' || effectiveActiveSection === 'achievements' ? (
         <div className="ledger-card">
           <div className="cv-section-header">
             <h3 className="cv-section-heading">
-              Kursus, Sertifikasi &amp; Penghargaan ({achievements.length})
+              {getSectionDisplayTitle(content, effectiveActiveSection)} ({achievements.length})
             </h3>
             <Button
               variant="outline"
@@ -671,10 +874,12 @@ export function CvSectionForm({
       ) : null}
 
       {/* 6. EDUCATION */}
-      {activeSection === 'education' ? (
+      {effectiveActiveSection === 'education' ? (
         <div className="ledger-card">
           <div className="cv-section-header">
-            <h3 className="cv-section-heading">Riwayat Pendidikan ({education.length})</h3>
+            <h3 className="cv-section-heading">
+              {getSectionDisplayTitle(content, 'education')} ({education.length})
+            </h3>
             <Button
               variant="outline"
               size="sm"
@@ -733,24 +938,39 @@ export function CvSectionForm({
                       />
                     </FormField>
 
-                    <FormField id={`edu-field-${idx}`} label="Program Studi / Deskripsi Jurusan">
+                    <FormField id={`edu-degree-${idx}`} label="Jenjang / Gelar">
                       <TextInput
-                        id={`edu-field-${idx}`}
-                        placeholder="Contoh: S1 Teknik Informatika"
-                        value={edu.field ?? ''}
+                        id={`edu-degree-${idx}`}
+                        placeholder="Contoh: S1 / High School Diploma"
+                        value={edu.degree ?? ''}
                         onChange={(e) => {
                           const next = [...education];
-                          next[idx] = { ...edu, field: e.target.value };
+                          next[idx] = { ...edu, degree: e.target.value || null };
                           onChange({ ...content, education: next });
                         }}
                       />
                     </FormField>
 
-                    <FormField id={`edu-start-${idx}`} label="Mulai (YYYY)">
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <FormField id={`edu-field-${idx}`} label="Program Studi / Deskripsi Jurusan">
+                        <TextInput
+                          id={`edu-field-${idx}`}
+                          placeholder="Contoh: Teknik Informatika – IPK 3.75/4.00"
+                          value={edu.field ?? ''}
+                          onChange={(e) => {
+                            const next = [...education];
+                            next[idx] = { ...edu, field: e.target.value || null };
+                            onChange({ ...content, education: next });
+                          }}
+                        />
+                      </FormField>
+                    </div>
+
+                    <FormField id={`edu-start-${idx}`} label="Mulai (YYYY-MM atau YYYY)">
                       <TextInput
                         id={`edu-start-${idx}`}
-                        placeholder="Contoh: 2024"
-                        value={edu.start_date?.slice(0, 4) ?? ''}
+                        placeholder="Contoh: 2021-01 atau 2021"
+                        value={edu.start_date ?? ''}
                         onChange={(e) => {
                           const next = [...education];
                           next[idx] = { ...edu, start_date: e.target.value || null };
@@ -759,14 +979,33 @@ export function CvSectionForm({
                       />
                     </FormField>
 
-                    <FormField id={`edu-end-${idx}`} label="Selesai (YYYY)">
+                    <FormField id={`edu-end-${idx}`} label="Selesai (YYYY-MM atau YYYY)">
                       <TextInput
                         id={`edu-end-${idx}`}
-                        placeholder="Kosongkan jika masih studi (Present)"
-                        value={edu.end_date?.slice(0, 4) ?? ''}
+                        placeholder="Contoh: 2024-01 atau kosongkan"
+                        value={edu.end_date ?? ''}
                         onChange={(e) => {
                           const next = [...education];
                           next[idx] = { ...edu, end_date: e.target.value || null };
+                          onChange({ ...content, education: next });
+                        }}
+                      />
+                    </FormField>
+                  </div>
+
+                  <div style={{ marginTop: 10 }}>
+                    <FormField
+                      id={`edu-desc-${idx}`}
+                      label="Pencapaian / Aktivitas (Opsional, awali dengan •)"
+                    >
+                      <TextArea
+                        id={`edu-desc-${idx}`}
+                        rows={3}
+                        placeholder="• Pencapaian: Meraih predikat lulusan terbaik&#10;• Aktivitas: Asisten Laboratorium Komputer"
+                        value={edu.description ?? ''}
+                        onChange={(e) => {
+                          const next = [...education];
+                          next[idx] = { ...edu, description: e.target.value || null };
                           onChange({ ...content, education: next });
                         }}
                       />
@@ -780,10 +1019,10 @@ export function CvSectionForm({
       ) : null}
 
       {/* 7. SKILLS & TOOLS */}
-      {activeSection === 'skills' ? (
+      {effectiveActiveSection === 'skills' ? (
         <div className="ledger-card">
           <h3 className="cv-section-heading" style={{ marginBottom: 6 }}>
-            Keahlian &amp; Tools (SKILLS &amp; TOOLS)
+            {getSectionDisplayTitle(content, 'skills')}
           </h3>
           <p style={{ margin: '0 0 14px 0', fontSize: '0.86rem', color: 'var(--ink-secondary)' }}>
             Daftar ini akan otomatis diformat menjadi 3 kolom rapi dengan bullet points pada hasil
@@ -800,12 +1039,12 @@ export function CvSectionForm({
       ) : null}
 
       {/* 8. PROJECTS & PORTFOLIO */}
-      {activeSection === 'projects' ? (
+      {effectiveActiveSection === 'projects' ? (
         <div className="ledger-card">
           <div className="cv-section-header">
             <div>
               <h3 className="cv-section-heading">
-                Proyek &amp; Portofolio (PROJECTS &amp; PORTFOLIO)
+                {getSectionDisplayTitle(content, 'projects')} ({projects.length})
               </h3>
               <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: 'var(--ink-secondary)' }}>
                 Tampilkan proyek unggulan, kontribusi open source, atau produk yang pernah Anda
@@ -933,6 +1172,57 @@ export function CvSectionForm({
               ))}
             </div>
           )}
+        </div>
+      ) : null}
+
+      {/* 9. BAGIAN TAMBAHAN (CUSTOM SECTION) */}
+      {activeCustomSection ? (
+        <div className="ledger-card">
+          <div className="cv-section-header" style={{ marginBottom: 14 }}>
+            <h3 className="cv-section-heading">
+              {activeCustomSection.title.trim() || 'Bagian Tambahan'}
+            </h3>
+          </div>
+
+          <div className="form-stack">
+            <FormField id={`custom-title-${activeCustomSection.id}`} label="Nama Bagian" required>
+              <TextInput
+                id={`custom-title-${activeCustomSection.id}`}
+                maxLength={80}
+                placeholder="Contoh: Bahasa, Publikasi, atau Pengalaman Relawan"
+                value={activeCustomSection.title}
+                onChange={(e) => {
+                  const nextCustom = (content.custom_sections ?? []).map((item) =>
+                    item.id === activeCustomSection.id
+                      ? { ...item, title: e.target.value }
+                      : item,
+                  );
+                  onChange({ ...content, custom_sections: nextCustom });
+                }}
+              />
+            </FormField>
+
+            <FormField
+              id={`custom-content-${activeCustomSection.id}`}
+              label="Isi Bagian (Gunakan baris baru atau awali dengan • untuk daftar poin)"
+              hint="Setiap baris yang diawali simbol •, -, atau * otomatis diformat sebagai daftar poin pada CV ATS."
+            >
+              <TextArea
+                id={`custom-content-${activeCustomSection.id}`}
+                rows={6}
+                placeholder="Contoh:&#10;• Bahasa Indonesia — Fasih (Native)&#10;• Bahasa Inggris — Profesional (TOEFL ITP 580)"
+                value={activeCustomSection.content}
+                onChange={(e) => {
+                  const nextCustom = (content.custom_sections ?? []).map((item) =>
+                    item.id === activeCustomSection.id
+                      ? { ...item, content: e.target.value }
+                      : item,
+                  );
+                  onChange({ ...content, custom_sections: nextCustom });
+                }}
+              />
+            </FormField>
+          </div>
         </div>
       ) : null}
     </div>
