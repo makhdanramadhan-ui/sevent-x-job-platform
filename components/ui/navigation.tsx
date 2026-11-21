@@ -61,6 +61,37 @@ export function notifyAuthChanged(): void {
   }
 }
 
+export function useAuthSession() {
+  const pathname = usePathname();
+  const [session, setSession] = useState<SessionInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadSession = useCallback(async () => {
+    if (!hasAuthSessionCookie()) {
+      setSession(null);
+      setLoading(false);
+      return;
+    }
+    const nextSession = await fetchSessionIfCookie();
+    setSession(nextSession);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void loadSession();
+  }, [pathname, loadSession]);
+
+  useEffect(() => {
+    const handler = () => {
+      void loadSession();
+    };
+    window.addEventListener('seventx:auth-changed', handler);
+    return () => window.removeEventListener('seventx:auth-changed', handler);
+  }, [loadSession]);
+
+  return { session, loading };
+}
+
 const NAV_ITEMS = [
   { href: '/', label: 'Beranda', exact: true },
   { href: '/jobs', label: 'Lowongan', exact: false },
@@ -204,32 +235,12 @@ export function SiteHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [session, setSession] = useState<SessionInfo | null>(null);
-  const [checking, setChecking] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-
-  const loadSession = useCallback(async () => {
-    const nextSession = await fetchSessionIfCookie();
-    setSession(nextSession);
-    setChecking(false);
-  }, []);
-
-  useEffect(() => {
-    loadSession();
-  }, [pathname, loadSession]);
-
-  useEffect(() => {
-    const handler = () => {
-      loadSession();
-    };
-    window.addEventListener('seventx:auth-changed', handler);
-    return () => window.removeEventListener('seventx:auth-changed', handler);
-  }, [loadSession]);
+  const { session, loading } = useAuthSession();
 
   async function executeLogout() {
     setLoggingOut(true);
     await apiFetch('/api/auth/logout', { method: 'POST' });
-    setSession(null);
     setLoggingOut(false);
     setMenuOpen(false);
     notifyAuthChanged();
@@ -338,8 +349,8 @@ export function SiteHeader() {
                   : 'nav-auth-area-guest'
               }`}
             >
-              {checking ? (
-                <span style={{ fontSize: '0.875rem', color: 'var(--p-muted)' }}>Memuat...</span>
+              {loading ? (
+                <span className="nav-auth-placeholder" aria-hidden="true" />
               ) : session ? (
                 <>
                   <div className="nav-desktop-avatar">
@@ -388,25 +399,8 @@ export function SiteHeader() {
 }
 
 export function SiteFooter() {
-  const pathname = usePathname();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  const checkSession = useCallback(async () => {
-    const nextSession = await fetchSessionIfCookie();
-    setIsLoggedIn(Boolean(nextSession));
-  }, []);
-
-  useEffect(() => {
-    checkSession();
-  }, [pathname, checkSession]);
-
-  useEffect(() => {
-    const handler = () => {
-      checkSession();
-    };
-    window.addEventListener('seventx:auth-changed', handler);
-    return () => window.removeEventListener('seventx:auth-changed', handler);
-  }, [checkSession]);
+  const { session, loading } = useAuthSession();
+  const isLoggedIn = session !== null;
 
   return (
     <footer className="site-footer">
@@ -424,11 +418,13 @@ export function SiteFooter() {
               perusahaan.
             </p>
             <div className="footer-cta-row">
-              {!isLoggedIn ? (
+              {loading ? (
+                <span className="btn btn-primary btn-sm auth-cta-placeholder" aria-hidden="true" />
+              ) : session ? null : (
                 <Link href="/signup" className="btn btn-primary btn-sm">
                   Daftar Akun
                 </Link>
-              ) : null}
+              )}
               <Link
                 href="/jobs"
                 className={isLoggedIn ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm'}
@@ -476,7 +472,12 @@ export function SiteFooter() {
               <li>
                 <Link href="/onboarding">Lengkapi Onboarding</Link>
               </li>
-              {!isLoggedIn ? (
+              {loading ? (
+                <>
+                  <li><span className="auth-link-placeholder" aria-hidden="true" /></li>
+                  <li><span className="auth-link-placeholder" aria-hidden="true" /></li>
+                </>
+              ) : session ? null : (
                 <>
                   <li>
                     <Link href="/login">Masuk Akun</Link>
@@ -485,7 +486,7 @@ export function SiteFooter() {
                     <Link href="/signup">Daftar Akun Baru</Link>
                   </li>
                 </>
-              ) : null}
+              )}
             </ul>
           </div>
 

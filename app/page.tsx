@@ -10,6 +10,7 @@ import {
   LandingPreviewStage,
   LandingWorkflowSteps,
 } from '@/components/ui/home-landing-client';
+import { HomeHeroAuthCta } from '@/components/ui/home-hero-auth-cta';
 import { ScrollReveal, ScrollWordHighlight } from '@/components/ui/scroll-motion';
 
 export default function HomePage() {
@@ -32,9 +33,7 @@ export default function HomePage() {
                 <Link href="/jobs" className="btn btn-primary btn-lg">
                   Cari Lowongan
                 </Link>
-                <Link href="/signup" className="btn btn-outline btn-lg">
-                  Daftar Akun
-                </Link>
+                <HomeHeroAuthCta />
               </div>
 
               <LandingHeroStats />

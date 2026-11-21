@@ -763,6 +763,27 @@ h4 {
   padding: 0 24px;
 }
 
+.auth-cta-placeholder {
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.home-hero-auth-cta {
+  min-width: 190px;
+}
+
+.auth-link-placeholder {
+  display: inline-block;
+  width: 104px;
+  height: 15px;
+}
+
+.nav-auth-placeholder {
+  display: inline-block;
+  width: 156px;
+  height: 36px;
+}
+
 .btn-primary {
   background: var(--p-action);
   color: var(--p-action-ink);
