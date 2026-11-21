@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from datetime import datetime, timezone
@@ -32,11 +33,15 @@ from typing import Any, Dict, List, Optional, Tuple
 from .ingest_client import SupabaseIngestClient, execute_ingest_pipeline
 from .logo_resolver import resolve_company_logo_from_internet
 from .normalizer import (
+    GEO_JAVA_RE,
+    TECH_SKILL_CONTEXT_RE,
     clean_description_whitespace,
     is_placeholder_logo_url,
     normalize_education,
     normalize_level,
+    normalize_location,
     normalize_skills,
+    normalize_work_mode,
 )
 from .sources import (
     SourceFetchResult,
@@ -319,6 +324,39 @@ def _is_placeholder_description(desc: Optional[str]) -> bool:
     return cleaned.startswith("Lowongan ") and "(tag pencarian:" in cleaned
 
 
+def _clean_stale_false_positive_skills(
+    existing_skills: List[str],
+    title: str,
+    desc_for_skills: Optional[str],
+) -> List[str]:
+    combined = f"{title} {desc_for_skills or ''}".strip()
+    combined_lower = combined.lower()
+    masked_java_lower = GEO_JAVA_RE.sub(" ", combined).lower()
+    has_tech_context = bool(TECH_SKILL_CONTEXT_RE.search(combined))
+
+    cleaned: List[str] = []
+    for skill in existing_skills:
+        if skill == "Express.js" and "express.js" not in combined_lower and "expressjs" not in combined_lower:
+            continue
+        if skill == "Next.js" and "next.js" not in combined_lower and "nextjs" not in combined_lower:
+            continue
+        if (
+            skill == "Go"
+            and "golang" not in combined_lower
+            and not re.search(r"\bgo\s*(?:developer|engineer|lang|programming)\b", combined_lower)
+        ):
+            continue
+        if skill == "Java" and not re.search(
+            r"(^|[\s,./()\-:;'\"\[\]])java($|[\s,./()\-:;'\"\[\]])",
+            masked_java_lower,
+        ):
+            continue
+        if len(skill) == 1 and not has_tech_context:
+            continue
+        cleaned.append(skill)
+    return cleaned
+
+
 def run_detail_and_skill_backfill(
     client: SupabaseIngestClient,
     *,
@@ -329,8 +367,7 @@ def run_detail_and_skill_backfill(
     Memperbarui lowongan di Supabase yang:
     1. Deskripsinya masih berupa placeholder pencarian ('Lowongan ... (tag pencarian: ...)') atau kosong,
        dengan mengambil ulang detail halaman publik LinkedIn.
-    2. Daftar keahlian (skills)-nya belum lengkap karena bug normalizer lama, dengan mengekstrak ulang
-       hingga maksimal 10 skill dari raw_skills + title + description.
+    2. Daftar keahlian (skills), work_mode, education, dan format location-nya belum lengkap/akurat.
     """
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     jobs = client.fetch_jobs_for_detail_backfill(limit=limit)
@@ -342,6 +379,9 @@ def run_detail_and_skill_backfill(
     descriptions_fetched_from_linkedin = 0
     still_placeholder_count = 0
     skills_expanded_count = 0
+    work_mode_updated_count = 0
+    education_updated_count = 0
+    location_updated_count = 0
     linkedin_blocked = False
     linkedin_calls = 0
     consecutive_blocked = 0
@@ -357,6 +397,8 @@ def run_detail_and_skill_backfill(
         title = str(job.get("title") or "").strip()
         company = str(job.get("company") or "").strip()
         current_desc = str(job.get("description") or "").strip() or None
+        current_loc = str(job.get("location") or "").strip() or None
+        current_work_mode = str(job.get("work_mode") or "unknown").strip()
         current_level = str(job.get("level") or "unknown").strip()
         current_education = job.get("education")
         current_logo = str(job.get("company_logo_url") or "").strip() or None
@@ -393,6 +435,8 @@ def run_detail_and_skill_backfill(
         description_updated = False
         new_level: Optional[str] = None
         new_education: Optional[str] = None
+        new_work_mode: Optional[str] = None
+        new_location: Optional[str] = None
         new_logo: Optional[str] = None
 
         if _is_placeholder_description(current_desc) and src_name == "linkedin_guest" and not linkedin_blocked:
@@ -431,31 +475,60 @@ def run_detail_and_skill_backfill(
         if _is_placeholder_description(effective_desc):
             still_placeholder_count += 1
 
-        if not current_education and effective_desc and not _is_placeholder_description(effective_desc):
-            cand_edu = normalize_education(None, description_hint=effective_desc)
+        desc_for_hints = None if _is_placeholder_description(effective_desc) else effective_desc
+
+        if current_loc:
+            cand_loc = normalize_location(current_loc)
+            if cand_loc and cand_loc != current_loc:
+                new_location = cand_loc
+
+        if current_work_mode in {"", "unknown"}:
+            cand_wm = normalize_work_mode(
+                None,
+                location_hint=new_location or current_loc,
+                title_hint=title,
+                description_hint=desc_for_hints,
+            )
+            if cand_wm != "unknown":
+                new_work_mode = cand_wm
+
+        if not current_education and desc_for_hints:
+            cand_edu = normalize_education(None, description_hint=desc_for_hints)
             if cand_edu:
                 new_education = cand_edu
 
-        desc_for_skills = None if _is_placeholder_description(effective_desc) else effective_desc
-        combined_lower = f"{title} {desc_for_skills or ''}".lower()
-        cleaned_existing_skills = [
-            s
-            for s in existing_skills
-            if not (s == "Express.js" and "express.js" not in combined_lower and "expressjs" not in combined_lower)
-        ]
+        cleaned_existing_skills = _clean_stale_false_positive_skills(
+            existing_skills,
+            title,
+            desc_for_hints,
+        )
         new_skills = normalize_skills(
             cleaned_existing_skills,
             title_hint=title,
-            description_hint=desc_for_skills,
+            description_hint=desc_for_hints,
         )
         skills_changed = new_skills != existing_skills
 
-        if not description_updated and not skills_changed and not new_level and not new_education and not new_logo:
+        if (
+            not description_updated
+            and not skills_changed
+            and not new_level
+            and not new_education
+            and not new_work_mode
+            and not new_location
+            and not new_logo
+        ):
             unchanged_count += 1
             continue
 
         if skills_changed:
             skills_expanded_count += 1
+        if new_work_mode:
+            work_mode_updated_count += 1
+        if new_education:
+            education_updated_count += 1
+        if new_location:
+            location_updated_count += 1
 
         patch_job: Dict[str, Any] = {
             "title": title,
@@ -464,6 +537,10 @@ def run_detail_and_skill_backfill(
         }
         if description_updated and effective_desc:
             patch_job["description"] = effective_desc
+        if new_location:
+            patch_job["location"] = new_location
+        if new_work_mode:
+            patch_job["work_mode"] = new_work_mode
         if new_level:
             patch_job["level"] = new_level
         if new_education:
@@ -491,6 +568,9 @@ def run_detail_and_skill_backfill(
                     "company": company,
                     "source_name": src_name,
                     "description_updated": description_updated,
+                    "work_mode_updated": new_work_mode,
+                    "education_updated": new_education,
+                    "location_updated": new_location,
                     "old_skills": existing_skills,
                     "new_skills": new_skills,
                 }
@@ -507,6 +587,9 @@ def run_detail_and_skill_backfill(
             "descriptions_fetched_from_linkedin": descriptions_fetched_from_linkedin,
             "still_placeholder_descriptions": still_placeholder_count,
             "skills_expanded": skills_expanded_count,
+            "work_mode_updated": work_mode_updated_count,
+            "education_updated": education_updated_count,
+            "location_updated": location_updated_count,
             "unchanged": unchanged_count,
             "skipped": len(skipped),
             "linkedin_calls": linkedin_calls,
