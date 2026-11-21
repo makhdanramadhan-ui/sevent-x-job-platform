@@ -15,7 +15,6 @@ import {
   AuthGuard,
   apiFetch,
   Button,
-  CheckboxGroup,
   EMPLOYMENT_TYPE_LABELS,
   EmptyState,
   ErrorState,
@@ -103,16 +102,72 @@ function RecommendationsInner() {
   const [endpointMissing, setEndpointMissing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiCallError | null>(null);
-  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [openDropdown, setOpenDropdown] = useState<'work_modes' | 'employment_types' | 'levels' | null>(null);
   const [expandedMissingKeys, setExpandedMissingKeys] = useState<Set<string>>(new Set());
 
   const [filters, setFilters] = useState<RecommendationFilters>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
   const listTopRef = useRef<HTMLDivElement | null>(null);
+  const filterDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!openDropdown) return;
+    function handleOutside(event: MouseEvent | TouchEvent) {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
+        setOpenDropdown(null);
+      }
+    }
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpenDropdown(null);
+    }
+    document.addEventListener('mousedown', handleOutside);
+    document.addEventListener('touchstart', handleOutside);
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('touchstart', handleOutside);
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [openDropdown]);
 
   function updateFilters(next: RecommendationFilters) {
     setFilters(next);
     setPage(1);
+  }
+
+  function toggleFilterOption(
+    key: 'work_modes' | 'employment_types' | 'levels',
+    value: string,
+  ) {
+    if (key === 'work_modes') {
+      const typed = value as RecommendationFilters['work_modes'][number];
+      const current = filters.work_modes;
+      const next = current.includes(typed)
+        ? current.filter((item) => item !== typed)
+        : [...current, typed];
+      updateFilters({ ...filters, work_modes: next });
+      return;
+    }
+    if (key === 'employment_types') {
+      const typed = value as RecommendationFilters['employment_types'][number];
+      const current = filters.employment_types;
+      const next = current.includes(typed)
+        ? current.filter((item) => item !== typed)
+        : [...current, typed];
+      updateFilters({ ...filters, employment_types: next });
+      return;
+    }
+    const typed = value as RecommendationFilters['levels'][number];
+    const current = filters.levels;
+    const next = current.includes(typed)
+      ? current.filter((item) => item !== typed)
+      : [...current, typed];
+    updateFilters({ ...filters, levels: next });
+  }
+
+  function clearFilterGroup(key: 'work_modes' | 'employment_types' | 'levels') {
+    updateFilters({ ...filters, [key]: [] });
+    setOpenDropdown(null);
   }
 
   function toggleExpandedMissing(key: string) {
@@ -277,36 +332,95 @@ function RecommendationsInner() {
         <>
           <section className="rec-profile-card" aria-label="Ringkasan profil kamu">
             <div className="rec-profile-header">
-              <h2 className="rec-profile-title">Ringkasan Kualifikasi Profilmu</h2>
-              <Link href="/profile" className="rec-profile-link">
-                Perbarui Profil →
+              <div>
+                <h2 className="rec-profile-title">Ringkasan Kualifikasi Profilmu</h2>
+                <p className="rec-profile-subtitle">
+                  Data profil yang digunakan untuk mencocokkan lowongan.
+                </p>
+              </div>
+              <Link href="/profile" className="btn btn-outline btn-sm">
+                Perbarui Profil
               </Link>
             </div>
             <div className="rec-stats-grid">
-              <div className="rec-stat-box">
-                <span className="rec-stat-value rec-stat-value--accent">
-                  {profile?.skills.length ?? 0}
-                </span>
-                <span className="rec-stat-label">Keahlian</span>
-              </div>
-              <div className="rec-stat-box">
-                <span className="rec-stat-value">{profile?.education.length ?? 0}</span>
-                <span className="rec-stat-label">Pendidikan</span>
-              </div>
-              <div className="rec-stat-box">
-                <span className="rec-stat-value">{profile?.experiences.length ?? 0}</span>
-                <span className="rec-stat-label">Pengalaman</span>
-              </div>
-              <div className="rec-stat-box">
-                <span className="rec-stat-value">{profile?.projects.length ?? 0}</span>
-                <span className="rec-stat-label">Proyek</span>
-              </div>
-              <div className="rec-stat-box">
-                <span className="rec-stat-value">
-                  {profile?.preferences.positions.length ?? 0}
-                </span>
-                <span className="rec-stat-label">Posisi Diminati</span>
-              </div>
+              {[
+                {
+                  key: 'skills',
+                  label: 'Keahlian',
+                  count: profile?.skills.length ?? 0,
+                  accent: true,
+                  icon: (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                    </svg>
+                  ),
+                },
+                {
+                  key: 'education',
+                  label: 'Pendidikan',
+                  count: profile?.education.length ?? 0,
+                  accent: false,
+                  icon: (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                      <path d="M6 12v5c3 3 9 3 12 0v-5" />
+                    </svg>
+                  ),
+                },
+                {
+                  key: 'experiences',
+                  label: 'Pengalaman',
+                  count: profile?.experiences.length ?? 0,
+                  accent: false,
+                  icon: (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                    </svg>
+                  ),
+                },
+                {
+                  key: 'projects',
+                  label: 'Proyek',
+                  count: profile?.projects.length ?? 0,
+                  accent: false,
+                  icon: (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                      <polyline points="2 17 12 22 22 17" />
+                      <polyline points="2 12 12 17 22 12" />
+                    </svg>
+                  ),
+                },
+                {
+                  key: 'positions',
+                  label: 'Posisi Diminati',
+                  count: profile?.preferences.positions.length ?? 0,
+                  accent: false,
+                  icon: (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10" />
+                      <circle cx="12" cy="12" r="6" />
+                      <circle cx="12" cy="12" r="2" />
+                    </svg>
+                  ),
+                },
+              ].map((stat) => (
+                <div
+                  key={stat.key}
+                  className={`rec-stat-box ${stat.count > 0 ? 'rec-stat-box--filled' : ''}`}
+                >
+                  <span className="rec-stat-icon">{stat.icon}</span>
+                  <div className="rec-stat-body">
+                    <span
+                      className={`rec-stat-value ${stat.accent && stat.count > 0 ? 'rec-stat-value--accent' : ''}`}
+                    >
+                      {stat.count}
+                    </span>
+                    <span className="rec-stat-label">{stat.label}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
 
@@ -328,62 +442,165 @@ function RecommendationsInner() {
             />
           ) : (
             <>
-              {/* Filter Bar when recommendations exist */}
+              {/* Filter Bar with Dropdowns */}
               <section className="rec-filter-card" aria-label="Filter daftar rekomendasi">
-                <div className="rec-filter-head">
-                  <div className="rec-filter-head-left">
+                <div className="rec-filter-bar">
+                  <div className="rec-filter-label-group">
+                    <span className="rec-filter-icon" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                      </svg>
+                    </span>
                     <h2 className="rec-filter-title">Filter Rekomendasi</h2>
                     {activeFilterCount > 0 ? (
                       <span className="rec-filter-count">{activeFilterCount} aktif</span>
                     ) : null}
                   </div>
-                  <div className="rec-filter-actions">
+
+                  <div className="rec-dropdown-group" ref={filterDropdownRef}>
+                    {(
+                      [
+                        {
+                          key: 'work_modes' as const,
+                          label: 'Mode Kerja',
+                          options: WORK_MODE_FILTER_OPTS,
+                          selected: filters.work_modes as string[],
+                        },
+                        {
+                          key: 'employment_types' as const,
+                          label: 'Jenis Kontrak',
+                          options: EMPLOYMENT_FILTER_OPTS,
+                          selected: filters.employment_types as string[],
+                        },
+                        {
+                          key: 'levels' as const,
+                          label: 'Tingkat Pengalaman',
+                          options: LEVEL_FILTER_OPTS,
+                          selected: filters.levels as string[],
+                        },
+                      ]
+                    ).map((group) => {
+                      const isOpen = openDropdown === group.key;
+                      const isActive = group.selected.length > 0;
+                      const triggerLabel =
+                        group.selected.length === 0
+                          ? group.label
+                          : group.selected.length === 1
+                            ? (group.options.find((opt) => opt.value === group.selected[0])
+                                ?.label ?? group.label)
+                            : `${group.label} (${group.selected.length})`;
+
+                      return (
+                        <div key={group.key} className="rec-dropdown-wrap">
+                          <button
+                            type="button"
+                            className={`rec-dropdown-trigger ${isActive ? 'rec-dropdown-trigger--active' : ''} ${isOpen ? 'rec-dropdown-trigger--open' : ''}`.trim()}
+                            aria-expanded={isOpen}
+                            aria-haspopup="listbox"
+                            onClick={() => setOpenDropdown(isOpen ? null : group.key)}
+                          >
+                            <span>{triggerLabel}</span>
+                            <svg
+                              className="rec-dropdown-chevron"
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                          </button>
+
+                          {isOpen ? (
+                            <>
+                              <div
+                                className="rec-dropdown-backdrop"
+                                aria-hidden="true"
+                                onClick={() => setOpenDropdown(null)}
+                              />
+                              <div
+                                className="rec-dropdown-menu"
+                                role="listbox"
+                                aria-multiselectable="true"
+                                aria-label={`Filter ${group.label}`}
+                              >
+                                <div className="rec-dropdown-head">
+                                  <span className="rec-dropdown-title">{group.label}</span>
+                                  <button
+                                    type="button"
+                                    className="rec-dropdown-close"
+                                    aria-label={`Tutup filter ${group.label}`}
+                                    onClick={() => setOpenDropdown(null)}
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+
+                                <div className="rec-dropdown-options">
+                                  <button
+                                    type="button"
+                                    role="option"
+                                    aria-selected={group.selected.length === 0}
+                                    className={`rec-dropdown-option ${group.selected.length === 0 ? 'rec-dropdown-option--selected' : ''}`.trim()}
+                                    onClick={() => clearFilterGroup(group.key)}
+                                  >
+                                    <span>Semua {group.label}</span>
+                                    {group.selected.length === 0 ? (
+                                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <polyline points="20 6 9 17 4 12" />
+                                      </svg>
+                                    ) : null}
+                                  </button>
+
+                                  {group.options.map((opt) => {
+                                    const isSelected = group.selected.includes(opt.value);
+                                    return (
+                                      <button
+                                        key={opt.value}
+                                        type="button"
+                                        role="option"
+                                        aria-selected={isSelected}
+                                        className={`rec-dropdown-option ${isSelected ? 'rec-dropdown-option--selected' : ''}`.trim()}
+                                        onClick={() => toggleFilterOption(group.key, opt.value)}
+                                      >
+                                        <span>{opt.label}</span>
+                                        {isSelected ? (
+                                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                            <polyline points="20 6 9 17 4 12" />
+                                          </svg>
+                                        ) : null}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+
                     {activeFilterCount > 0 ? (
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => updateFilters(EMPTY_FILTERS)}
+                        className="rec-dropdown-reset"
+                        onClick={() => {
+                          updateFilters(EMPTY_FILTERS);
+                          setOpenDropdown(null);
+                        }}
                       >
                         Reset Filter
                       </Button>
                     ) : null}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      aria-expanded={filtersOpen}
-                      onClick={() => setFiltersOpen((prev) => !prev)}
-                    >
-                      {filtersOpen ? 'Sembunyikan' : 'Tampilkan Filter'}
-                    </Button>
                   </div>
                 </div>
-
-                {filtersOpen ? (
-                  <div className="rec-filter-body">
-                    <CheckboxGroup
-                      legend="Mode Kerja"
-                      options={WORK_MODE_FILTER_OPTS}
-                      selected={filters.work_modes}
-                      onChange={(work_modes) => updateFilters({ ...filters, work_modes })}
-                    />
-                    <CheckboxGroup
-                      legend="Jenis Kontrak"
-                      options={EMPLOYMENT_FILTER_OPTS}
-                      selected={filters.employment_types}
-                      onChange={(employment_types) =>
-                        updateFilters({ ...filters, employment_types })
-                      }
-                    />
-                    <CheckboxGroup
-                      legend="Tingkat Pengalaman"
-                      options={LEVEL_FILTER_OPTS}
-                      selected={filters.levels}
-                      onChange={(levels) => updateFilters({ ...filters, levels })}
-                    />
-                  </div>
-                ) : null}
               </section>
 
               {filteredItems.length === 0 ? (

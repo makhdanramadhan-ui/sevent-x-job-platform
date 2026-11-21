@@ -49,7 +49,7 @@ type JobsApiResponse = {
   page: number;
   limit: number;
   pages: number;
-  profile_state?: 'empty' | 'ingest_pending' | 'ready' | 'explicit_search';
+  profile_state?: 'empty' | 'ingest_pending' | 'ready' | 'explicit_search' | 'all_newest';
   reason?: 'profile_incomplete';
   empty_hint?: EmptyHint | null;
   location_notes?: Record<string, string>;
@@ -67,6 +67,12 @@ type FilterState = {
 };
 
 type PillKey = 'employment_type' | 'work_mode' | 'level' | 'status';
+type SortMode = 'relevance' | 'newest';
+
+const SORT_OPTIONS: Array<{ value: SortMode; label: string; hint: string }> = [
+  { value: 'relevance', label: 'Relevansi', hint: 'Sesuai profilmu' },
+  { value: 'newest', label: 'Terbaru', hint: 'Semua lowongan' },
+];
 
 const INITIAL_FILTERS: FilterState = {
   q: '',
@@ -79,7 +85,11 @@ const INITIAL_FILTERS: FilterState = {
 
 const HIDDEN_JOBS_STORAGE_KEY = 'rakitkarier:hidden-jobs';
 
-function parseQueryStateFromSearch(search: string): { filters: FilterState; page: number } {
+function parseQueryStateFromSearch(search: string): {
+  filters: FilterState;
+  page: number;
+  sort: SortMode;
+} {
   const params = new URLSearchParams(search);
   const q = (params.get('q') ?? '').slice(0, 100);
   const location = (params.get('location') ?? '').slice(0, 100);
@@ -87,6 +97,7 @@ function parseQueryStateFromSearch(search: string): { filters: FilterState; page
   const rawEmpType = params.get('employment_type') ?? '';
   const rawLevel = params.get('level') ?? '';
   const rawStatus = params.get('status') ?? '';
+  const rawSort = params.get('sort') ?? '';
   const rawPage = Number(params.get('page') ?? '1');
 
   const work_mode: '' | WorkMode = WORK_MODES.includes(rawWorkMode as WorkMode)
@@ -103,15 +114,21 @@ function parseQueryStateFromSearch(search: string): { filters: FilterState; page
   const status: '' | JobStatus = JOB_STATUSES.includes(rawStatus as JobStatus)
     ? (rawStatus as JobStatus)
     : '';
+  const sort: SortMode = rawSort === 'newest' ? 'newest' : 'relevance';
   const page = Number.isInteger(rawPage) && rawPage >= 1 && rawPage <= 1000 ? rawPage : 1;
 
   return {
     filters: { q, location, work_mode, employment_type, level, status },
     page,
+    sort,
   };
 }
 
-function buildJobsQueryString(applied: FilterState, pageNum: number): string {
+function buildJobsQueryString(
+  applied: FilterState,
+  pageNum: number,
+  sortMode: SortMode,
+): string {
   const params = new URLSearchParams();
   const cleanedQ = cleanSearchQuery(applied.q);
   if (cleanedQ) params.set('q', cleanedQ.slice(0, 100));
@@ -121,6 +138,7 @@ function buildJobsQueryString(applied: FilterState, pageNum: number): string {
   if (applied.employment_type) params.set('employment_type', applied.employment_type);
   if (applied.level) params.set('level', applied.level);
   if (applied.status) params.set('status', applied.status);
+  if (sortMode !== 'relevance') params.set('sort', sortMode);
   if (pageNum > 1) params.set('page', String(pageNum));
   return params.toString();
 }
@@ -250,6 +268,8 @@ function JobsFeedInner() {
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<FilterState>(INITIAL_FILTERS);
   const [openPill, setOpenPill] = useState<PillKey | null>(null);
+  const [sort, setSort] = useState<SortMode>('relevance');
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [page, setPage] = useState(1);
   const limit = 12;
 
@@ -267,6 +287,7 @@ function JobsFeedInner() {
   const [pendingPolled, setPendingPolled] = useState(false);
 
   const pillsRef = useRef<HTMLDivElement | null>(null);
+  const sortRef = useRef<HTMLDivElement | null>(null);
   const prefersReducedMotion = useReducedMotion();
 
   // Fitur #4 & #5: Muat filter awal dari URL query string & hiddenIds dari localStorage
@@ -275,6 +296,7 @@ function JobsFeedInner() {
     setFilters(initial.filters);
     setAppliedFilters(initial.filters);
     setPage(initial.page);
+    setSort(initial.sort);
     setHiddenIds(readHiddenJobIds());
     setUrlHydrated(true);
 
@@ -283,21 +305,22 @@ function JobsFeedInner() {
       setFilters(next.filters);
       setAppliedFilters(next.filters);
       setPage(next.page);
+      setSort(next.sort);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Fitur #4: Sinkronkan filter aktif & halaman ke URL browser tanpa reload halaman
+  // Fitur #4: Sinkronkan filter aktif, sortir, & halaman ke URL browser tanpa reload halaman
   useEffect(() => {
     if (!urlHydrated) return;
-    const qs = buildJobsQueryString(appliedFilters, page);
+    const qs = buildJobsQueryString(appliedFilters, page, sort);
     const nextUrl = qs ? `/jobs?${qs}` : '/jobs';
     const currentUrl = `${window.location.pathname}${window.location.search}`;
     if (nextUrl !== currentUrl) {
       window.history.replaceState(null, '', nextUrl);
     }
-  }, [appliedFilters, page, urlHydrated]);
+  }, [appliedFilters, page, sort, urlHydrated]);
 
   const bookmarkedIds = useMemo(
     () => new Set(bookmarks.map((b) => b.job_id)),
@@ -305,18 +328,27 @@ function JobsFeedInner() {
   );
 
   useEffect(() => {
-    function handleOutsideClick(event: MouseEvent) {
-      if (pillsRef.current && !pillsRef.current.contains(event.target as Node)) {
+    function handleOutsideClick(event: MouseEvent | TouchEvent) {
+      const target = event.target as Node;
+      if (pillsRef.current && !pillsRef.current.contains(target)) {
         setOpenPill(null);
+      }
+      if (sortRef.current && !sortRef.current.contains(target)) {
+        setSortMenuOpen(false);
       }
     }
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpenPill(null);
+      if (event.key === 'Escape') {
+        setOpenPill(null);
+        setSortMenuOpen(false);
+      }
     }
     document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
@@ -335,6 +367,7 @@ function JobsFeedInner() {
     const params = new URLSearchParams();
     params.set('page', String(page));
     params.set('limit', String(limit));
+    params.set('sort', sort);
 
     const cleanedQ = cleanSearchQuery(appliedFilters.q);
     if (cleanedQ) params.set('q', cleanedQ.slice(0, 100));
@@ -356,7 +389,7 @@ function JobsFeedInner() {
       setError(res.error);
     }
     setLoading(false);
-  }, [appliedFilters, page]);
+  }, [appliedFilters, page, sort]);
 
   useEffect(() => {
     loadBookmarks();
@@ -378,7 +411,14 @@ function JobsFeedInner() {
 
   useEffect(() => {
     setPendingPolled(false);
-  }, [appliedFilters, page]);
+  }, [appliedFilters, page, sort]);
+
+  function handleSelectSort(nextSort: SortMode) {
+    setSortMenuOpen(false);
+    if (nextSort === sort) return;
+    setSort(nextSort);
+    setPage(1);
+  }
 
   useEffect(() => {
     if (loading || error || !data) return;
@@ -771,13 +811,85 @@ function JobsFeedInner() {
               ) : null}
             </span>
 
-            <Link href="/profile" className="jobs-pref-link">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
-              </svg>
-              <span>Preferensi</span>
-            </Link>
+            <div className="jobs-toolbar-actions">
+              <div className="jobs-sort-wrap" ref={sortRef}>
+                <button
+                  type="button"
+                  className={`jobs-sort-btn ${sortMenuOpen ? 'jobs-sort-btn--open' : ''} ${sort === 'newest' ? 'jobs-sort-btn--active' : ''}`.trim()}
+                  aria-haspopup="menu"
+                  aria-expanded={sortMenuOpen}
+                  aria-label="Urutkan lowongan"
+                  title={sort === 'relevance' ? 'Urutkan: Relevansi' : 'Urutkan: Terbaru'}
+                  onClick={() => {
+                    setOpenPill(null);
+                    setSortMenuOpen((prev) => !prev);
+                  }}
+                >
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="m7 15 5 5 5-5" />
+                    <path d="m7 9 5-5 5 5" />
+                  </svg>
+                  <span>{sort === 'relevance' ? 'Relevansi' : 'Terbaru'}</span>
+                </button>
+
+                {sortMenuOpen ? (
+                  <div className="jobs-sort-menu" role="menu" aria-label="Urutkan lowongan">
+                    {SORT_OPTIONS.map((opt) => {
+                      const active = sort === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={active}
+                          className={`jobs-sort-option ${active ? 'jobs-sort-option--selected' : ''}`.trim()}
+                          onClick={() => handleSelectSort(opt.value)}
+                        >
+                          <span className="jobs-sort-check" aria-hidden="true">
+                            {active ? (
+                              <svg
+                                width="15"
+                                height="15"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.4"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            ) : null}
+                          </span>
+                          <span className="jobs-sort-option-body">
+                            <span className="jobs-sort-option-label">{opt.label}</span>
+                            <span className="jobs-sort-option-hint">{opt.hint}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+
+              <Link href="/profile" className="jobs-pref-link">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+                </svg>
+                <span>Preferensi</span>
+              </Link>
+            </div>
           </div>
 
           {loading ? (

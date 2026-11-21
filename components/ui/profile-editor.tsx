@@ -23,7 +23,6 @@ import {
 import { ErrorState, NoticeBanner } from './feedback';
 import {
   Button,
-  CheckboxGroup,
   FormField,
   TextArea,
   TextInput,
@@ -45,6 +44,177 @@ const EXPERIENCE_LEVEL_OPTIONS = EXPERIENCE_LEVELS.filter((l) => l !== 'unknown'
   value,
   label: EXPERIENCE_LEVEL_LABELS[value],
 }));
+
+function PreferenceMultiDropdown<T extends string>({
+  id,
+  label,
+  placeholder,
+  options,
+  selected,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  placeholder: string;
+  options: Array<{ value: T; label: string }>;
+  selected: T[];
+  onChange: (next: T[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleOutside(event: MouseEvent | TouchEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('mousedown', handleOutside);
+    document.addEventListener('touchstart', handleOutside);
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('touchstart', handleOutside);
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [open]);
+
+  function toggleOption(value: T) {
+    const exists = selected.includes(value);
+    const next = exists ? selected.filter((item) => item !== value) : [...selected, value];
+    onChange(next);
+  }
+
+  const allSelected = options.length > 0 && selected.length === options.length;
+  const firstLabel =
+    selected.length > 0
+      ? (options.find((opt) => opt.value === selected[0])?.label ?? selected[0])
+      : '';
+  const summaryText =
+    selected.length === 0
+      ? placeholder
+      : selected.length === 1
+        ? firstLabel
+        : `${firstLabel} +${selected.length - 1} lainnya`;
+
+  return (
+    <div className="form-field pref-dropdown-field" ref={wrapRef}>
+      <label htmlFor={id} className="form-label">
+        <span>{label}</span>
+        {selected.length > 0 ? (
+          <span className="pref-dropdown-count">{selected.length} dipilih</span>
+        ) : null}
+      </label>
+
+      <button
+        type="button"
+        id={id}
+        className={`pref-dropdown-trigger ${open ? 'pref-dropdown-trigger--open' : ''}`.trim()}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        onClick={() => setOpen((prev) => !prev)}
+      >
+        <span
+          className={`pref-dropdown-trigger-text ${selected.length === 0 ? 'pref-dropdown-trigger-text--placeholder' : ''}`.trim()}
+        >
+          {summaryText}
+        </span>
+        <svg
+          className="rec-dropdown-chevron"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.1"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {open ? (
+        <>
+          <div
+            className="rec-dropdown-backdrop"
+            aria-hidden="true"
+            onClick={() => setOpen(false)}
+          />
+          <div
+            className="pref-dropdown-menu"
+            role="listbox"
+            aria-multiselectable="true"
+            aria-label={label}
+          >
+            <div className="pref-dropdown-menu-head">
+              <span className="pref-dropdown-menu-title">{label}</span>
+              <div className="pref-dropdown-menu-actions">
+                <button
+                  type="button"
+                  className="pref-dropdown-quick-btn"
+                  onClick={() => onChange(allSelected ? [] : options.map((opt) => opt.value))}
+                >
+                  {allSelected ? 'Hapus Pilihan' : 'Pilih Semua'}
+                </button>
+                <button
+                  type="button"
+                  className="rec-dropdown-close pref-dropdown-close"
+                  aria-label={`Tutup ${label}`}
+                  onClick={() => setOpen(false)}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="rec-dropdown-options">
+              {options.map((opt) => {
+                const isSelected = selected.includes(opt.value);
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    className={`pref-dropdown-option ${isSelected ? 'pref-dropdown-option--selected' : ''}`.trim()}
+                    onClick={() => toggleOption(opt.value)}
+                  >
+                    <span
+                      className={`pref-dropdown-checkbox ${isSelected ? 'pref-dropdown-checkbox--checked' : ''}`.trim()}
+                      aria-hidden="true"
+                    >
+                      {isSelected ? (
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      ) : null}
+                    </span>
+                    <span className="pref-dropdown-option-label">{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
 
 type PendingLeaveAction =
   | { type: 'internal'; href: string }
@@ -560,41 +730,49 @@ export function ProfileEditorForm({
             </p>
           ) : null}
 
-          <CheckboxGroup
-            legend="Preferensi Mode Kerja (Work Mode)"
-            options={WORK_MODE_OPTIONS}
-            selected={draft.preferences.work_modes}
-            onChange={(work_modes) =>
-              setDraft({
-                ...draft,
-                preferences: { ...draft.preferences, work_modes },
-              })
-            }
-          />
+          <div className="pref-dropdown-grid">
+            <PreferenceMultiDropdown
+              id="pref-work-modes"
+              label="Mode Kerja"
+              placeholder="Pilih mode kerja..."
+              options={WORK_MODE_OPTIONS}
+              selected={draft.preferences.work_modes}
+              onChange={(work_modes) =>
+                setDraft({
+                  ...draft,
+                  preferences: { ...draft.preferences, work_modes },
+                })
+              }
+            />
 
-          <CheckboxGroup
-            legend="Preferensi Jenis Pekerjaan (Employment Type)"
-            options={EMPLOYMENT_TYPE_OPTIONS}
-            selected={draft.preferences.employment_types}
-            onChange={(employment_types) =>
-              setDraft({
-                ...draft,
-                preferences: { ...draft.preferences, employment_types },
-              })
-            }
-          />
+            <PreferenceMultiDropdown
+              id="pref-employment-types"
+              label="Jenis Pekerjaan"
+              placeholder="Pilih jenis pekerjaan..."
+              options={EMPLOYMENT_TYPE_OPTIONS}
+              selected={draft.preferences.employment_types}
+              onChange={(employment_types) =>
+                setDraft({
+                  ...draft,
+                  preferences: { ...draft.preferences, employment_types },
+                })
+              }
+            />
 
-          <CheckboxGroup
-            legend="Preferensi Tingkat Pengalaman (Experience Level)"
-            options={EXPERIENCE_LEVEL_OPTIONS}
-            selected={draft.preferences.levels}
-            onChange={(levels) =>
-              setDraft({
-                ...draft,
-                preferences: { ...draft.preferences, levels },
-              })
-            }
-          />
+            <PreferenceMultiDropdown
+              id="pref-levels"
+              label="Tingkat Pengalaman"
+              placeholder="Pilih tingkat pengalaman..."
+              options={EXPERIENCE_LEVEL_OPTIONS}
+              selected={draft.preferences.levels}
+              onChange={(levels) =>
+                setDraft({
+                  ...draft,
+                  preferences: { ...draft.preferences, levels },
+                })
+              }
+            />
+          </div>
           <label
             htmlFor="pref-email-match-alerts"
             style={{
