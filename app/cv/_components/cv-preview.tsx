@@ -46,7 +46,7 @@ export function CvPreview({
       <article id={id} className="cv-ats-sheet" aria-label="Pratinjau CV Format Standar ATS">
         {/* HEADER DOKUMEN ATS (CENTERED) */}
         {isVisible('profile') ? (
-          <header className="cv-ats-header">
+          <div className="cv-ats-header">
             <h1 className="cv-ats-name">{profile.full_name || 'Nama Lengkap Kandidat'}</h1>
             <div className="cv-ats-contacts">
               {[
@@ -77,7 +77,7 @@ export function CvPreview({
                   </span>
                 ))}
             </div>
-          </header>
+          </div>
         ) : null}
 
         {/* SECTIONS SESUAI SECTION_ORDER */}

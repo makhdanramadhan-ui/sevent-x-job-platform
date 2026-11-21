@@ -1065,6 +1065,8 @@
   }
 
   /* Sembunyikan elemen web aplikasi */
+  header.site-header,
+  footer.site-footer,
   .site-header,
   .site-footer,
   .cv-actions-bar,
@@ -1074,13 +1076,36 @@
   button,
   .page-banner,
   .state-panel,
-  .notice-banner,
-  header,
-  footer {
+  .notice-banner {
     display: none !important;
     height: 0 !important;
     width: 0 !important;
     overflow: hidden !important;
+  }
+
+  /* PAKSA Header CV (Nama & Kontak) tampil utuh */
+  .cv-ats-header {
+    display: block !important;
+    visibility: visible !important;
+    height: auto !important;
+    width: 100% !important;
+    overflow: visible !important;
+    margin-bottom: 14px !important;
+    text-align: center !important;
+  }
+
+  .cv-ats-name {
+    display: block !important;
+    visibility: visible !important;
+    color: #000000 !important;
+  }
+
+  .cv-ats-contacts {
+    display: flex !important;
+    visibility: visible !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    color: #111111 !important;
   }
 
   /* Jadikan workspace layout block sederhana */
