@@ -1,6 +1,5 @@
 'use client';
 
-import { motion, useReducedMotion } from 'motion/react';
 import Link from 'next/link';
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -11,13 +10,19 @@ export function LoadingState({
   title = 'Memuat data...',
   description = 'Mohon tunggu sebentar.',
   lines = 3,
+  reserved = false,
 }: {
   title?: string;
   description?: string;
   lines?: number;
+  reserved?: boolean;
 }) {
   return (
-    <div className="state-panel" role="status" aria-live="polite">
+    <div
+      className={`state-panel${reserved ? ' state-panel--reserved' : ''}`}
+      role="status"
+      aria-live="polite"
+    >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <strong style={{ fontWeight: 500 }}>{title}</strong>
         <p style={{ margin: 0, fontSize: '0.9375rem', color: 'var(--p-muted)' }}>
@@ -185,7 +190,6 @@ export function NoticePopup({
   const [mounted, setMounted] = useState(false);
   const titleId = useId();
   const confirmRef = useRef<HTMLButtonElement | null>(null);
-  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     setMounted(true);
@@ -209,25 +213,19 @@ export function NoticePopup({
   const heading = title ?? DEFAULT_POPUP_TITLES[variant];
 
   return createPortal(
-    <motion.div
+    <div
       className="notice-popup-backdrop"
-      initial={prefersReducedMotion ? false : { opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.18 }}
       onClick={(event) => {
         if (event.target === event.currentTarget) {
           onDismiss();
         }
       }}
     >
-      <motion.div
+      <div
         className={`notice-popup-box notice-popup-${variant}`}
         role={variant === 'error' || variant === 'warning' ? 'alertdialog' : 'dialog'}
         aria-modal="true"
         aria-labelledby={titleId}
-        initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.95, y: 12 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
       >
         <div className="notice-popup-top">
           <div className={`notice-popup-icon notice-popup-icon-${variant}`}>
@@ -261,8 +259,8 @@ export function NoticePopup({
             {confirmLabel}
           </button>
         </div>
-      </motion.div>
-    </motion.div>,
+      </div>
+    </div>,
     document.body,
   );
 }

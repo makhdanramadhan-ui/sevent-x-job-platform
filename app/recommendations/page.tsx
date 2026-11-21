@@ -12,20 +12,16 @@ import {
 } from 'react';
 import {
   type ApiCallError,
-  AuthGuard,
   apiFetch,
-  Button,
   EMPLOYMENT_TYPE_LABELS,
-  EmptyState,
-  ErrorState,
   EXPERIENCE_LEVEL_LABELS,
   formatDateTimeId,
-  JobStatusBadge,
-  LoadingState,
-  NoticeBanner,
-  PageBanner,
   WORK_MODE_LABELS,
-} from '@/components/ui';
+} from '@/components/ui/api-client';
+import { AuthGuard } from '@/components/ui/auth-guard';
+import { EmptyState, ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
+import { Button, JobStatusBadge } from '@/components/ui/forms';
+import { PageBanner } from '@/components/ui/page-banner';
 import { CompanyLogo } from '@/components/ui/company-logo';
 import { displaySourceName } from '@/lib/job-source';
 import type { EmptyHint } from '@/lib/recommendation/empty-hint';
@@ -279,26 +275,7 @@ function RecommendationsInner() {
     );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-      <PageBanner
-        kicker="Kecocokan Profil"
-        title="Rekomendasi Lowongan Untukmu"
-        subtitle="Lihat peluang kerja yang paling sesuai dengan keahlian, pengalaman, dan preferensi profilmu, beserta persyaratan yang masih perlu kamu lengkapi."
-        tone="mist"
-        imageSrc="/images/banner-recommendations.jpg"
-        imageAlt="Ilustrasi rekomendasi kecocokan lowongan"
-        actions={
-          <>
-            <Link href="/profile" className="btn btn-outline btn-sm">
-              Ubah Profil &amp; Preferensi
-            </Link>
-            <Link href="/jobs" className="btn btn-secondary btn-sm">
-              Cari Semua Lowongan
-            </Link>
-          </>
-        }
-      />
-
+    <>
       {/* Friendly Info Banner */}
       <NoticeBanner variant="info" title="Cara Membaca Kecocokan Profil">
         Indikator kecocokan membantu kamu melihat kesesuaian kualifikasi profilmu dengan persyaratan
@@ -310,6 +287,7 @@ function RecommendationsInner() {
           title="Menyiapkan rekomendasi lowongan..."
           description="Mencocokkan profil kamu dengan daftar lowongan yang tersedia."
           lines={4}
+          reserved
         />
       ) : error ? (
         <ErrorState
@@ -740,6 +718,7 @@ function RecommendationsInner() {
                                 href={item.source.source_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                aria-label={`Detail dan sumber asli untuk ${job.title} di ${job.company}`}
                                 className="btn btn-primary btn-sm"
                               >
                                 Detail &amp; Sumber Asli
@@ -747,6 +726,7 @@ function RecommendationsInner() {
                             ) : (
                               <Link
                                 href={`/jobs/${item.job_id}`}
+                                aria-label={`Detail dan sumber asli untuk ${job.title} di ${job.company}`}
                                 className="btn btn-primary btn-sm"
                               >
                                 Detail &amp; Sumber Asli
@@ -937,14 +917,34 @@ function RecommendationsInner() {
           )}
         </>
       )}
-    </div>
+    </>
   );
 }
 
 export default function RecommendationsPage() {
   return (
-    <AuthGuard title="Masuk untuk Melihat Rekomendasi Lowongan">
-      {() => <RecommendationsInner />}
-    </AuthGuard>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <PageBanner
+        kicker="Kecocokan Profil"
+        title="Rekomendasi Lowongan Untukmu"
+        subtitle="Lihat peluang kerja yang paling sesuai dengan keahlian, pengalaman, dan preferensi profilmu, beserta persyaratan yang masih perlu kamu lengkapi."
+        tone="mist"
+        imageSrc="/images/banner-recommendations.jpg"
+        actions={
+          <>
+            <Link href="/profile" className="btn btn-outline btn-sm">
+              Ubah Profil &amp; Preferensi
+            </Link>
+            <Link href="/jobs" className="btn btn-secondary btn-sm">
+              Cari Semua Lowongan
+            </Link>
+          </>
+        }
+      />
+
+      <AuthGuard title="Masuk untuk Melihat Rekomendasi Lowongan">
+        {() => <RecommendationsInner />}
+      </AuthGuard>
+    </div>
   );
 }

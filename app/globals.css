@@ -180,6 +180,8 @@ h4 {
   flex: 1;
   width: min(100% - 2 * var(--gut), var(--max-width));
   margin: 0 auto;
+  min-height: calc(100vh - var(--nav-h));
+  min-height: calc(100dvh - var(--nav-h));
   padding: 40px 0 80px;
 }
 
@@ -693,9 +695,11 @@ h4 {
 }
 
 .profile-avatar-progress-bar {
+  width: 100%;
   height: 100%;
   background: var(--p-action);
-  transition: width 0.12s ease;
+  transform-origin: left center;
+  transition: transform 0.12s ease;
 }
 
 .profile-avatar-progress-text {
@@ -1011,6 +1015,8 @@ h4 {
 .page-banner__count {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: 100px;
   font-family: var(--font-text);
   font-size: 0.85rem;
   font-weight: 600;
@@ -1019,10 +1025,9 @@ h4 {
   font-variant-numeric: tabular-nums;
   padding: 5px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(17, 17, 17, 0.1);
   color: var(--p-ink);
-  backdrop-filter: blur(6px);
 }
 
 .page-banner__subtitle {
@@ -1038,8 +1043,7 @@ h4 {
 }
 
 .page-banner__actions .btn-outline {
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(6px);
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .page-banner__actions .btn-outline:hover {
@@ -2887,6 +2891,10 @@ h4 {
   margin: 16px 0;
 }
 
+.state-panel--reserved {
+  min-height: 360px;
+}
+
 .state-panel-error {
   border-color: var(--status-danger-border);
   background: var(--status-danger-bg);
@@ -2933,12 +2941,33 @@ h4 {
   color: var(--p-ink);
 }
 
+@keyframes backdrop-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes popover-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .notice-popup-backdrop {
   position: fixed;
   inset: 0;
   z-index: 1000;
   background: rgba(17, 17, 17, 0.42);
   backdrop-filter: blur(4px);
+  animation: backdrop-fade-in 160ms ease-out;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2953,6 +2982,7 @@ h4 {
   border-radius: var(--r-lg);
   padding: 24px 26px 22px;
   box-shadow: 0 24px 60px rgba(17, 17, 17, 0.16);
+  animation: modal-enter 200ms cubic-bezier(0.22, 1, 0.36, 1);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -3059,7 +3089,13 @@ h4 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skeleton-line {
+  .skeleton-line,
+  .notice-popup-backdrop,
+  .notice-popup-box,
+  .jobs-pill-popover,
+  .avatar-dropdown,
+  .auth-modal-dialog,
+  .unsaved-modal-dialog {
     animation: none;
   }
 }
@@ -3304,6 +3340,7 @@ h4 {
   border: 1px solid rgba(17, 17, 17, 0.1);
   box-shadow: 0 20px 44px rgba(7, 21, 63, 0.18);
   padding: 14px;
+  animation: popover-fade-in 150ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .jobs-pill-popover-title {

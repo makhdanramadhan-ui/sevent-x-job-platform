@@ -9,22 +9,13 @@ import {
   useRef,
   useState,
 } from 'react';
-import {
-  type ApiCallError,
-  AuthGuard,
-  apiFetch,
-  Button,
-  EmptyState,
-  ErrorState,
-  formatDateTimeId,
-  getInitials,
-  LoadingState,
-  NoticeBanner,
-  notifyAuthChanged,
-  PageBanner,
-  ProfileEditorForm,
-  type SessionInfo,
-} from '@/components/ui';
+import { type ApiCallError, apiFetch, formatDateTimeId } from '@/components/ui/api-client';
+import { AuthGuard } from '@/components/ui/auth-guard';
+import { EmptyState, ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
+import { Button } from '@/components/ui/forms';
+import { getInitials, notifyAuthChanged, type SessionInfo } from '@/components/ui/navigation';
+import { PageBanner } from '@/components/ui/page-banner';
+import { ProfileEditorForm } from '@/components/ui/profile-editor';
 import type { ProfileRecord } from '@/lib/contracts';
 
 type AvatarUploadResponse = { avatar_url: string | null };
@@ -280,12 +271,19 @@ function ProfileAvatarSection({ session }: { session: SessionInfo }) {
       ) : null}
 
       <div className="profile-avatar-row">
-        <div className="profile-avatar-figure" aria-label={`Foto profil ${label}`}>
+        <div
+          className="profile-avatar-figure"
+          role={showImage ? undefined : 'img'}
+          aria-label={showImage ? undefined : `Foto profil ${label}`}
+        >
           {showImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={displayedUrl ?? undefined}
               alt={`Foto profil ${label}`}
+              width={72}
+              height={72}
+              decoding="async"
               className="profile-avatar-image"
               referrerPolicy="no-referrer"
               onError={() => setImageFailed(true)}
@@ -304,6 +302,7 @@ function ProfileAvatarSection({ session }: { session: SessionInfo }) {
               id={inputId}
               type="file"
               accept={ACCEPTED_AVATAR_TYPES.join(',')}
+              aria-label="Unggah foto profil"
               className="sr-only"
               onChange={handleFileChange}
               disabled={busy}
@@ -369,7 +368,7 @@ function ProfileAvatarSection({ session }: { session: SessionInfo }) {
               >
                 <div
                   className="profile-avatar-progress-bar"
-                  style={{ width: `${uploadProgress}%` }}
+                  style={{ transform: `scaleX(${uploadProgress / 100})` }}
                 />
               </div>
               <span className="profile-avatar-progress-text">
@@ -451,32 +450,7 @@ function ProfileInner({ session: initialSession }: { session: SessionInfo }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <PageBanner
-        kicker="Akun & Karier"
-        title="Profil & Preferensi Kerja"
-        subtitle={
-          <>
-            Kelola riwayat pendidikan, pengalaman kerja, keahlian, portofolio, serta preferensi
-            pencarian kerja untuk{' '}
-            <strong>{session.user.name ?? session.user.email ?? session.user.id}</strong>.
-          </>
-        }
-        tone="sand"
-        imageSrc="/images/banner-profile.jpg"
-        imageAlt="Ilustrasi profil dan preferensi kerja"
-        actions={
-          <>
-            <Link href="/recommendations" className="btn btn-secondary btn-sm">
-              Lihat Rekomendasi
-            </Link>
-            <Link href="/cv" className="btn btn-outline btn-sm">
-              Buka Studio CV
-            </Link>
-          </>
-        }
-      />
-
+    <>
       <ProfileAvatarSection session={session} />
 
       {clearNotice ? (
@@ -494,6 +468,7 @@ function ProfileInner({ session: initialSession }: { session: SessionInfo }) {
           title="Memuat profil..."
           description="Mohon tunggu sebentar."
           lines={4}
+          reserved
         />
       ) : error ? (
         <ErrorState
@@ -711,14 +686,34 @@ function ProfileInner({ session: initialSession }: { session: SessionInfo }) {
           </section>
         </>
       )}
-    </div>
+    </>
   );
 }
 
 export default function ProfilePage() {
   return (
-    <AuthGuard title="Masuk untuk Mengakses Profil & Preferensi">
-      {(session) => <ProfileInner session={session} />}
-    </AuthGuard>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <PageBanner
+        kicker="Akun & Karier"
+        title="Profil & Preferensi Kerja"
+        subtitle="Kelola riwayat pendidikan, pengalaman kerja, keahlian, portofolio, serta preferensi pencarian kerja milikmu."
+        tone="sand"
+        imageSrc="/images/banner-profile.jpg"
+        actions={
+          <>
+            <Link href="/recommendations" className="btn btn-secondary btn-sm">
+              Lihat Rekomendasi
+            </Link>
+            <Link href="/cv" prefetch={false} className="btn btn-outline btn-sm">
+              Buka Studio CV
+            </Link>
+          </>
+        }
+      />
+
+      <AuthGuard title="Masuk untuk Mengakses Profil & Preferensi">
+        {(session) => <ProfileInner session={session} />}
+      </AuthGuard>
+    </div>
   );
 }
