@@ -24,6 +24,7 @@ function LoginFormContent() {
     nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : '/jobs';
   const oauthMessage = OAUTH_ERROR_MESSAGES[searchParams.get('error') ?? ''] ?? null;
   const verifyInvalid = searchParams.get('verify') === 'invalid';
+  const resetSuccess = searchParams.get('reset') === '1';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -107,6 +108,12 @@ function LoginFormContent() {
           </NoticeBanner>
         ) : null}
 
+        {resetSuccess ? (
+          <NoticeBanner variant="success" title="Password Berhasil Diubah">
+            Password berhasil diubah, silakan masuk.
+          </NoticeBanner>
+        ) : null}
+
         {verifyInvalid ? (
           <NoticeBanner variant="warning" title="Link verifikasi tidak valid atau kedaluwarsa">
             <p style={{ margin: '0 0 8px' }}>
@@ -168,6 +175,18 @@ function LoginFormContent() {
                 }
               }}
             />
+            <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
+              <Link
+                href={
+                  email.trim()
+                    ? `/forgot-password?email=${encodeURIComponent(email.trim())}`
+                    : '/forgot-password'
+                }
+                style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ink-secondary)' }}
+              >
+                Lupa password?
+              </Link>
+            </div>
           </FormField>
 
           <Button type="submit" variant="primary" size="lg" loading={submitting}>

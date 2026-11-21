@@ -13,7 +13,9 @@ import {
   notifyAuthChanged,
   type SessionInfo,
 } from './navigation';
+import { PasswordPolicyChecklist } from './password-policy-checklist';
 import { ResendVerificationButton } from './resend-verification';
+import { validatePassword } from '@/lib/password-policy';
 
 export function AuthGuard({
   title = 'Masuk untuk Melanjutkan',
@@ -79,9 +81,14 @@ export function AuthGuard({
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmedEmail)) {
       errors.email = 'Masukkan alamat email yang valid.';
     }
+    const passwordValidation = validatePassword(password);
     if (!password) {
       errors.password = 'Password wajib diisi.';
-    } else if (password.length < 8 || password.length > 72) {
+    } else if (password.length > 72) {
+      errors.password = 'Password maksimal 72 karakter.';
+    } else if (activeTab === 'signup' && !passwordValidation.ok) {
+      errors.password = 'Password belum memenuhi syarat.';
+    } else if (activeTab === 'login' && (password.length < 8 || password.length > 72)) {
       errors.password = 'Password harus terdiri dari 8 hingga 72 karakter.';
     }
 
@@ -136,6 +143,10 @@ export function AuthGuard({
     setSubmitting(false);
 
     if (!res.ok) {
+      if (res.error.code === 'weak_password') {
+        setFieldErrors((prev) => ({ ...prev, password: res.error.message || 'Password belum memenuhi syarat.' }));
+        return;
+      }
       setFormError(res.error.message);
       return;
     }
@@ -327,7 +338,7 @@ export function AuthGuard({
               <FormField
                 id="modal-password"
                 label="Password"
-                hint="Minimal 8 karakter"
+                hint={activeTab === 'login' ? 'Minimal 8 karakter' : undefined}
                 error={fieldErrors.password}
               >
                 <PasswordInput
@@ -343,9 +354,31 @@ export function AuthGuard({
                     }
                   }}
                 />
+                {activeTab === 'login' ? (
+                  <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
+                    <Link
+                      href={
+                        email.trim()
+                          ? `/forgot-password?email=${encodeURIComponent(email.trim())}`
+                          : '/forgot-password'
+                      }
+                      style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ink-secondary)' }}
+                    >
+                      Lupa password?
+                    </Link>
+                  </div>
+                ) : (
+                  <PasswordPolicyChecklist password={password} />
+                )}
               </FormField>
 
-              <Button type="submit" variant="primary" size="lg" loading={submitting}>
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                loading={submitting}
+                disabled={submitting || (activeTab === 'signup' && !validatePassword(password).ok)}
+              >
                 {activeTab === 'login' ? 'Masuk Sekarang' : 'Daftar & Lanjutkan'}
               </Button>
             </form>

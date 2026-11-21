@@ -6,7 +6,9 @@ import { type ApiCallError, apiFetch, SITE_NAME } from '@/components/ui/api-clie
 import { ErrorState, NoticeBanner } from '@/components/ui/feedback';
 import { Button, FormField, PasswordInput, TextInput } from '@/components/ui/forms';
 import { AuthDivider, GoogleAuthButton } from '@/components/ui/google-button';
+import { PasswordPolicyChecklist } from '@/components/ui/password-policy-checklist';
 import { ResendVerificationButton } from '@/components/ui/resend-verification';
+import { validatePassword } from '@/lib/password-policy';
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState('');
@@ -38,10 +40,13 @@ export default function SignupPage() {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmedEmail)) {
       errors.email = 'Masukkan alamat email yang valid.';
     }
+    const passwordValidation = validatePassword(password);
     if (!password) {
       errors.password = 'Password wajib diisi.';
-    } else if (password.length < 8 || password.length > 72) {
-      errors.password = 'Password harus terdiri dari 8 hingga 72 karakter.';
+    } else if (password.length > 72) {
+      errors.password = 'Password maksimal 72 karakter.';
+    } else if (!passwordValidation.ok) {
+      errors.password = 'Password belum memenuhi syarat.';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -68,6 +73,10 @@ export default function SignupPage() {
     setSubmitting(false);
 
     if (!res.ok) {
+      if (res.error.code === 'weak_password') {
+        setFieldErrors((prev) => ({ ...prev, password: res.error.message || 'Password belum memenuhi syarat.' }));
+        return;
+      }
       setApiError(res.error);
       return;
     }
@@ -179,7 +188,6 @@ export default function SignupPage() {
           <FormField
             id="signup-password"
             label="Password"
-            hint="Gunakan 8–72 karakter"
             error={fieldErrors.password}
           >
             <PasswordInput
@@ -195,9 +203,16 @@ export default function SignupPage() {
                 }
               }}
             />
+            <PasswordPolicyChecklist password={password} />
           </FormField>
 
-          <Button type="submit" variant="primary" size="lg" loading={submitting}>
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            loading={submitting}
+            disabled={submitting || !validatePassword(password).ok}
+          >
             Buat Akun &amp; Lanjut Onboarding
           </Button>
         </form>
