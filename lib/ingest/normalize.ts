@@ -24,9 +24,22 @@ const SKILL_CANONICAL_DISPLAY: Record<string, string> = {
   py: 'Python',
   python: 'Python',
   python3: 'Python',
+  java: 'Java',
+  php: 'PHP',
+  'c#': 'C#',
+  csharp: 'C#',
+  '.net': '.NET',
+  dotnet: '.NET',
+  'c++': 'C++',
+  cpp: 'C++',
+  kotlin: 'Kotlin',
+  swift: 'Swift',
   react: 'React',
   reactjs: 'React',
   'react.js': 'React',
+  'react native': 'React Native',
+  angular: 'Angular',
+  angularjs: 'Angular',
   next: 'Next.js',
   nextjs: 'Next.js',
   'next.js': 'Next.js',
@@ -36,6 +49,17 @@ const SKILL_CANONICAL_DISPLAY: Record<string, string> = {
   node: 'Node.js',
   nodejs: 'Node.js',
   'node.js': 'Node.js',
+  express: 'Express.js',
+  expressjs: 'Express.js',
+  'express.js': 'Express.js',
+  nestjs: 'NestJS',
+  'nest.js': 'NestJS',
+  laravel: 'Laravel',
+  'spring boot': 'Spring Boot',
+  springboot: 'Spring Boot',
+  django: 'Django',
+  fastapi: 'FastAPI',
+  flutter: 'Flutter',
   golang: 'Go',
   go: 'Go',
   postgres: 'PostgreSQL',
@@ -44,6 +68,10 @@ const SKILL_CANONICAL_DISPLAY: Record<string, string> = {
   mysql: 'MySQL',
   mongodb: 'MongoDB',
   redis: 'Redis',
+  nosql: 'NoSQL',
+  elasticsearch: 'Elasticsearch',
+  kafka: 'Apache Kafka',
+  'apache kafka': 'Apache Kafka',
   tailwind: 'Tailwind CSS',
   tailwindcss: 'Tailwind CSS',
   'tailwind css': 'Tailwind CSS',
@@ -56,12 +84,32 @@ const SKILL_CANONICAL_DISPLAY: Record<string, string> = {
   kubernetes: 'Kubernetes',
   aws: 'AWS',
   gcp: 'GCP',
+  azure: 'Azure',
+  'microsoft azure': 'Azure',
+  linux: 'Linux',
+  terraform: 'Terraform',
+  'ci/cd': 'CI/CD',
+  cicd: 'CI/CD',
   sql: 'SQL',
   git: 'Git',
   rest: 'REST API',
   'rest api': 'REST API',
+  'rest apis': 'REST API',
   'restful api': 'REST API',
+  'restful apis': 'REST API',
   graphql: 'GraphQL',
+  'power bi': 'Power BI',
+  powerbi: 'Power BI',
+  tableau: 'Tableau',
+  'machine learning': 'Machine Learning',
+  'data analysis': 'Data Analysis',
+  'data analytics': 'Data Analysis',
+  'analisis data': 'Data Analysis',
+  qa: 'QA / Testing',
+  'quality assurance': 'QA / Testing',
+  'software testing': 'QA / Testing',
+  'manual testing': 'QA / Testing',
+  'automation testing': 'QA / Testing',
   'ui/ux': 'UI/UX Design',
   'ui/ux design': 'UI/UX Design',
   figma: 'Figma',
@@ -216,22 +264,179 @@ export function cleanWhitespace(
   return cleaned;
 }
 
+const INDONESIA_CITIES = [
+  'jakarta selatan',
+  'jakarta pusat',
+  'jakarta barat',
+  'jakarta timur',
+  'jakarta utara',
+  'jakarta',
+  'dki jakarta',
+  'bandung',
+  'surabaya',
+  'yogyakarta',
+  'jogjakarta',
+  'jogja',
+  'sleman',
+  'bantul',
+  'semarang',
+  'medan',
+  'denpasar',
+  'bali',
+  'badung',
+  'tangerang selatan',
+  'tangerang',
+  'bekasi',
+  'cikarang',
+  'karawang',
+  'depok',
+  'bogor',
+  'serpong',
+  'bsd',
+  'jabodetabek',
+  'gambir',
+  'cilandak',
+  'kuningan',
+  'menteng',
+  'setiabudi',
+  'kebayoran',
+  'senayan',
+  'kemang',
+  'scbd',
+  'malang',
+  'makassar',
+  'palembang',
+  'batam',
+  'balikpapan',
+  'samarinda',
+  'banjarmasin',
+  'manado',
+  'padang',
+  'pekanbaru',
+  'pontianak',
+  'surakarta',
+  'solo',
+  'cirebon',
+  'lampung',
+  'bandar lampung',
+] as const;
+
+const KNOWN_COUNTRIES: Record<string, string> = {
+  indonesia: 'Indonesia',
+  'united states': 'USA',
+  usa: 'USA',
+  us: 'USA',
+  'united kingdom': 'United Kingdom',
+  uk: 'United Kingdom',
+  singapore: 'Singapore',
+  malaysia: 'Malaysia',
+  australia: 'Australia',
+  canada: 'Canada',
+  germany: 'Germany',
+  deutschland: 'Germany',
+  france: 'France',
+  netherlands: 'Netherlands',
+  switzerland: 'Switzerland',
+  japan: 'Japan',
+  'south korea': 'South Korea',
+  india: 'India',
+  philippines: 'Philippines',
+  vietnam: 'Vietnam',
+  thailand: 'Thailand',
+  'sri lanka': 'Sri Lanka',
+  ireland: 'Ireland',
+  spain: 'Spain',
+  italy: 'Italy',
+  poland: 'Poland',
+  portugal: 'Portugal',
+  sweden: 'Sweden',
+  brazil: 'Brazil',
+  mexico: 'Mexico',
+  'united arab emirates': 'UAE',
+  uae: 'UAE',
+};
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function normalizeLocation(raw: string | null | undefined): string | null {
+  const cleaned = cleanWhitespace(stripHtml(raw ?? null), 120);
+  if (!cleaned) return null;
+
+  const lower = cleaned.toLowerCase();
+  if (
+    ['remote', 'worldwide', 'anywhere', 'global', 'remote (anywhere)', 'anywhere in the world'].includes(
+      lower,
+    )
+  ) {
+    return 'Global, Remote';
+  }
+
+  const parts = cleaned
+    .split(',')
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+  if (parts.length === 0) return null;
+
+  const firstLower = parts[0].toLowerCase();
+  if (firstLower in KNOWN_COUNTRIES) {
+    const country = KNOWN_COUNTRIES[firstLower];
+    if (parts.length === 1) return country;
+    for (const seg of parts.slice(1)) {
+      if (seg.toLowerCase() !== firstLower) {
+        return cleanWhitespace(`${country}, ${seg}`, 120);
+      }
+    }
+    return country;
+  }
+
+  const lastLower = parts[parts.length - 1].toLowerCase();
+  if (lastLower in KNOWN_COUNTRIES) {
+    const country = KNOWN_COUNTRIES[lastLower];
+    const city = parts[0];
+    if (city.toLowerCase() === lastLower || city.toLowerCase() === country.toLowerCase()) {
+      return country;
+    }
+    return cleanWhitespace(`${country}, ${city}`, 120);
+  }
+
+  for (const cityKw of INDONESIA_CITIES) {
+    const pattern = new RegExp(`\\b${escapeRegExp(cityKw)}\\b`, 'i');
+    if (pattern.test(lower)) {
+      const cityDisplay = parts[0];
+      if (cityDisplay.toLowerCase() === 'indonesia') return 'Indonesia';
+      return cleanWhitespace(`Indonesia, ${cityDisplay}`, 120);
+    }
+  }
+
+  if (lower in KNOWN_COUNTRIES) {
+    return KNOWN_COUNTRIES[lower];
+  }
+
+  return cleaned;
+}
+
 export function normalizeWorkMode(
   raw: string | null | undefined,
   locationHint?: string | null,
   titleHint?: string | null,
+  descriptionHint?: string | null,
 ): string {
-  const combined = [raw ?? '', locationHint ?? '', titleHint ?? ''].join(' ').toLowerCase();
-  if (!combined.trim()) return 'unknown';
-
   const rawLower = (raw ?? '').trim().toLowerCase();
-  if (VALID_WORK_MODES.has(rawLower)) return rawLower;
+  if (VALID_WORK_MODES.has(rawLower) && rawLower !== 'unknown') return rawLower;
 
-  if (/\b(hybrid|campuran|wfo\s*\/\s*wfh|kombinasi)\b/.test(combined)) return 'hybrid';
-  if (/\b(remote|wfh|work from home|work from anywhere|wfa|jarak jauh|anywhere)\b/.test(combined))
-    return 'remote';
-  if (/\b(onsite|on-site|on site|wfo|work from office|tatap muka|di kantor)\b/.test(combined))
-    return 'onsite';
+  const primary = [raw ?? '', locationHint ?? '', titleHint ?? ''].join(' ').toLowerCase();
+  const blocks = [primary, (descriptionHint ?? '').toLowerCase()];
+
+  for (const block of blocks) {
+    if (!block.trim()) continue;
+    if (/\b(hybrid|campuran|wfo\s*\/\s*wfh|kombinasi)\b/.test(block)) return 'hybrid';
+    if (/\b(remote|wfh|work from home|work from anywhere|wfa|jarak jauh)\b/.test(block))
+      return 'remote';
+    if (/\b(onsite|on-site|on site|wfo|work from office|tatap muka|di kantor)\b/.test(block))
+      return 'onsite';
+  }
 
   return 'unknown';
 }
@@ -300,17 +505,83 @@ export function normalizeEducation(
   );
   if (match) return cleanWhitespace(match[1], 200);
 
-  if (/\b(bachelor'?s?\s+degree|sarjana\s+\(s1\)|minimal\s+s1)\b/i.test(desc))
+  if (
+    /\b(?:d3\/s1|d3\/d4|diploma\s*(?:\(\s*d3\s*\)|iii)|minimal\s+(?:pendidikan\s+)?d3|lulusan\s+d3|associate'?s?\s+degree)\b/i.test(
+      desc,
+    )
+  ) {
+    return 'Minimal D3 / Diploma';
+  }
+
+  if (
+    /\b(?:bachelor'?s?(?:\s+degree)?|bachelor\s+(?:in|of)\b|undergraduate\s+degree|sarjana(?:\s*\(\s*s1\s*\))?|minimal\s+(?:pendidikan\s+)?(?:s1|d4|sarjana)|lulusan\s+(?:s1|d4|sarjana)|s1\/d4|d4\/s1|s1\/s2)\b/i.test(
+      desc,
+    ) ||
+    /\bs1\s+(?:ilmu|teknik|sistem|informatika|akuntansi|manajemen|ekonomi|hukum|komputer|komunikasi|psikologi|desain|dkv|it|all\s+majors|semua\s+jurusan|of|in)\b/i.test(
+      desc,
+    ) ||
+    /(?:education|pendidikan|kualifikasi|gelar|degree|graduate)[^.\n]{0,30}\bs1\b/i.test(desc)
+  ) {
     return "Minimal S1 / Bachelor's Degree";
-  if (/\b(master'?s?\s+degree|magister\s+\(s2\))\b/i.test(desc))
+  }
+
+  if (
+    /\b(?:master'?s?\s+degree|master\s+(?:in|of)\b|magister(?:\s*\(\s*s2\s*\))?|minimal\s+(?:pendidikan\s+)?s2|lulusan\s+s2|pasca\s*sarjana)\b/i.test(
+      desc,
+    )
+  ) {
     return "Minimal S2 / Master's Degree";
-  if (/\b(diploma\s+\(d3\)|minimal\s+d3)\b/i.test(desc)) return 'Minimal D3 / Diploma';
+  }
+
+  if (
+    /\b(?:minimal\s+(?:pendidikan\s+)?(?:sma|smk|slta)(?:\s*\/\s*(?:smk|ma))?|lulusan\s+(?:sma|smk)(?:\s*\/\s*(?:smk|ma))?|sma\s*\/\s*smk|high\s+school\s+diploma)\b/i.test(
+      desc,
+    )
+  ) {
+    return 'Minimal SMA / SMK';
+  }
 
   return null;
 }
 
 const ROLE_TITLE_RE =
   /\b(developer|engineer|manager|analyst|executive|specialist|officer|staff|staf|intern|magang|lead|consultant|designer|writer|administrator|architect|sales|account|recruiter|secretary|asisten)\b/i;
+const TECH_SKILL_CONTEXT_RE =
+  /\b(developer|engineer|programmer|software|embedded|firmware|data\s+scientist|statistic|backend|fullstack|full-stack|system|c\/c\+\+)\b/i;
+const GEO_JAVA_RE =
+  /\b(?:east|west|central|north|south|pulau|jawa)\s+java\b|\bjava\s*(?:island|sea|region|area|,\s*indonesia)\b/gi;
+const MAX_SKILLS_PER_JOB = 10;
+const AMBIGUOUS_PROSE_SKILL_ALIASES = new Set(['go', 'next', 'rest', 'express', 'js', 'ts', 'py']);
+const SLASH_PRESERVED_SKILL_RE =
+  /^(?:ci\/cd|ui\/ux(?:\s+design)?|seo\/sem|qa\s*\/\s*testing)$/i;
+
+function extractSkillsFromText(text: string | null | undefined): string[] {
+  if (!text || !text.trim()) return [];
+  const masked = text.replace(GEO_JAVA_RE, ' ');
+  const padded = ` ${masked.toLowerCase()} `;
+  const bestIndexBySkill = new Map<string, number>();
+
+  for (const [alias, displayName] of Object.entries(SKILL_CANONICAL_DISPLAY)) {
+    if (alias.length < 2 || AMBIGUOUS_PROSE_SKILL_ALIASES.has(alias)) continue;
+    const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(
+      `(^|[\\s,./()\\-:;'"[\\]])${escaped}($|[\\s,./()\\-:;'"[\\]])`,
+      'i',
+    );
+    const match = pattern.exec(padded);
+    if (match) {
+      const idx = match.index;
+      const prev = bestIndexBySkill.get(displayName);
+      if (prev === undefined || idx < prev) {
+        bestIndexBySkill.set(displayName, idx);
+      }
+    }
+  }
+
+  return Array.from(bestIndexBySkill.entries())
+    .sort((a, b) => a[1] - b[1])
+    .map(([displayName]) => displayName);
+}
 
 export function normalizeSkills(
   rawSkills: unknown,
@@ -319,15 +590,19 @@ export function normalizeSkills(
 ): string[] {
   const seenLower = new Set<string>();
   const result: string[] = [];
+  const contextText = `${titleHint ?? ''} ${descriptionHint ?? ''}`.trim();
+  const allowSingleCharSkill = !contextText || TECH_SKILL_CONTEXT_RE.test(contextText);
 
-  const add = (item: string) => {
+  const add = (item: string, fromRaw = false) => {
+    if (result.length >= MAX_SKILLS_PER_JOB) return;
     const cleaned = cleanWhitespace(item, 80);
     if (!cleaned) return;
+    if (fromRaw && cleaned.length === 1 && !allowSingleCharSkill) return;
     const key = cleaned.toLowerCase();
     const canonical = SKILL_CANONICAL_DISPLAY[key] ?? cleaned;
     if (ROLE_TITLE_RE.test(canonical) && !(key in SKILL_CANONICAL_DISPLAY)) return;
     const canonicalKey = canonical.toLowerCase();
-    if (!seenLower.has(canonicalKey) && result.length < 100) {
+    if (!seenLower.has(canonicalKey) && result.length < MAX_SKILLS_PER_JOB) {
       seenLower.add(canonicalKey);
       result.push(canonical.slice(0, 80));
     }
@@ -336,18 +611,28 @@ export function normalizeSkills(
   if (Array.isArray(rawSkills)) {
     for (const item of rawSkills) {
       if (typeof item === 'string') {
-        for (const sub of item.split(/[,;/|]/)) add(sub);
+        const trimmed = item.trim();
+        if (
+          SKILL_CANONICAL_DISPLAY[trimmed.toLowerCase()] ||
+          SLASH_PRESERVED_SKILL_RE.test(trimmed)
+        ) {
+          add(trimmed, true);
+        } else {
+          for (const sub of item.split(/[,;/|]/)) add(sub, true);
+        }
       }
     }
   }
 
-  if (result.length === 0) {
-    const combinedText = ` ${titleHint ?? ''} ${descriptionHint ?? ''} `.toLowerCase();
-    for (const [alias, displayName] of Object.entries(SKILL_CANONICAL_DISPLAY)) {
-      if (alias.length < 2 || ROLE_TITLE_RE.test(alias)) continue;
-      const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const pattern = new RegExp(`(^|[\\s,./()\\-])${escaped}($|[\\s,./()\\-])`, 'i');
-      if (pattern.test(combinedText)) add(displayName);
+  if (result.length < MAX_SKILLS_PER_JOB && titleHint) {
+    for (const skill of extractSkillsFromText(titleHint)) {
+      add(skill);
+    }
+  }
+
+  if (result.length < MAX_SKILLS_PER_JOB && descriptionHint) {
+    for (const skill of extractSkillsFromText(descriptionHint)) {
+      add(skill);
     }
   }
 
@@ -473,8 +758,8 @@ export function buildIngestPayload(input: {
   const normPublishedAt = normalizeIsoTimestamp(input.publishedAt ?? null);
 
   const normDescription = cleanDescriptionWhitespace(stripHtml(input.description ?? null), 20000);
-  const normLocation = cleanWhitespace(stripHtml(input.location ?? null) ?? input.location ?? null, 120);
-  const normWorkMode = normalizeWorkMode(input.workMode, normLocation, normTitle);
+  const normLocation = normalizeLocation(input.location ?? null);
+  const normWorkMode = normalizeWorkMode(input.workMode, normLocation, normTitle, normDescription);
   const normEmploymentType = normalizeEmploymentType(input.employmentType, normTitle);
   const normLevel = normalizeLevel(input.level, normTitle);
   const normEducation = normalizeEducation(input.education, normDescription);

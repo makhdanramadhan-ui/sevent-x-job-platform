@@ -52,9 +52,22 @@ SKILL_CANONICAL_DISPLAY: Dict[str, str] = {
     "py": "Python",
     "python": "Python",
     "python3": "Python",
+    "java": "Java",
+    "php": "PHP",
+    "c#": "C#",
+    "csharp": "C#",
+    ".net": ".NET",
+    "dotnet": ".NET",
+    "c++": "C++",
+    "cpp": "C++",
+    "kotlin": "Kotlin",
+    "swift": "Swift",
     "react": "React",
     "reactjs": "React",
     "react.js": "React",
+    "react native": "React Native",
+    "angular": "Angular",
+    "angularjs": "Angular",
     "next": "Next.js",
     "nextjs": "Next.js",
     "next.js": "Next.js",
@@ -64,6 +77,17 @@ SKILL_CANONICAL_DISPLAY: Dict[str, str] = {
     "node": "Node.js",
     "nodejs": "Node.js",
     "node.js": "Node.js",
+    "express": "Express.js",
+    "expressjs": "Express.js",
+    "express.js": "Express.js",
+    "nestjs": "NestJS",
+    "nest.js": "NestJS",
+    "laravel": "Laravel",
+    "spring boot": "Spring Boot",
+    "springboot": "Spring Boot",
+    "django": "Django",
+    "fastapi": "FastAPI",
+    "flutter": "Flutter",
     "golang": "Go",
     "go": "Go",
     "postgres": "PostgreSQL",
@@ -72,6 +96,10 @@ SKILL_CANONICAL_DISPLAY: Dict[str, str] = {
     "mysql": "MySQL",
     "mongodb": "MongoDB",
     "redis": "Redis",
+    "nosql": "NoSQL",
+    "elasticsearch": "Elasticsearch",
+    "kafka": "Apache Kafka",
+    "apache kafka": "Apache Kafka",
     "tailwind": "Tailwind CSS",
     "tailwindcss": "Tailwind CSS",
     "tailwind css": "Tailwind CSS",
@@ -84,12 +112,32 @@ SKILL_CANONICAL_DISPLAY: Dict[str, str] = {
     "kubernetes": "Kubernetes",
     "aws": "AWS",
     "gcp": "GCP",
+    "azure": "Azure",
+    "microsoft azure": "Azure",
+    "linux": "Linux",
+    "terraform": "Terraform",
+    "ci/cd": "CI/CD",
+    "cicd": "CI/CD",
     "sql": "SQL",
     "git": "Git",
     "rest": "REST API",
     "rest api": "REST API",
+    "rest apis": "REST API",
     "restful api": "REST API",
+    "restful apis": "REST API",
     "graphql": "GraphQL",
+    "power bi": "Power BI",
+    "powerbi": "Power BI",
+    "tableau": "Tableau",
+    "machine learning": "Machine Learning",
+    "data analysis": "Data Analysis",
+    "data analytics": "Data Analysis",
+    "analisis data": "Data Analysis",
+    "qa": "QA / Testing",
+    "quality assurance": "QA / Testing",
+    "software testing": "QA / Testing",
+    "manual testing": "QA / Testing",
+    "automation testing": "QA / Testing",
     "ui/ux": "UI/UX Design",
     "ui/ux design": "UI/UX Design",
     "figma": "Figma",
@@ -259,8 +307,19 @@ INDONESIA_CITIES = (
     "tangerang",
     "bekasi",
     "cikarang",
+    "karawang",
     "depok",
     "bogor",
+    "serpong",
+    "gambir",
+    "cilandak",
+    "kuningan",
+    "menteng",
+    "setiabudi",
+    "kebayoran",
+    "senayan",
+    "kemang",
+    "scbd",
     "malang",
     "makassar",
     "palembang",
@@ -397,7 +456,7 @@ def normalize_work_mode(
         if re.search(r"\b(hybrid|campuran|wfo\s*/\s*wfh|kombinasi)\b", text_block):
             return "hybrid"
         if re.search(
-            r"\b(remote|wfh|work from home|work from anywhere|wfa|jarak jauh|anywhere)\b",
+            r"\b(remote|wfh|work from home|work from anywhere|wfa|jarak jauh)\b",
             text_block,
         ):
             return "remote"
@@ -477,14 +536,91 @@ def normalize_education(raw: Optional[str], description_hint: Optional[str] = No
     if match:
         return clean_whitespace(match.group(1), max_len=200)
 
-    if re.search(r"\b(bachelor'?s?\s+degree|sarjana\s+\(s1\)|minimal\s+s1)\b", desc, re.IGNORECASE):
-        return "Minimal S1 / Bachelor's Degree"
-    if re.search(r"\b(master'?s?\s+degree|magister\s+\(s2\))\b", desc, re.IGNORECASE):
-        return "Minimal S2 / Master's Degree"
-    if re.search(r"\b(diploma\s+\(d3\)|minimal\s+d3)\b", desc, re.IGNORECASE):
+    if re.search(
+        r"\b(?:d3/s1|d3/d4|diploma\s*(?:\(\s*d3\s*\)|iii)|minimal\s+(?:pendidikan\s+)?d3|lulusan\s+d3|associate'?s?\s+degree)\b",
+        desc,
+        re.IGNORECASE,
+    ):
         return "Minimal D3 / Diploma"
 
+    if (
+        re.search(
+            r"\b(?:bachelor'?s?(?:\s+degree)?|bachelor\s+(?:in|of)\b|undergraduate\s+degree|sarjana(?:\s*\(\s*s1\s*\))?|minimal\s+(?:pendidikan\s+)?(?:s1|d4|sarjana)|lulusan\s+(?:s1|d4|sarjana)|s1/d4|d4/s1|s1/s2)\b",
+            desc,
+            re.IGNORECASE,
+        )
+        or re.search(
+            r"\bs1\s+(?:ilmu|teknik|sistem|informatika|akuntansi|manajemen|ekonomi|hukum|komputer|komunikasi|psikologi|desain|dkv|it|all\s+majors|semua\s+jurusan|of|in)\b",
+            desc,
+            re.IGNORECASE,
+        )
+        or re.search(
+            r"(?:education|pendidikan|kualifikasi|gelar|degree|graduate)[^.\n]{0,30}\bs1\b",
+            desc,
+            re.IGNORECASE,
+        )
+    ):
+        return "Minimal S1 / Bachelor's Degree"
+
+    if re.search(
+        r"\b(?:master'?s?\s+degree|master\s+(?:in|of)\b|magister(?:\s*\(\s*s2\s*\))?|minimal\s+(?:pendidikan\s+)?s2|lulusan\s+s2|pasca\s*sarjana)\b",
+        desc,
+        re.IGNORECASE,
+    ):
+        return "Minimal S2 / Master's Degree"
+
+    if re.search(
+        r"\b(?:minimal\s+(?:pendidikan\s+)?(?:sma|smk|slta)(?:\s*/\s*(?:smk|ma))?|lulusan\s+(?:sma|smk)(?:\s*/\s*(?:smk|ma))?|sma\s*/\s*smk|high\s+school\s+diploma)\b",
+        desc,
+        re.IGNORECASE,
+    ):
+        return "Minimal SMA / SMK"
+
     return None
+
+
+ROLE_TITLE_RE = re.compile(
+    r"\b(developer|engineer|manager|analyst|executive|specialist|officer|staff|staf|intern|magang|lead|consultant|designer|writer|administrator|architect|sales|account|recruiter|secretary|asisten)\b",
+    re.IGNORECASE,
+)
+TECH_SKILL_CONTEXT_RE = re.compile(
+    r"\b(developer|engineer|programmer|software|embedded|firmware|data\s+scientist|statistic|backend|fullstack|full-stack|system|c/c\+\+)\b",
+    re.IGNORECASE,
+)
+GEO_JAVA_RE = re.compile(
+    r"\b(?:east|west|central|north|south|pulau|jawa)\s+java\b|\bjava\s*(?:island|sea|region|area|,\s*indonesia)\b",
+    re.IGNORECASE,
+)
+MAX_SKILLS_PER_JOB = 10
+AMBIGUOUS_PROSE_SKILL_ALIASES = {"go", "next", "rest", "express", "js", "ts", "py"}
+SLASH_PRESERVED_SKILL_RE = re.compile(
+    r"^(?:ci/cd|ui/ux(?:\s+design)?|seo/sem|qa\s*/\s*testing)$",
+    re.IGNORECASE,
+)
+
+
+def _extract_skills_from_text(text: Optional[str]) -> List[str]:
+    if not text or not isinstance(text, str) or not text.strip():
+        return []
+    masked = GEO_JAVA_RE.sub(" ", text)
+    padded = f" {masked.lower()} "
+    best_index_by_skill: Dict[str, int] = {}
+
+    for alias, display_name in SKILL_CANONICAL_DISPLAY.items():
+        if len(alias) < 2 or alias in AMBIGUOUS_PROSE_SKILL_ALIASES:
+            continue
+        pattern = rf"(^|[\s,./()\-:;'\"\[\]]){re.escape(alias)}($|[\s,./()\-:;'\"\[\]])"
+        match = re.search(pattern, padded)
+        if match:
+            idx = match.start()
+            prev = best_index_by_skill.get(display_name)
+            if prev is None or idx < prev:
+                best_index_by_skill[display_name] = idx
+
+    return [
+        display_name
+        for display_name, _ in sorted(best_index_by_skill.items(), key=lambda kv: kv[1])
+    ]
 
 
 def normalize_skills(
@@ -494,33 +630,47 @@ def normalize_skills(
 ) -> List[str]:
     seen_lower: set[str] = set()
     result: List[str] = []
+    context_text = f"{title_hint or ''} {description_hint or ''}".strip()
+    allow_single_char_skill = not context_text or bool(TECH_SKILL_CONTEXT_RE.search(context_text))
 
-    def _add(item: str) -> None:
+    def _add(item: str, from_raw: bool = False) -> None:
+        if len(result) >= MAX_SKILLS_PER_JOB:
+            return
         cleaned = clean_whitespace(item, max_len=80)
         if not cleaned:
             return
+        if from_raw and len(cleaned) == 1 and not allow_single_char_skill:
+            return
         key = cleaned.lower()
         canonical = SKILL_CANONICAL_DISPLAY.get(key, cleaned)
+        if ROLE_TITLE_RE.search(canonical) and key not in SKILL_CANONICAL_DISPLAY:
+            return
         canonical_key = canonical.lower()
-        if canonical_key not in seen_lower and len(result) < 100:
+        if canonical_key not in seen_lower and len(result) < MAX_SKILLS_PER_JOB:
             seen_lower.add(canonical_key)
             result.append(canonical[:80])
 
     if raw_skills:
         for item in raw_skills:
             if isinstance(item, str):
-                for sub in re.split(r"[,;/|]", item):
-                    _add(sub)
+                trimmed = item.strip()
+                if (
+                    trimmed.lower() in SKILL_CANONICAL_DISPLAY
+                    or SLASH_PRESERVED_SKILL_RE.match(trimmed)
+                ):
+                    _add(trimmed, from_raw=True)
+                else:
+                    for sub in re.split(r"[,;/|]", item):
+                        _add(sub, from_raw=True)
 
-    # Jika daftar skill dari sumber masih kosong, ekstrak secara konservatif dari judul & deskripsi
-    if not result:
-        combined_text = f" {title_hint or ''} {description_hint or ''} ".lower()
-        for alias, display_name in SKILL_CANONICAL_DISPLAY.items():
-            if len(alias) < 2:
-                continue
-            pattern = rf"(^|[\s,./()\-]){re.escape(alias)}($|[\s,./()\-])"
-            if re.search(pattern, combined_text):
-                _add(display_name)
+    # Selalu ekstrak dari judul lalu deskripsi hingga batas maksimal 10 skill
+    if len(result) < MAX_SKILLS_PER_JOB and title_hint:
+        for skill in _extract_skills_from_text(title_hint):
+            _add(skill)
+
+    if len(result) < MAX_SKILLS_PER_JOB and description_hint:
+        for skill in _extract_skills_from_text(description_hint):
+            _add(skill)
 
     return result
 

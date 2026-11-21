@@ -27,6 +27,7 @@ from scrapers.normalizer import (
     VALID_STATUSES,
     VALID_WORK_MODES,
     build_ingest_payload,
+    normalize_education,
     normalize_employment_type,
     normalize_level,
     normalize_location,
@@ -308,6 +309,102 @@ class TestNormalizerAndContract(unittest.TestCase):
         self.assertIn("• Menguasai Python dan SQL.", desc)
         self.assertIn("• Pengalaman REST API.", desc)
         self.assertNotIn("• •", desc)
+
+    def test_normalize_skills_always_extracts_from_title_and_description_up_to_10(self) -> None:
+        moneta_desc = (
+            "Requirements:\n"
+            "4. Proficient in JavaScript/TypeScript, HTML, CSS, and modern frontend frameworks (React.js, Angular, or Vue.js).\n"
+            "5. Strong backend development experience (Node.js, Java, Python, PHP, or equivalent).\n"
+            "6. Experienced in RESTful APIs, database management (SQL/NoSQL), and system integration.\n"
+            "7. Familiar with cloud platforms, Docker, CI/CD, and Git."
+        )
+        skills = normalize_skills(
+            ["SQL"],
+            title_hint="Senior Full Stack Developer",
+            description_hint=moneta_desc,
+        )
+        self.assertEqual(skills[0], "SQL")
+        self.assertEqual(len(skills), 10)
+        for expected in ["JavaScript", "TypeScript", "HTML", "CSS", "React", "Angular", "Vue.js", "Node.js", "Java"]:
+            self.assertIn(expected, skills)
+
+        # Pastikan kata bahasa Inggris umum ('next', 'go', 'rest') tidak memicu false-positive
+        prose_only = normalize_skills(
+            ["Software Engineering"],
+            title_hint="Staff Engineer",
+            description_hint="In the next step, you will go through the rest of the onboarding process with RESTful APIs and CI/CD.",
+        )
+        self.assertIn("Software Engineering", prose_only)
+        self.assertIn("REST API", prose_only)
+        self.assertIn("CI/CD", prose_only)
+        self.assertNotIn("Next.js", prose_only)
+        self.assertNotIn("Go", prose_only)
+
+    def test_linkedin_detail_nested_div_does_not_truncate_requirements(self) -> None:
+        nested_html = """
+        <div class="show-more-less-html__markup">
+          <div><p>Job overview section.</p></div>
+          <div><p>Requirements: Proficient in Angular, PHP, NoSQL, and CI/CD.</p></div>
+        </div>
+        """
+        parsed = parse_linkedin_guest_detail_html(nested_html)
+        self.assertIn("Requirements: Proficient in Angular, PHP, NoSQL, and CI/CD.", parsed["description"] or "")
+
+    def test_audit_metadata_and_false_positive_skill_fixes(self) -> None:
+        # 1. work_mode dari deskripsi dan tanpa false-positive 'anywhere'
+        self.assertEqual(
+            normalize_work_mode(None, description_hint="Role ini menerapkan skema kerja Hybrid (3 hari WFO)."),
+            "hybrid",
+        )
+        self.assertEqual(
+            normalize_work_mode(None, description_hint="Kandidat bersedia bekerja on-site di Surabaya."),
+            "onsite",
+        )
+        self.assertEqual(
+            normalize_work_mode(None, description_hint="Collaborate with stakeholders anywhere in the region."),
+            "unknown",
+        )
+
+        # 2. Variasi education Indonesia & Inggris
+        self.assertEqual(
+            normalize_education(None, "Qualification: Bachelor in Computer Science or related field."),
+            "Minimal S1 / Bachelor's Degree",
+        )
+        self.assertEqual(
+            normalize_education(None, "Kualifikasi: Sarjana Teknik Informatika / Sistem Informasi."),
+            "Minimal S1 / Bachelor's Degree",
+        )
+        self.assertEqual(
+            normalize_education(None, "Pendidikan D3/S1 Akuntansi."),
+            "Minimal D3 / Diploma",
+        )
+        self.assertEqual(
+            normalize_education(None, "Master in Data Science preferred."),
+            "Minimal S2 / Master's Degree",
+        )
+
+        # 3. 'East Java' tidak dianggap bahasa pemrograman Java
+        ninja_skills = normalize_skills(
+            [],
+            title_hint="Business Development Executive (Surabaya)",
+            description_hint="Covering East Java and West Java merchant acquisition and Sales growth.",
+        )
+        self.assertNotIn("Java", ninja_skills)
+        self.assertIn("Sales", ninja_skills)
+
+        # 4. Tag 1 huruf 'C' ditolak pada peran non-teknis, tetapi dipertahankan pada peran teknis
+        non_tech_skills = normalize_skills(
+            ["C"],
+            title_hint="Account Executive - Splunk",
+            description_hint="Responsible for enterprise sales pipeline and client relationships.",
+        )
+        self.assertNotIn("C", non_tech_skills)
+        tech_skills = normalize_skills(
+            ["C"],
+            title_hint="Embedded Software Engineer",
+            description_hint="Develop low-level firmware and embedded systems.",
+        )
+        self.assertIn("C", tech_skills)
 
 
 class TestConservativeDeduplication(unittest.TestCase):

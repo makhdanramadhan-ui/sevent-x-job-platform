@@ -214,6 +214,24 @@ def parse_linkedin_guest_search_html(raw_html: str) -> List[Dict[str, Optional[s
     return cards
 
 
+def _extract_balanced_div_inner(raw_html: str, open_div_pattern: str) -> Optional[str]:
+    open_match = re.search(open_div_pattern, raw_html, re.DOTALL | re.IGNORECASE)
+    if not open_match:
+        return None
+    content_start = open_match.end()
+    depth = 1
+    for tag_match in re.finditer(r"</?div\b[^>]*>", raw_html[content_start:], re.IGNORECASE):
+        tag_lower = tag_match.group(0).lower()
+        if tag_lower.startswith("</div"):
+            depth -= 1
+            if depth == 0:
+                return raw_html[content_start : content_start + tag_match.start()]
+        elif not tag_lower.endswith("/>"):
+            depth += 1
+    fallback = re.search(r"(.*?)</div>", raw_html[content_start:], re.DOTALL | re.IGNORECASE)
+    return fallback.group(1) if fallback else None
+
+
 def parse_linkedin_guest_detail_html(raw_html: str) -> Dict[str, Optional[str]]:
     """
     Mengekstrak deskripsi, level senioritas, tipe pekerjaan, dan logo dari halaman detail publik LinkedIn:
@@ -230,13 +248,12 @@ def parse_linkedin_guest_detail_html(raw_html: str) -> Dict[str, Optional[str]]:
 
     result["logo_url"] = _extract_linkedin_logo_url(raw_html)
 
-    desc_match = re.search(
-        r"<div[^>]*class=\"[^\"]*show-more-less-html__markup[^\"]*\"[^>]*>(.*?)</div>",
+    desc_inner = _extract_balanced_div_inner(
         raw_html,
-        re.DOTALL | re.IGNORECASE,
+        r"<div[^>]*class=\"[^\"]*show-more-less-html__markup[^\"]*\"[^>]*>",
     )
-    if desc_match:
-        result["description"] = strip_html(html.unescape(desc_match.group(1)))
+    if desc_inner:
+        result["description"] = strip_html(html.unescape(desc_inner))
 
     criteria_items = re.findall(
         r"<li[^>]*class=\"[^\"]*description__job-criteria-item[^\"]*\"[^>]*>(.*?)</li>",
@@ -282,6 +299,7 @@ def fetch_linkedin_guest_jobs(
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     payloads: List[Dict[str, Any]] = []
     seen_job_ids: set[str] = set()
+    detail_blocked = False
 
     for idx, kw in enumerate(keywords):
         clean_kw = kw.strip()
@@ -352,13 +370,15 @@ def fetch_linkedin_guest_jobs(
                 "employment_type": None,
                 "logo_url": None,
             }
-            if fetch_detail:
+            if fetch_detail and not detail_blocked:
                 if delay_seconds > 0:
                     time.sleep(min(1.0, delay_seconds))
                 detail_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
                 try:
                     d_status, d_url, d_html = _http_get_text(detail_url)
-                    if d_status == 200 and "authwall" not in d_url.lower():
+                    if d_status in {429, 999} or "authwall" in d_url.lower():
+                        detail_blocked = True
+                    elif d_status == 200:
                         detail_info = parse_linkedin_guest_detail_html(d_html)
                 except Exception:
                     pass

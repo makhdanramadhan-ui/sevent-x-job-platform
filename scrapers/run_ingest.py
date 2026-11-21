@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from datetime import datetime, timezone
@@ -31,7 +32,17 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from .ingest_client import SupabaseIngestClient, execute_ingest_pipeline
 from .logo_resolver import resolve_company_logo_from_internet
-from .normalizer import is_placeholder_logo_url
+from .normalizer import (
+    GEO_JAVA_RE,
+    TECH_SKILL_CONTEXT_RE,
+    clean_description_whitespace,
+    is_placeholder_logo_url,
+    normalize_education,
+    normalize_level,
+    normalize_location,
+    normalize_skills,
+    normalize_work_mode,
+)
 from .sources import (
     SourceFetchResult,
     _http_get_text,
@@ -304,6 +315,293 @@ def run_logo_backfill(
     }
 
 
+def _is_placeholder_description(desc: Optional[str]) -> bool:
+    if not desc or not isinstance(desc, str):
+        return True
+    cleaned = desc.strip()
+    if not cleaned:
+        return True
+    return cleaned.startswith("Lowongan ") and "(tag pencarian:" in cleaned
+
+
+def _clean_stale_false_positive_skills(
+    existing_skills: List[str],
+    title: str,
+    desc_for_skills: Optional[str],
+) -> List[str]:
+    combined = f"{title} {desc_for_skills or ''}".strip()
+    combined_lower = combined.lower()
+    masked_java_lower = GEO_JAVA_RE.sub(" ", combined).lower()
+    has_tech_context = bool(TECH_SKILL_CONTEXT_RE.search(combined))
+
+    cleaned: List[str] = []
+    for skill in existing_skills:
+        if skill == "Express.js" and "express.js" not in combined_lower and "expressjs" not in combined_lower:
+            continue
+        if skill == "Next.js" and "next.js" not in combined_lower and "nextjs" not in combined_lower:
+            continue
+        if (
+            skill == "Go"
+            and "golang" not in combined_lower
+            and not re.search(r"\bgo\s*(?:developer|engineer|lang|programming)\b", combined_lower)
+        ):
+            continue
+        if skill == "Java" and not re.search(
+            r"(^|[\s,./()\-:;'\"\[\]])java($|[\s,./()\-:;'\"\[\]])",
+            masked_java_lower,
+        ):
+            continue
+        if len(skill) == 1 and not has_tech_context:
+            continue
+        cleaned.append(skill)
+    return cleaned
+
+
+def run_detail_and_skill_backfill(
+    client: SupabaseIngestClient,
+    *,
+    dry_run: bool = True,
+    limit: int = 200,
+) -> Dict[str, Any]:
+    """
+    Memperbarui lowongan di Supabase yang:
+    1. Deskripsinya masih berupa placeholder pencarian ('Lowongan ... (tag pencarian: ...)') atau kosong,
+       dengan mengambil ulang detail halaman publik LinkedIn.
+    2. Daftar keahlian (skills), work_mode, education, dan format location-nya belum lengkap/akurat.
+    """
+    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    jobs = client.fetch_jobs_for_detail_backfill(limit=limit)
+
+    updated: List[Dict[str, Any]] = []
+    unchanged_count = 0
+    skipped: List[Dict[str, str]] = []
+    errors: List[Dict[str, str]] = []
+    descriptions_fetched_from_linkedin = 0
+    still_placeholder_count = 0
+    skills_expanded_count = 0
+    work_mode_updated_count = 0
+    education_updated_count = 0
+    location_updated_count = 0
+    linkedin_blocked = False
+    linkedin_calls = 0
+    consecutive_blocked = 0
+
+    # Urutkan agar lowongan dengan deskripsi placeholder diproses lebih dulu sebelum kuota request LinkedIn terkena 429
+    sorted_jobs = sorted(
+        [j for j in jobs if isinstance(j, dict)],
+        key=lambda j: 0 if _is_placeholder_description(j.get("description")) else 1,
+    )
+
+    for job in sorted_jobs:
+        job_id = str(job.get("id") or "")
+        title = str(job.get("title") or "").strip()
+        company = str(job.get("company") or "").strip()
+        current_desc = str(job.get("description") or "").strip() or None
+        current_loc = str(job.get("location") or "").strip() or None
+        current_work_mode = str(job.get("work_mode") or "unknown").strip()
+        current_level = str(job.get("level") or "unknown").strip()
+        current_education = job.get("education")
+        current_logo = str(job.get("company_logo_url") or "").strip() or None
+        raw_existing_skills = job.get("skills")
+        existing_skills: List[str] = (
+            [str(s).strip() for s in raw_existing_skills if isinstance(s, str) and str(s).strip()]
+            if isinstance(raw_existing_skills, list)
+            else []
+        )
+
+        sources = job.get("job_sources") or []
+        if not isinstance(sources, list):
+            sources = []
+        valid_sources = [
+            s
+            for s in sources
+            if isinstance(s, dict)
+            and s.get("source_name")
+            and s.get("source_job_id")
+            and s.get("source_url")
+        ]
+        if not valid_sources or not title or not company:
+            skipped.append({"id": job_id, "title": title, "company": company, "reason": "no_valid_source"})
+            continue
+
+        chosen_src = next(
+            (s for s in valid_sources if str(s.get("source_name")) == "linkedin_guest"),
+            valid_sources[0],
+        )
+        src_name = str(chosen_src["source_name"])
+        src_job_id = str(chosen_src["source_job_id"])
+
+        effective_desc = current_desc
+        description_updated = False
+        new_level: Optional[str] = None
+        new_education: Optional[str] = None
+        new_work_mode: Optional[str] = None
+        new_location: Optional[str] = None
+        new_logo: Optional[str] = None
+
+        if _is_placeholder_description(current_desc) and src_name == "linkedin_guest" and not linkedin_blocked:
+            if linkedin_calls > 0:
+                time.sleep(2.0)
+            linkedin_calls += 1
+            detail_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{src_job_id}"
+            try:
+                status_code, final_url, body_html = _http_get_text(detail_url)
+                if status_code == 429:
+                    time.sleep(4.0)
+                    linkedin_calls += 1
+                    status_code, final_url, body_html = _http_get_text(detail_url)
+
+                if status_code in {429, 999} or "authwall" in final_url.lower():
+                    consecutive_blocked += 1
+                    if consecutive_blocked >= 3:
+                        linkedin_blocked = True
+                elif status_code == 200:
+                    consecutive_blocked = 0
+                    detail = parse_linkedin_guest_detail_html(body_html)
+                    fetched_desc = clean_description_whitespace(detail.get("description"), max_len=20000)
+                    if fetched_desc and not _is_placeholder_description(fetched_desc):
+                        effective_desc = fetched_desc
+                        description_updated = True
+                        descriptions_fetched_from_linkedin += 1
+                    if current_level in {"", "unknown"} and detail.get("level"):
+                        cand_level = normalize_level(detail.get("level"), title_hint=title)
+                        if cand_level != "unknown":
+                            new_level = cand_level
+                    if not current_logo and detail.get("logo_url") and not is_placeholder_logo_url(detail.get("logo_url")):
+                        new_logo = str(detail.get("logo_url"))
+            except Exception as exc:
+                errors.append({"id": job_id, "company": company, "error": f"linkedin_detail: {exc}"})
+
+        if _is_placeholder_description(effective_desc):
+            still_placeholder_count += 1
+
+        desc_for_hints = None if _is_placeholder_description(effective_desc) else effective_desc
+
+        if current_loc:
+            cand_loc = normalize_location(current_loc)
+            if cand_loc and cand_loc != current_loc:
+                new_location = cand_loc
+
+        if current_work_mode in {"", "unknown"}:
+            cand_wm = normalize_work_mode(
+                None,
+                location_hint=new_location or current_loc,
+                title_hint=title,
+                description_hint=desc_for_hints,
+            )
+            if cand_wm != "unknown":
+                new_work_mode = cand_wm
+
+        if not current_education and desc_for_hints:
+            cand_edu = normalize_education(None, description_hint=desc_for_hints)
+            if cand_edu:
+                new_education = cand_edu
+
+        cleaned_existing_skills = _clean_stale_false_positive_skills(
+            existing_skills,
+            title,
+            desc_for_hints,
+        )
+        new_skills = normalize_skills(
+            cleaned_existing_skills,
+            title_hint=title,
+            description_hint=desc_for_hints,
+        )
+        skills_changed = new_skills != existing_skills
+
+        if (
+            not description_updated
+            and not skills_changed
+            and not new_level
+            and not new_education
+            and not new_work_mode
+            and not new_location
+            and not new_logo
+        ):
+            unchanged_count += 1
+            continue
+
+        if skills_changed:
+            skills_expanded_count += 1
+        if new_work_mode:
+            work_mode_updated_count += 1
+        if new_education:
+            education_updated_count += 1
+        if new_location:
+            location_updated_count += 1
+
+        patch_job: Dict[str, Any] = {
+            "title": title,
+            "company": company,
+            "skills": new_skills,
+        }
+        if description_updated and effective_desc:
+            patch_job["description"] = effective_desc
+        if new_location:
+            patch_job["location"] = new_location
+        if new_work_mode:
+            patch_job["work_mode"] = new_work_mode
+        if new_level:
+            patch_job["level"] = new_level
+        if new_education:
+            patch_job["education"] = new_education
+        if new_logo:
+            patch_job["company_logo_url"] = new_logo
+
+        patch_payload: Dict[str, Any] = {
+            "source": {
+                "name": src_name,
+                "job_id": src_job_id,
+                "url": str(chosen_src["source_url"]),
+                "fetched_at": now_iso,
+            },
+            "job": patch_job,
+        }
+
+        try:
+            if not dry_run:
+                client.call_ingest_job(patch_payload)
+            updated.append(
+                {
+                    "id": job_id,
+                    "title": title,
+                    "company": company,
+                    "source_name": src_name,
+                    "description_updated": description_updated,
+                    "work_mode_updated": new_work_mode,
+                    "education_updated": new_education,
+                    "location_updated": new_location,
+                    "old_skills": existing_skills,
+                    "new_skills": new_skills,
+                }
+            )
+        except Exception as exc:
+            errors.append({"id": job_id, "company": company, "error": str(exc)})
+
+    return {
+        "started_at": now_iso,
+        "dry_run": dry_run,
+        "summary": {
+            "checked": len(sorted_jobs),
+            "updated": len(updated),
+            "descriptions_fetched_from_linkedin": descriptions_fetched_from_linkedin,
+            "still_placeholder_descriptions": still_placeholder_count,
+            "skills_expanded": skills_expanded_count,
+            "work_mode_updated": work_mode_updated_count,
+            "education_updated": education_updated_count,
+            "location_updated": location_updated_count,
+            "unchanged": unchanged_count,
+            "skipped": len(skipped),
+            "linkedin_calls": linkedin_calls,
+            "linkedin_blocked": linkedin_blocked,
+            "errors_count": len(errors),
+        },
+        "updated": updated,
+        "skipped": skipped,
+        "errors": errors,
+    }
+
+
 def main(argv: List[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Pipeline akuisisi, normalisasi, deduplikasi, dan ingest lowongan kerja SEVENT X"
@@ -356,6 +654,12 @@ def main(argv: List[str] | None = None) -> int:
         default=False,
         help="Isi ulang company_logo_url pada lowongan di Supabase yang masih kosong lewat RPC ingest_job",
     )
+    parser.add_argument(
+        "--backfill-details",
+        action="store_true",
+        default=False,
+        help="Isi ulang deskripsi LinkedIn yang masih placeholder dan ekstrak ulang skills (maks 10) lewat RPC ingest_job",
+    )
     args = parser.parse_args(argv)
 
     repo_root = Path(__file__).resolve().parent.parent
@@ -363,6 +667,27 @@ def main(argv: List[str] | None = None) -> int:
 
     is_dry_run = True if not args.live else args.dry_run
     client = SupabaseIngestClient()
+
+    if args.backfill_details:
+        if not client.is_configured():
+            print(
+                "ERROR: Mode --backfill-details membutuhkan NEXT_PUBLIC_SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY "
+                "yang valid di environment atau .env.local.",
+                file=sys.stderr,
+            )
+            return 1
+        detail_report = run_detail_and_skill_backfill(
+            client,
+            dry_run=is_dry_run,
+            limit=max(1, min(args.limit if args.limit != 4 else 200, 500)),
+        )
+        formatted_json = json.dumps(detail_report, indent=2, ensure_ascii=False)
+        if args.output:
+            out_path = Path(args.output)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_text(formatted_json, encoding="utf-8")
+        print(formatted_json)
+        return 0 if len(detail_report.get("errors") or []) == 0 else 1
 
     if args.backfill_logos:
         if not client.is_configured():

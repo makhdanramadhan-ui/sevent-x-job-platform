@@ -183,6 +183,29 @@ export function parseLinkedinGuestSearchHtml(
   return cards;
 }
 
+function extractBalancedDivInner(rawHtml: string, openDivRe: RegExp): string | null {
+  const openMatch = openDivRe.exec(rawHtml);
+  if (!openMatch) return null;
+  const contentStart = openMatch.index + openMatch[0].length;
+  const tagRe = /<\/?div\b[^>]*>/gi;
+  tagRe.lastIndex = contentStart;
+  let depth = 1;
+  let match: RegExpExecArray | null;
+  while ((match = tagRe.exec(rawHtml)) !== null) {
+    const tag = match[0].toLowerCase();
+    if (tag.startsWith('</div')) {
+      depth -= 1;
+      if (depth === 0) {
+        return rawHtml.slice(contentStart, match.index);
+      }
+    } else if (!tag.endsWith('/>')) {
+      depth += 1;
+    }
+  }
+  const fallback = /([\s\S]*?)<\/div>/i.exec(rawHtml.slice(contentStart));
+  return fallback ? fallback[1] : null;
+}
+
 export function parseLinkedinGuestDetailHtml(rawHtml: string): {
   description: string | null;
   level: string | null;
@@ -204,10 +227,12 @@ export function parseLinkedinGuestDetailHtml(rawHtml: string): {
 
   result.logo_url = extractLinkedinLogoUrl(rawHtml);
 
-  const descMatch =
-    /<div[^>]*class="[^"]*show-more-less-html__markup[^"]*"[^>]*>([\s\S]*?)<\/div>/i.exec(rawHtml);
-  if (descMatch) {
-    result.description = stripHtml(decodeHtmlEntities(descMatch[1] ?? ''));
+  const descInner = extractBalancedDivInner(
+    rawHtml,
+    /<div[^>]*class="[^"]*show-more-less-html__markup[^"]*"[^>]*>/i,
+  );
+  if (descInner) {
+    result.description = stripHtml(decodeHtmlEntities(descInner));
   }
 
   const criteriaItems =
@@ -253,6 +278,7 @@ export async function fetchLinkedinGuestJobs(options: {
   const fetchedAt = nowIso();
   const payloads: IngestPayload[] = [];
   const seenJobIds = new Set<string>();
+  let detailBlocked = false;
 
   if (keywords.length === 0) {
     return { source_name: 'linkedin_guest', status: 'OK', payloads, reason: null, fetched_at: fetchedAt };
@@ -343,12 +369,14 @@ export async function fetchLinkedinGuestJobs(options: {
         employment_type: null,
         logo_url: null,
       };
-      if (fetchDetail) {
+      if (fetchDetail && !detailBlocked) {
         if (delayMs > 0) await delay(Math.min(1000, delayMs));
         const detailUrl = `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${jobId}`;
         try {
           const d = await fetchText(detailUrl);
-          if (d.status === 200 && !d.finalUrl.toLowerCase().includes('authwall')) {
+          if (d.status === 429 || d.status === 999 || d.finalUrl.toLowerCase().includes('authwall')) {
+            detailBlocked = true;
+          } else if (d.status === 200) {
             detailInfo = parseLinkedinGuestDetailHtml(d.body);
           }
         } catch {
