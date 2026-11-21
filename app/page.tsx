@@ -16,7 +16,9 @@ export default function HomePage() {
   return (
     <LandingPreviewProvider>
       <div>
-        <section className="tk-hero" aria-labelledby="hero-heading">
+        {/* div role="region", bukan <section>: tetap jadi landmark untuk pembaca layar,
+            tapi menghindari peringatan Chrome soal <h1> di dalam <section>. */}
+        <div role="region" className="tk-hero" aria-labelledby="hero-heading">
           <div className="tk-hero__top">
             <div className="tk-hero__text">
               <h1 id="hero-heading" className="tk-hero__h1">
@@ -52,7 +54,7 @@ export default function HomePage() {
           </div>
 
           <LandingPreviewStage />
-        </section>
+        </div>
 
         {/* SCROLL MOMENT: Word-Highlight Statement (tasteskill) */}
         <section aria-label="Ringkasan cara kerja RakitKarier">
