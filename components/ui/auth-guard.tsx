@@ -56,18 +56,22 @@ export function AuthGuard({
 
   const verify = useCallback(async (forceRefresh = false) => {
     if (!hasAuthSessionCookie()) {
-      setSession(null);
-      setLoading(false);
+      window.setTimeout(() => {
+        startTransition(() => {
+          setSession(null);
+          setLoading(false);
+        });
+      }, 0);
       return;
     }
     setLoading(true);
     const data = await fetchSessionIfCookie(forceRefresh);
-    window.requestAnimationFrame(() => {
+    window.setTimeout(() => {
       startTransition(() => {
         setSession(data);
         setLoading(false);
       });
-    });
+    }, 0);
   }, []);
 
   useEffect(() => {
@@ -229,6 +233,7 @@ export function AuthGuard({
 
               <Link
                 href="/"
+                prefetch={false}
                 className="auth-modal-close"
                 aria-label="Tutup dan kembali ke Beranda"
                 title="Kembali ke Beranda"
@@ -373,6 +378,7 @@ export function AuthGuard({
                           ? `/forgot-password?email=${encodeURIComponent(email.trim())}`
                           : '/forgot-password'
                       }
+                      prefetch={false}
                       style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ink-secondary)' }}
                     >
                       Lupa password?
@@ -430,7 +436,7 @@ export function AuthGuard({
                 fontSize: '0.82rem',
               }}
             >
-              <Link href="/" style={{ color: 'var(--ink-secondary)', fontWeight: 600 }}>
+              <Link href="/" prefetch={false} style={{ color: 'var(--ink-secondary)', fontWeight: 600 }}>
                 Kembali ke Beranda
               </Link>
             </div>
