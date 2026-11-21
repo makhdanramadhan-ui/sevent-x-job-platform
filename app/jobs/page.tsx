@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ButtonText } from '@/components/ui/button-text';
 import { JobsAuthSection } from '@/components/ui/jobs-auth-section';
 import { PageBanner } from '@/components/ui/page-banner';
 
@@ -10,7 +11,7 @@ export default function JobsPage() {
         title="Cari Lowongan Kerja"
         subtitle="Temukan peluang kerja yang sesuai dengan bidang, lokasi, dan sistem kerja pilihanmu."
         tone="sky"
-        imageSrc="/images/banner-jobs.jpg"
+        imageSrc="/images/banner-jobs-vector.svg"
         actions={
           <>
             <Link
@@ -18,14 +19,14 @@ export default function JobsPage() {
               prefetch={false}
               className="btn btn-secondary btn-sm"
             >
-              Cek Kecocokan Profil
+              <ButtonText>Cek Kecocokan Profil</ButtonText>
             </Link>
             <Link
               href="/bookmarks"
               prefetch={false}
               className="btn btn-outline btn-sm"
             >
-              Lowongan Tersimpan
+              <ButtonText>Lowongan Tersimpan</ButtonText>
             </Link>
           </>
         }

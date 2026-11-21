@@ -11,6 +11,7 @@ import {
   WORK_MODE_LABELS,
 } from '@/components/ui/api-client';
 import { CompanyLogo } from '@/components/ui/company-logo';
+import { ButtonText } from '@/components/ui/button-text';
 import { Badge, JobStatusBadge } from '@/components/ui/forms';
 import { ScrollStepsProgress } from '@/components/ui/scroll-motion';
 import { useAuthSession } from './navigation';
@@ -344,7 +345,7 @@ export function LandingPreviewStage() {
                 <span className="btn btn-primary btn-sm auth-cta-placeholder" aria-hidden="true" />
               ) : (
                 <Link href={emptyActionHref} className="btn btn-primary btn-sm">
-                  {emptyActionLabel}
+                  <ButtonText>{emptyActionLabel}</ButtonText>
                 </Link>
               )}
             </div>
@@ -434,7 +435,7 @@ export function LandingPreviewStage() {
                       terbaru.
                     </p>
                     <Link href="/jobs" className="btn btn-primary btn-sm">
-                      Lihat halaman Lowongan
+                      <ButtonText>Lihat halaman Lowongan</ButtonText>
                     </Link>
                   </div>
                 ) : (

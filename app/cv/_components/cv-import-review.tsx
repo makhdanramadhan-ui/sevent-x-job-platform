@@ -2,12 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import {
-  apiFetch,
-  Button,
-  NoticeBanner,
-  sanitizeProfilePayload,
-} from '@/components/ui';
+import { apiFetch, sanitizeProfilePayload } from '@/components/ui/api-client';
+import { NoticeBanner } from '@/components/ui/feedback';
+import { Badge, Button } from '@/components/ui/forms';
 import type { CvDocument, ProfileRecord } from '@/lib/contracts';
 import type { ProfileInput } from '@/lib/profile';
 import type { MappedCvResult } from '../_lib/cv-mapper';
@@ -29,7 +26,7 @@ export function CvImportReview({
   onSuccess: (cvId: string) => void;
 }) {
   const router = useRouter();
-  const [content, setContent] = useState<CvContent>(mappedResult.content);
+  const [content] = useState<CvContent>(mappedResult.content);
   const [cvTitle, setCvTitle] = useState(`CV Hasil Impor (${fileName})`);
   const [syncToProfile, setSyncToProfile] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -135,26 +132,28 @@ export function CvImportReview({
   }
 
   return (
-    <div className="surface-card" style={{ maxWidth: 840, margin: '0 auto' }}>
-      <div className="page-header" style={{ marginBottom: 16 }}>
-        <div>
-          <span className="page-kicker">Konfirmasi &amp; Verifikasi Impor</span>
-          <h2 style={{ fontSize: '1.4rem', margin: '4px 0', fontWeight: 700 }}>
-            Tinjau Hasil Ekstraksi CV
-          </h2>
-          <p className="page-subtitle" style={{ fontSize: '0.86rem' }}>
-            Periksa data yang berhasil diekstraksi dari <strong className="font-mono">{fileName}</strong>.
-            Data ini <em>tidak akan menimpa profil lama Anda</em> tanpa persetujuan eksplisit.
-          </p>
-        </div>
+    <div style={{ maxWidth: 840, margin: '0 auto' }}>
+      <div style={{ marginBottom: 16 }}>
+        <span className="page-kicker">Konfirmasi &amp; Verifikasi Impor</span>
+        <h2
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '1.35rem',
+            margin: '4px 0 6px',
+            fontWeight: 600,
+          }}
+        >
+          Tinjau Hasil Ekstraksi CV
+        </h2>
+        <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--ink-secondary)' }}>
+          Periksa data yang berhasil diekstraksi dari <strong>{fileName}</strong>. Data ini{' '}
+          <em>tidak akan menimpa profil lama Anda</em> tanpa persetujuan eksplisit.
+        </p>
       </div>
 
       {mappedResult.warnings && mappedResult.warnings.length > 0 ? (
         <div style={{ marginBottom: 14 }}>
-          <NoticeBanner
-            variant="warning"
-            title="Peringatan Ekstraksi Dokumen"
-          >
+          <NoticeBanner variant="warning" title="Peringatan Ekstraksi Dokumen">
             {mappedResult.warnings.join(' ')}
           </NoticeBanner>
         </div>
@@ -167,45 +166,26 @@ export function CvImportReview({
       ) : null}
 
       {/* Ringkasan Keberhasilan Ekstraksi */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-          gap: 10,
-          marginBottom: 18,
-        }}
-      >
-        <div className="surface-card" style={{ padding: 12 }}>
-          <span className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--ink-muted)' }}>
-            KONTAK
-          </span>
-          <div style={{ fontWeight: 700, fontSize: '0.9rem', marginTop: 4 }}>
-            {confidence.contactFound ? '✓ Ditemukan' : '⚠️ Belum Lengkap'}
+      <div className="cv-import-stats">
+        <div className="cv-import-stat">
+          <span className="cv-import-stat__label">KONTAK</span>
+          <div className="cv-import-stat__value">
+            <Badge variant={confidence.contactFound ? 'open' : 'warning'}>
+              {confidence.contactFound ? 'Ditemukan' : 'Belum Lengkap'}
+            </Badge>
           </div>
         </div>
-        <div className="surface-card" style={{ padding: 12 }}>
-          <span className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--ink-muted)' }}>
-            ORGANISASI
-          </span>
-          <div style={{ fontWeight: 700, fontSize: '0.9rem', marginTop: 4 }}>
-            {content.organizations.length} Entri
-          </div>
+        <div className="cv-import-stat">
+          <span className="cv-import-stat__label">ORGANISASI</span>
+          <div className="cv-import-stat__value">{content.organizations.length} Entri</div>
         </div>
-        <div className="surface-card" style={{ padding: 12 }}>
-          <span className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--ink-muted)' }}>
-            PENDIDIKAN
-          </span>
-          <div style={{ fontWeight: 700, fontSize: '0.9rem', marginTop: 4 }}>
-            {content.education.length} Entri
-          </div>
+        <div className="cv-import-stat">
+          <span className="cv-import-stat__label">PENDIDIKAN</span>
+          <div className="cv-import-stat__value">{content.education.length} Entri</div>
         </div>
-        <div className="surface-card" style={{ padding: 12 }}>
-          <span className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--ink-muted)' }}>
-            KEAHLIAN
-          </span>
-          <div style={{ fontWeight: 700, fontSize: '0.9rem', marginTop: 4 }}>
-            {content.skills.length} Keahlian
-          </div>
+        <div className="cv-import-stat">
+          <span className="cv-import-stat__label">KEAHLIAN</span>
+          <div className="cv-import-stat__value">{content.skills.length} Keahlian</div>
         </div>
       </div>
 
@@ -228,15 +208,15 @@ export function CvImportReview({
       {/* Ringkasan Data yang Dikenali */}
       <div
         style={{
-          background: 'var(--p-surface, #f4f4f4)',
+          background: 'var(--p-surface, #f5f6f8)',
           padding: 16,
-          borderRadius: 'var(--radius-sm, 8px)',
-          border: '1px solid var(--border-subtle, rgba(0,0,0,0.1))',
+          borderRadius: 'var(--r-md, 12px)',
+          border: '1px solid var(--border-subtle, rgba(17, 17, 17, 0.08))',
           marginBottom: 18,
           fontSize: '0.88rem',
         }}
       >
-        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 700 }}>
+        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 600 }}>
           Data Utama yang Berhasil Dikenali:
         </h4>
         <ul style={{ margin: 0, paddingLeft: 20 }}>
@@ -273,7 +253,7 @@ export function CvImportReview({
           style={{
             background: 'var(--status-warning-bg)',
             border: '1px solid var(--status-warning-border)',
-            borderRadius: 'var(--radius-sm, 8px)',
+            borderRadius: 'var(--r-sm, 8px)',
             padding: 14,
             marginBottom: 18,
           }}
@@ -301,7 +281,7 @@ export function CvImportReview({
       {/* Pilihan Sinkronisasi ke Profil Kandidat */}
       <div
         style={{
-          borderTop: '1px solid var(--border-subtle, rgba(0,0,0,0.1))',
+          borderTop: '1px solid var(--border-subtle, rgba(17, 17, 17, 0.08))',
           paddingTop: 16,
           marginBottom: 20,
         }}
@@ -318,7 +298,7 @@ export function CvImportReview({
         </label>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
         <Button variant="outline" onClick={onCancel} disabled={submitting}>
           Batal
         </Button>
@@ -328,7 +308,7 @@ export function CvImportReview({
           loading={submitting}
           disabled={!cvTitle.trim()}
         >
-          Konfirmasi &amp; Buka Editor CV (ATS) &rarr;
+          Konfirmasi &amp; Buka Editor CV
         </Button>
       </div>
     </div>

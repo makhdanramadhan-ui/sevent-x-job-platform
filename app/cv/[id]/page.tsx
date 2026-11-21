@@ -1,17 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import {
-  apiFetch,
-  AuthGuard,
-  Badge,
-  Button,
-  LoadingState,
-  NoticeBanner,
-  type SessionInfo,
-} from '@/components/ui';
+import { apiFetch } from '@/components/ui/api-client';
+import { AuthGuard } from '@/components/ui/auth-guard';
+import { ButtonText } from '@/components/ui/button-text';
+import { LoadingState, NoticeBanner } from '@/components/ui/feedback';
+import { Button } from '@/components/ui/forms';
+import type { SessionInfo } from '@/components/ui/navigation';
 import type { CvDocument } from '@/lib/contracts';
 import { CvPreview } from '../_components/cv-preview';
 import { CvSectionForm } from '../_components/cv-section-form';
@@ -36,7 +33,12 @@ function getDemoDocument(id: string): CvDocument | null {
   }
 }
 
-function updateDemoDocument(id: string, title: string, template_version: string, content: CvContent): boolean {
+function updateDemoDocument(
+  id: string,
+  title: string,
+  template_version: string,
+  content: CvContent,
+): boolean {
   if (typeof window === 'undefined') return false;
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -77,7 +79,6 @@ function CvEditorInner({
   session: SessionInfo;
   isDemo?: boolean;
 }) {
-  const router = useRouter();
   const [doc, setDoc] = useState<CvDocument | null>(null);
   const [title, setTitle] = useState('');
   const [templateVersion, setTemplateVersion] = useState<string>('v1-default');
@@ -164,19 +165,11 @@ function CvEditorInner({
 
     if (res.ok) {
       setDoc(res.data);
-      setSuccessNotice('Perubahan CV berhasil disimpan ke basis data Supabase.');
+      setSuccessNotice('Perubahan CV berhasil disimpan ke basis data.');
     } else {
       setApiError(`Gagal menyimpan: ${res.error.message}`);
     }
   }
-
-  const payloadStats = content
-    ? validateCvPayload({
-        title,
-        template_version: templateVersion,
-        content,
-      })
-    : null;
 
   if (loading) {
     return (
@@ -184,19 +177,20 @@ function CvEditorInner({
         title="Memuat dokumen CV ATS..."
         description="Menyiapkan editor dan pratinjau..."
         lines={5}
+        reserved
       />
     );
   }
 
   if (apiError && !doc) {
     return (
-      <div className="state-panel state-panel-error" role="alert">
-        <h2 style={{ fontSize: '1.2rem', margin: '0 0 8px 0', fontWeight: 700 }}>
+      <div className="state-panel state-panel-error state-panel--reserved" role="alert">
+        <h2 style={{ fontSize: '1.2rem', margin: '0 0 8px 0', fontWeight: 600 }}>
           Dokumen Tidak Dapat Dibuka
         </h2>
         <p style={{ margin: '0 0 16px 0', color: 'var(--ink-secondary)' }}>{apiError}</p>
         <Link href="/cv" className="btn btn-primary btn-sm">
-          &larr; Kembali ke Studio CV
+          <ButtonText>Kembali ke Studio CV</ButtonText>
         </Link>
       </div>
     );
@@ -208,41 +202,40 @@ function CvEditorInner({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Top Action Bar */}
       <div className="cv-actions-bar">
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 16,
-            flexWrap: 'wrap',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Link href="/cv" className="btn btn-ghost btn-sm">
-              &larr; Kembali
+        <div className="cv-actions-row">
+          <div className="cv-actions-left">
+            <Link
+              href="/cv"
+              className="btn btn-outline btn-sm cv-editor-back"
+              aria-label="Kembali ke Studio CV"
+              title="Kembali ke Studio CV"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.1"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
             </Link>
             <input
               type="text"
-              className="input-control"
+              className="cv-title-input"
+              aria-label="Judul dokumen CV"
               value={title}
               maxLength={200}
               placeholder="Judul Dokumen CV..."
-              style={{
-                fontWeight: 700,
-                fontSize: '1.05rem',
-                border: 'none',
-                background: 'transparent',
-                padding: '4px 8px',
-                borderBottom: '1.5px solid var(--border-subtle, rgba(0,0,0,0.15))',
-                borderRadius: 0,
-                width: '100%',
-                maxWidth: 380,
-              }}
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div className="cv-actions-right">
             <Button
               variant="outline"
               size="md"
@@ -275,28 +268,21 @@ function CvEditorInner({
       ) : null}
 
       {/* Mode View Switcher untuk Layar Mobile */}
-      <div
-        className="cv-mode-toggle"
-        style={{
-          display: 'none',
-          gap: 8,
-          background: 'var(--p-surface, #f4f4f4)',
-          padding: 4,
-          borderRadius: 'var(--radius-sm, 8px)',
-        }}
-      >
+      <div className="cv-mode-toggle" role="tablist" aria-label="Pilih tampilan editor atau pratinjau">
         <button
           type="button"
-          className={`btn btn-sm ${activeTab === 'editor' ? 'btn-secondary' : 'btn-ghost'}`}
-          style={{ flex: 1 }}
+          role="tab"
+          aria-selected={activeTab === 'editor'}
+          className={`cv-mode-btn${activeTab === 'editor' ? ' cv-mode-btn--active' : ''}`}
           onClick={() => setActiveTab('editor')}
         >
           Editor Isi
         </button>
         <button
           type="button"
-          className={`btn btn-sm ${activeTab === 'preview' ? 'btn-secondary' : 'btn-ghost'}`}
-          style={{ flex: 1 }}
+          role="tab"
+          aria-selected={activeTab === 'preview'}
+          className={`cv-mode-btn${activeTab === 'preview' ? ' cv-mode-btn--active' : ''}`}
           onClick={() => setActiveTab('preview')}
         >
           Pratinjau ATS
@@ -334,8 +320,6 @@ function CvEditorInner({
           </div>
         </div>
       </div>
-
-
     </div>
   );
 }

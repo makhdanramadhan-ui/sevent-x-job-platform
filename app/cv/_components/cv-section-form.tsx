@@ -1,16 +1,111 @@
 'use client';
 
-import { useState } from 'react';
-import {
-  Button,
-  FormField,
-  SkillComboboxInput,
-  TagListInput,
-  TextArea,
-  TextInput,
-} from '@/components/ui';
+import type { ReactNode } from 'react';
+import { Button, FormField, TextArea, TextInput } from '@/components/ui/forms';
+import { SkillComboboxInput } from '@/components/ui/skill-combobox';
 import type { CvContent, CvSectionId } from '../_lib/types';
-import { SECTION_LABELS } from '../_lib/types';
+
+function SectionTabIcon({ secId }: { secId: CvSectionId }): ReactNode {
+  const props = {
+    width: 15,
+    height: 15,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true as const,
+  };
+
+  switch (secId) {
+    case 'profile':
+      return (
+        <svg {...props}>
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      );
+    case 'summary':
+      return (
+        <svg {...props}>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+        </svg>
+      );
+    case 'experience':
+      return (
+        <svg {...props}>
+          <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+        </svg>
+      );
+    case 'education':
+      return (
+        <svg {...props}>
+          <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+          <path d="M6 12v5c3 3 9 3 12 0v-5" />
+        </svg>
+      );
+    case 'organization':
+      return (
+        <svg {...props}>
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      );
+    case 'projects':
+      return (
+        <svg {...props}>
+          <polygon points="12 2 2 7 12 12 22 7 12 2" />
+          <polyline points="2 17 12 22 22 17" />
+          <polyline points="2 12 12 17 22 12" />
+        </svg>
+      );
+    case 'skills':
+      return (
+        <svg {...props}>
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+        </svg>
+      );
+    case 'certifications':
+    case 'achievements':
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="8" r="7" />
+          <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+        </svg>
+      );
+    default:
+      return (
+        <svg {...props}>
+          <line x1="8" y1="6" x2="21" y2="6" />
+          <line x1="8" y1="12" x2="21" y2="12" />
+          <line x1="8" y1="18" x2="21" y2="18" />
+          <line x1="3" y1="6" x2="3.01" y2="6" />
+          <line x1="3" y1="12" x2="3.01" y2="12" />
+          <line x1="3" y1="18" x2="3.01" y2="18" />
+        </svg>
+      );
+  }
+}
+
+const SECTION_SHORT_LABELS: Record<CvSectionId, string> = {
+  profile: 'Identitas',
+  summary: 'Ringkasan',
+  experience: 'Pengalaman',
+  education: 'Pendidikan',
+  organization: 'Organisasi',
+  projects: 'Proyek',
+  skills: 'Keahlian',
+  certifications: 'Sertifikasi',
+  achievements: 'Sertifikasi',
+  custom: 'Lainnya',
+};
 
 export function CvSectionForm({
   content,
@@ -24,7 +119,6 @@ export function CvSectionForm({
   onSelectSection: (section: CvSectionId) => void;
 }) {
   const {
-    language = 'en',
     profile,
     summary,
     organizations,
@@ -35,47 +129,85 @@ export function CvSectionForm({
     projects,
   } = content;
 
-  const labels = SECTION_LABELS[language] || SECTION_LABELS.en;
+  const activeIndex = Math.max(0, content.section_order.indexOf(activeSection));
+
+  function getSectionStatus(secId: CvSectionId): { count?: number; filled?: boolean } {
+    switch (secId) {
+      case 'profile':
+        return { filled: Boolean(profile.full_name.trim()) };
+      case 'summary':
+        return { filled: Boolean(summary.trim()) };
+      case 'experience':
+        return { count: experiences.length };
+      case 'education':
+        return { count: education.length };
+      case 'organization':
+        return { count: organizations.length };
+      case 'projects':
+        return { count: projects.length };
+      case 'skills':
+        return { count: skills.length };
+      case 'certifications':
+      case 'achievements':
+        return { count: achievements.length };
+      case 'custom':
+        return { count: content.custom_sections?.length ?? 0 };
+      default:
+        return {};
+    }
+  }
 
   return (
     <div className="form-stack">
-      {/* Tabs Pilihan Bagian */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 6,
-          flexWrap: 'wrap',
-          background: 'var(--p-surface, #f4f4f4)',
-          padding: 6,
-          borderRadius: 'var(--radius-md, 12px)',
-          border: '1px solid var(--border-subtle, rgba(0,0,0,0.1))',
-        }}
-        role="tablist"
-        aria-label="Pilih bagian CV untuk diedit"
-      >
-        {content.section_order.map((secId) => {
-          const isActive = activeSection === secId;
-          const label = labels[secId] || secId;
-          return (
-            <button
-              key={secId}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              className={`btn btn-sm ${isActive ? 'btn-secondary' : 'btn-ghost'}`}
-              onClick={() => onSelectSection(secId)}
-              style={{ fontSize: '0.78rem', padding: '5px 10px' }}
-            >
-              {label}
-            </button>
-          );
-        })}
+      {/* Navigasi Bagian CV (Grid 4x2 dengan Ikon & Penghitung) */}
+      <div className="cv-section-nav">
+        <div className="cv-section-nav__head">
+          <span className="cv-section-nav__title">Bagian CV</span>
+          <span className="cv-section-nav__step">
+            Bagian {activeIndex + 1} dari {content.section_order.length}
+          </span>
+        </div>
+
+        <div
+          className="cv-section-tabs"
+          role="tablist"
+          aria-label="Pilih bagian CV untuk diedit"
+        >
+          {content.section_order.map((secId) => {
+            const isActive = activeSection === secId;
+            const label = SECTION_SHORT_LABELS[secId] || secId;
+            const status = getSectionStatus(secId);
+
+            return (
+              <button
+                key={secId}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className={`cv-section-tab${isActive ? ' cv-section-tab--active' : ''}`}
+                onClick={() => onSelectSection(secId)}
+              >
+                <span className="cv-section-tab__main">
+                  <span className="cv-section-tab__icon">
+                    <SectionTabIcon secId={secId} />
+                  </span>
+                  <span className="cv-section-tab__label">{label}</span>
+                </span>
+                {typeof status.count === 'number' ? (
+                  <span className="cv-section-tab__count">{status.count}</span>
+                ) : status.filled ? (
+                  <span className="cv-section-tab__dot" aria-label="Terisi" />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* 1. PROFIL & IDENTITAS */}
       {activeSection === 'profile' ? (
-        <div className="surface-card">
-          <h3 style={{ fontSize: '1.15rem', marginBottom: 14, fontWeight: 700 }}>
+        <div className="ledger-card">
+          <h3 className="cv-section-heading" style={{ marginBottom: 14 }}>
             Identitas &amp; Kontak (Header CV)
           </h3>
           <div className="form-grid-2">
@@ -142,23 +274,13 @@ export function CvSectionForm({
 
       {/* 2. SUMMARY / PROFILE */}
       {activeSection === 'summary' ? (
-        <div className="surface-card">
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 10,
-              gap: 12,
-            }}
-          >
-            <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700 }}>
-              Ringkasan Profil (PROFILE)
-            </h3>
+        <div className="ledger-card">
+          <div className="cv-section-header" style={{ marginBottom: 10 }}>
+            <h3 className="cv-section-heading">Ringkasan Profil (PROFILE)</h3>
           </div>
-          <p style={{ margin: '0 0 12px', fontSize: '0.84rem', color: 'var(--ink-secondary)' }}>
-            Tuliskan 2-4 kalimat mengenai latar belakang pendidikan, kontribusi organisasi, keahlian utama,
-            dan minat Anda.
+          <p style={{ margin: '0 0 12px', fontSize: '0.86rem', color: 'var(--ink-secondary)' }}>
+            Tuliskan 2–4 kalimat mengenai latar belakang pendidikan, kontribusi organisasi, keahlian
+            utama, dan minat Anda.
           </p>
           <FormField id="cv-summary" label="Teks Profil">
             <TextArea
@@ -175,16 +297,9 @@ export function CvSectionForm({
 
       {/* 3. ORGANIZATION EXPERIENCE */}
       {activeSection === 'organization' ? (
-        <div className="surface-card">
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 14,
-            }}
-          >
-            <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700 }}>
+        <div className="ledger-card">
+          <div className="cv-section-header">
+            <h3 className="cv-section-heading">
               Pengalaman Organisasi ({organizations.length})
             </h3>
             <Button
@@ -215,38 +330,19 @@ export function CvSectionForm({
           ) : (
             <div className="form-stack">
               {organizations.map((org, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    padding: 16,
-                    background: 'var(--p-surface, #f4f4f4)',
-                    borderRadius: 'var(--radius-sm, 8px)',
-                    border: '1px solid var(--border-subtle, rgba(0,0,0,0.1))',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: 12,
-                    }}
-                  >
-                    <strong className="font-mono" style={{ fontSize: '0.82rem' }}>
-                      ORGANISASI #{idx + 1}
-                    </strong>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          const next = organizations.filter((_, i) => i !== idx);
-                          onChange({ ...content, organizations: next });
-                        }}
-                      >
-                        Hapus
-                      </Button>
-                    </div>
+                <div key={idx} className="cv-item-card">
+                  <div className="cv-item-head">
+                    <strong className="cv-item-index">ORGANISASI #{idx + 1}</strong>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const next = organizations.filter((_, i) => i !== idx);
+                        onChange({ ...content, organizations: next });
+                      }}
+                    >
+                      Hapus
+                    </Button>
                   </div>
 
                   <div className="form-grid-2">
@@ -308,7 +404,7 @@ export function CvSectionForm({
                     <FormField
                       id={`org-desc-${idx}`}
                       label="Poin Kontribusi / Tanggung Jawab (Gunakan bullet • per baris)"
-                      hint="Ketik tiap poin dengan diawali bullet (•). Tombol ✨ Terjemahkan akan otomatis mengubahnya menjadi Action Verbs bahasa Inggris!"
+                      hint="Tulis satu pencapaian per baris diawali simbol bullet (•) agar terbaca rapi oleh sistem ATS."
                     >
                       <TextArea
                         id={`org-desc-${idx}`}
@@ -332,18 +428,9 @@ export function CvSectionForm({
 
       {/* 4. WORK EXPERIENCE */}
       {activeSection === 'experience' ? (
-        <div className="surface-card">
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 14,
-            }}
-          >
-            <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700 }}>
-              Pengalaman Kerja ({experiences.length})
-            </h3>
+        <div className="ledger-card">
+          <div className="cv-section-header">
+            <h3 className="cv-section-heading">Pengalaman Kerja ({experiences.length})</h3>
             <Button
               variant="outline"
               size="sm"
@@ -374,26 +461,9 @@ export function CvSectionForm({
           ) : (
             <div className="form-stack">
               {experiences.map((exp, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    padding: 16,
-                    background: 'var(--p-surface, #f4f4f4)',
-                    borderRadius: 'var(--radius-sm, 8px)',
-                    border: '1px solid var(--border-subtle, rgba(0,0,0,0.1))',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: 12,
-                    }}
-                  >
-                    <strong className="font-mono" style={{ fontSize: '0.82rem' }}>
-                      PENGALAMAN #{idx + 1}
-                    </strong>
+                <div key={idx} className="cv-item-card">
+                  <div className="cv-item-head">
+                    <strong className="cv-item-index">PENGALAMAN #{idx + 1}</strong>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -503,16 +573,9 @@ export function CvSectionForm({
 
       {/* 5. COURSE & CERTIFICATION / AWARDS */}
       {activeSection === 'certifications' || activeSection === 'achievements' ? (
-        <div className="surface-card">
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 14,
-            }}
-          >
-            <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700 }}>
+        <div className="ledger-card">
+          <div className="cv-section-header">
+            <h3 className="cv-section-heading">
               Kursus, Sertifikasi &amp; Penghargaan ({achievements.length})
             </h3>
             <Button
@@ -542,15 +605,7 @@ export function CvSectionForm({
           ) : (
             <div className="form-stack">
               {achievements.map((ach, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    padding: 14,
-                    background: 'var(--p-surface, #f4f4f4)',
-                    borderRadius: 'var(--radius-sm, 8px)',
-                    border: '1px solid var(--border-subtle, rgba(0,0,0,0.1))',
-                  }}
-                >
+                <div key={idx} className="cv-item-card">
                   <div className="form-grid-3">
                     <FormField id={`ach-title-${idx}`} label="Nama Sertifikat / Course" required>
                       <TextInput
@@ -579,7 +634,7 @@ export function CvSectionForm({
                     </FormField>
 
                     <FormField id={`ach-date-${idx}`} label="Tahun">
-                      <div style={{ display: 'flex', gap: 6 }}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         <TextInput
                           id={`ach-date-${idx}`}
                           placeholder="Contoh: 2024"
@@ -593,12 +648,27 @@ export function CvSectionForm({
                         <Button
                           variant="ghost"
                           size="sm"
+                          aria-label={`Hapus sertifikasi ${idx + 1}`}
+                          title="Hapus sertifikasi"
                           onClick={() => {
                             const next = achievements.filter((_, i) => i !== idx);
                             onChange({ ...content, achievements: next });
                           }}
                         >
-                          ✕
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.1"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
                         </Button>
                       </div>
                     </FormField>
@@ -612,18 +682,9 @@ export function CvSectionForm({
 
       {/* 6. EDUCATION */}
       {activeSection === 'education' ? (
-        <div className="surface-card">
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 14,
-            }}
-          >
-            <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700 }}>
-              Riwayat Pendidikan ({education.length})
-            </h3>
+        <div className="ledger-card">
+          <div className="cv-section-header">
+            <h3 className="cv-section-heading">Riwayat Pendidikan ({education.length})</h3>
             <Button
               variant="outline"
               size="sm"
@@ -653,26 +714,9 @@ export function CvSectionForm({
           ) : (
             <div className="form-stack">
               {education.map((edu, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    padding: 16,
-                    background: 'var(--p-surface, #f4f4f4)',
-                    borderRadius: 'var(--radius-sm, 8px)',
-                    border: '1px solid var(--border-subtle, rgba(0,0,0,0.1))',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: 10,
-                    }}
-                  >
-                    <strong className="font-mono" style={{ fontSize: '0.82rem' }}>
-                      PENDIDIKAN #{idx + 1}
-                    </strong>
+                <div key={idx} className="cv-item-card">
+                  <div className="cv-item-head">
+                    <strong className="cv-item-index">PENDIDIKAN #{idx + 1}</strong>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -747,13 +791,13 @@ export function CvSectionForm({
 
       {/* 7. SKILLS & TOOLS */}
       {activeSection === 'skills' ? (
-        <div className="surface-card">
-          <h3 style={{ fontSize: '1.15rem', marginBottom: 6, fontWeight: 700 }}>
+        <div className="ledger-card">
+          <h3 className="cv-section-heading" style={{ marginBottom: 6 }}>
             Keahlian &amp; Tools (SKILLS &amp; TOOLS)
           </h3>
-          <p style={{ margin: '0 0 14px 0', fontSize: '0.84rem', color: 'var(--ink-secondary)' }}>
-            Daftar ini akan otomatis diformat menjadi 3 kolom rapi dengan bullet points pada hasil cetak
-            ATS persis seperti contoh PDF. Pilih dari katalog keahlian atau ketik keahlian baru.
+          <p style={{ margin: '0 0 14px 0', fontSize: '0.86rem', color: 'var(--ink-secondary)' }}>
+            Daftar ini akan otomatis diformat menjadi 3 kolom rapi dengan bullet points pada hasil
+            cetak ATS. Pilih dari katalog keahlian atau ketik keahlian baru.
           </p>
           <SkillComboboxInput
             id="cv-skills-editor"
@@ -767,14 +811,15 @@ export function CvSectionForm({
 
       {/* 8. PROJECTS & PORTFOLIO */}
       {activeSection === 'projects' ? (
-        <div className="surface-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <div className="ledger-card">
+          <div className="cv-section-header">
             <div>
-              <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700 }}>
+              <h3 className="cv-section-heading">
                 Proyek &amp; Portofolio (PROJECTS &amp; PORTFOLIO)
               </h3>
-              <p style={{ margin: '2px 0 0 0', fontSize: '0.84rem', color: 'var(--ink-secondary)' }}>
-                Tampilkan proyek unggulan, kontribusi open source, atau produk yang pernah Anda buat.
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: 'var(--ink-secondary)' }}>
+                Tampilkan proyek unggulan, kontribusi open source, atau produk yang pernah Anda
+                buat.
               </p>
             </div>
             <Button
@@ -799,24 +844,16 @@ export function CvSectionForm({
           </div>
 
           {projects.length === 0 ? (
-            <p style={{ fontStyle: 'italic', color: 'var(--ink-muted)', fontSize: '0.88rem' }}>
+            <p className="form-hint">
               Belum ada data proyek. Klik &quot;+ Tambah Proyek&quot; untuk menambahkan.
             </p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="form-stack">
               {projects.map((proj, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    padding: 14,
-                    border: '1px solid var(--border-subtle, rgba(0,0,0,0.1))',
-                    borderRadius: 'var(--radius-sm, 8px)',
-                    background: 'var(--p-surface-card, #ffffff)',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <strong style={{ fontSize: '0.92rem' }}>
-                      #{idx + 1} {proj.name || 'Proyek Tanpa Judul'}
+                <div key={idx} className="cv-item-card">
+                  <div className="cv-item-head">
+                    <strong className="cv-item-index">
+                      PROYEK #{idx + 1} — {proj.name || 'Tanpa Judul'}
                     </strong>
                     <Button
                       variant="ghost"
@@ -885,22 +922,22 @@ export function CvSectionForm({
                   </div>
 
                   <div style={{ marginTop: 10 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                      <label htmlFor={`proj-desc-${idx}`} style={{ fontSize: '0.85rem', fontWeight: 600 }}>
-                        Deskripsi &amp; Pencapaian Proyek (Gunakan poin •)
-                      </label>
-                    </div>
-                    <TextArea
+                    <FormField
                       id={`proj-desc-${idx}`}
-                      rows={4}
-                      placeholder="• Mengembangkan platform pencarian kerja menggunakan Next.js dan TypeScript&#10;• Mengoptimalkan kinerja query basis data hingga 40%"
-                      value={proj.description ?? ''}
-                      onChange={(e) => {
-                        const next = [...projects];
-                        next[idx] = { ...proj, description: e.target.value || null };
-                        onChange({ ...content, projects: next });
-                      }}
-                    />
+                      label="Deskripsi & Pencapaian Proyek (Gunakan poin •)"
+                    >
+                      <TextArea
+                        id={`proj-desc-${idx}`}
+                        rows={4}
+                        placeholder="• Mengembangkan platform pencarian kerja menggunakan Next.js dan TypeScript&#10;• Mengoptimalkan kinerja query basis data hingga 40%"
+                        value={proj.description ?? ''}
+                        onChange={(e) => {
+                          const next = [...projects];
+                          next[idx] = { ...proj, description: e.target.value || null };
+                          onChange({ ...content, projects: next });
+                        }}
+                      />
+                    </FormField>
                   </div>
                 </div>
               ))}

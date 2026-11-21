@@ -30,12 +30,12 @@ export function PageBanner({
           src={imageSrc}
           alt=""
           fill
+          unoptimized
           priority
           fetchPriority="high"
-          sizes="(max-width: 640px) 92vw, (max-width: 1248px) 96vw, 1200px"
+          sizes="(max-width: 768px) 92vw, 420px"
           className="page-banner__img"
         />
-        <div className="page-banner__scrim" />
       </div>
 
       <div className="page-banner__content">

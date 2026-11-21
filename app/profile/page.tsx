@@ -13,6 +13,7 @@ import {
 } from 'react';
 import { type ApiCallError, apiFetch, formatDateTimeId } from '@/components/ui/api-client';
 import { AuthGuard } from '@/components/ui/auth-guard';
+import { ButtonText } from '@/components/ui/button-text';
 import { EmptyState, ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
 import { Button } from '@/components/ui/forms';
 import { getInitials, notifyAuthChanged, type SessionInfo } from '@/components/ui/navigation';
@@ -714,14 +715,14 @@ export default function ProfilePage() {
         title="Profil & Preferensi Kerja"
         subtitle="Kelola riwayat pendidikan, pengalaman kerja, keahlian, portofolio, serta preferensi pencarian kerja milikmu."
         tone="sand"
-        imageSrc="/images/banner-profile.jpg"
+        imageSrc="/images/banner-profile-vector.svg"
         actions={
           <>
             <Link href="/recommendations" className="btn btn-secondary btn-sm">
-              Lihat Rekomendasi
+              <ButtonText>Lihat Rekomendasi</ButtonText>
             </Link>
             <Link href="/cv" prefetch={false} className="btn btn-outline btn-sm">
-              Buka Studio CV
+              <ButtonText>Buka Studio CV</ButtonText>
             </Link>
           </>
         }

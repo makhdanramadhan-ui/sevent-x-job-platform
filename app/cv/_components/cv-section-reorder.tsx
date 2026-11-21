@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button } from '@/components/ui/forms';
 import {
   CV_PRESETS,
   type CvPresetId,
@@ -83,7 +83,6 @@ export function CvSectionReorder({
     }
   }
 
-  // Handler Drag & Drop
   function handleDragStart(index: number, e: React.DragEvent) {
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
@@ -133,23 +132,15 @@ export function CvSectionReorder({
   }
 
   return (
-    <div className="surface-card">
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          flexWrap: 'wrap',
-          gap: 10,
-          marginBottom: 8,
-        }}
-      >
+    <div className="ledger-card">
+      <div className="cv-section-header" style={{ alignItems: 'flex-start', marginBottom: 8 }}>
         <div>
-          <h3 style={{ fontSize: '1.15rem', margin: '0 0 4px 0', fontWeight: 700 }}>
+          <h3 className="cv-section-heading" style={{ marginBottom: 4 }}>
             Tata Letak &amp; Urutan Bagian CV (ATS Flow)
           </h3>
-          <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--ink-secondary)' }}>
-            Pilih preset instan atau <strong>tarik dan lepas (Drag &amp; Drop)</strong> kotak bagian untuk mengatur urutan CV Anda.
+          <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--ink-secondary)' }}>
+            Pilih preset instan atau <strong>tarik dan lepas (Drag &amp; Drop)</strong> kotak bagian
+            untuk mengatur urutan CV Anda.
           </p>
         </div>
         <Badge variant={currentPresetId === 'v1-[#custom]' ? 'neutral' : 'open'}>
@@ -159,12 +150,7 @@ export function CvSectionReorder({
 
       {/* Preset Selector Grid */}
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 10,
-          margin: '14px 0 16px 0',
-        }}
+        className="cv-preset-grid"
         role="group"
         aria-label="Pilihan Preset Jenis CV"
       >
@@ -175,58 +161,14 @@ export function CvSectionReorder({
               key={preset.id}
               type="button"
               onClick={() => applyPreset(preset.id)}
-              style={{
-                textAlign: 'left',
-                padding: '10px 12px',
-                borderRadius: 'var(--radius-md, 10px)',
-                border: isSelected
-                  ? '2px solid var(--p-primary, #b8381e)'
-                  : '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
-                background: isSelected ? 'var(--p-primary-soft, #fdf2f0)' : '#ffffff',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
+              className={`cv-preset-card${isSelected ? ' cv-preset-card--active' : ''}`}
             >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: 4,
-                }}
-              >
-                <strong
-                  style={{
-                    fontSize: '0.88rem',
-                    color: isSelected ? 'var(--p-primary, #b8381e)' : 'inherit',
-                  }}
-                >
-                  {preset.name}
-                </strong>
-                {isSelected ? (
-                  <span style={{ fontSize: '0.75rem', color: 'var(--p-primary, #b8381e)' }}>
-                    ● Aktif
-                  </span>
-                ) : null}
+              <div className="cv-preset-card__top">
+                <strong className="cv-preset-card__name">{preset.name}</strong>
+                {isSelected ? <Badge variant="accent">Aktif</Badge> : null}
               </div>
-              <p
-                style={{
-                  margin: '0 0 6px 0',
-                  fontSize: '0.78rem',
-                  color: 'var(--ink-secondary)',
-                  lineHeight: 1.35,
-                }}
-              >
-                {preset.description}
-              </p>
-              <span
-                style={{
-                  fontSize: '0.72rem',
-                  color: 'var(--ink-muted)',
-                  fontStyle: 'italic',
-                  display: 'block',
-                }}
-              >
+              <p className="cv-preset-card__desc">{preset.description}</p>
+              <span className="cv-preset-card__for">
                 Cocok untuk: {preset.recommendedFor}
               </span>
             </button>
@@ -235,21 +177,14 @@ export function CvSectionReorder({
       </div>
 
       {/* Drag & Drop Reorderable Section List */}
-      <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink-secondary)' }}>
-          Urutan Bagian ({section_order.length} Bagian — Drag kotak untuk memindahkan):
+      <div style={{ marginBottom: 10 }}>
+        <span style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--ink-secondary)' }}>
+          Urutan Bagian ({section_order.length} Bagian — seret kotak untuk memindahkan):
         </span>
       </div>
 
       <ul
-        style={{
-          listStyle: 'none',
-          padding: 0,
-          margin: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-        }}
+        className="cv-reorder-list"
         aria-label="Daftar urutan bagian CV yang dapat digeser"
       >
         {section_order.map((secId, index) => {
@@ -257,6 +192,15 @@ export function CvSectionReorder({
           const label = labels[secId] || secId;
           const isBeingDragged = draggedIndex === index;
           const isOver = dragOverIndex === index && !isBeingDragged;
+
+          const itemClass = [
+            'cv-reorder-item',
+            isHidden ? 'cv-reorder-item--hidden' : '',
+            isBeingDragged ? 'cv-reorder-item--dragging' : '',
+            isOver ? 'cv-reorder-item--over' : '',
+          ]
+            .filter(Boolean)
+            .join(' ');
 
           return (
             <li
@@ -266,52 +210,24 @@ export function CvSectionReorder({
               onDragOver={(e) => handleDragOver(e, index)}
               onDrop={(e) => handleDrop(index, e)}
               onDragEnd={handleDragEnd}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '9px 12px',
-                background: isBeingDragged
-                  ? '#f3f4f6'
-                  : isOver
-                    ? '#eff6ff'
-                    : isHidden
-                      ? 'var(--p-surface, #f4f4f4)'
-                      : '#ffffff',
-                border: isOver
-                  ? '2px dashed var(--p-primary, #b8381e)'
-                  : isBeingDragged
-                    ? '1.5px dashed #9ca3af'
-                    : '1px solid var(--border-subtle, rgba(0,0,0,0.1))',
-                borderRadius: 'var(--radius-sm, 8px)',
-                opacity: isBeingDragged ? 0.45 : isHidden ? 0.6 : 1,
-                gap: 12,
-                cursor: 'grab',
-                userSelect: 'none',
-                transition: 'background 0.15s ease, border 0.15s ease',
-              }}
+              className={itemClass}
             >
-              {/* Drag Handle & Label */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div className="cv-reorder-meta">
                 <span
-                  title="Geser / Drag untuk mengubah urutan"
-                  style={{
-                    fontSize: '1.1rem',
-                    color: 'var(--ink-muted)',
-                    cursor: 'grab',
-                    padding: '2px 4px',
-                    lineHeight: 1,
-                    letterSpacing: -1,
-                  }}
+                  className="cv-reorder-handle"
+                  title="Seret untuk mengubah urutan"
+                  aria-hidden="true"
                 >
-                  ⠿
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="9" cy="5" r="1.6" />
+                    <circle cx="15" cy="5" r="1.6" />
+                    <circle cx="9" cy="12" r="1.6" />
+                    <circle cx="15" cy="12" r="1.6" />
+                    <circle cx="9" cy="19" r="1.6" />
+                    <circle cx="15" cy="19" r="1.6" />
+                  </svg>
                 </span>
-                <span
-                  className="font-mono"
-                  style={{ fontSize: '0.78rem', color: 'var(--ink-muted)' }}
-                >
-                  #{index + 1}
-                </span>
+                <span className="cv-reorder-index">#{index + 1}</span>
                 <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{label}</span>
                 {isHidden ? (
                   <Badge variant="neutral">Disembunyikan</Badge>
@@ -320,8 +236,7 @@ export function CvSectionReorder({
                 )}
               </div>
 
-              {/* Action Buttons (Tombol panah sebagai fallback aksesibilitas) */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div className="cv-reorder-actions">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -333,7 +248,19 @@ export function CvSectionReorder({
                   aria-label={`Pindahkan ${label} ke atas`}
                   title="Pindahkan ke atas"
                 >
-                  ↑
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="18 15 12 9 6 15" />
+                  </svg>
                 </Button>
                 <Button
                   variant="ghost"
@@ -346,7 +273,19 @@ export function CvSectionReorder({
                   aria-label={`Pindahkan ${label} ke bawah`}
                   title="Pindahkan ke bawah"
                 >
-                  ↓
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
                 </Button>
                 <Button
                   variant="outline"

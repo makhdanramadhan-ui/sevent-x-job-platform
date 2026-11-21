@@ -354,7 +354,6 @@ export function AuthGuard({
               <FormField
                 id="modal-password"
                 label="Password"
-                hint={activeTab === 'login' ? 'Minimal 8 karakter' : undefined}
                 error={fieldErrors.password}
               >
                 <PasswordInput

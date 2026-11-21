@@ -21,6 +21,7 @@ import {
   JOB_STATUS_LABELS,
   WORK_MODE_LABELS,
 } from '@/components/ui/api-client';
+import { ButtonText } from '@/components/ui/button-text';
 import { EmptyState, ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
 import { Button, JobStatusBadge } from '@/components/ui/forms';
 import {
@@ -320,7 +321,27 @@ export default function JobsFeedClient() {
   const [pendingPolled, setPendingPolled] = useState(false);
 
   const pillsRef = useRef<HTMLDivElement | null>(null);
+  const listTopRef = useRef<HTMLElement | null>(null);
   const bookmarksLoadedRef = useRef(false);
+
+  function handlePageChange(nextPage: number) {
+    const totalPages = data?.pages ?? 1;
+    const clamped = Math.max(1, Math.min(totalPages, nextPage));
+    if (clamped === page) return;
+    setPage(clamped);
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        if (!listTopRef.current) return;
+        const prefersReducedMotion = window.matchMedia(
+          '(prefers-reduced-motion: reduce)',
+        ).matches;
+        listTopRef.current.scrollIntoView({
+          behavior: prefersReducedMotion ? 'auto' : 'smooth',
+          block: 'start',
+        });
+      });
+    }
+  }
 
   // Fitur #4: Dengarkan navigasi back/forward browser untuk menyinkronkan filter & halaman
   useEffect(() => {
@@ -754,7 +775,7 @@ export default function JobsFeedClient() {
             </div>
 
             <button type="submit" className="jobs-search-submit">
-              Cari
+              <ButtonText>Cari</ButtonText>
             </button>
           </div>
 
@@ -862,7 +883,11 @@ export default function JobsFeedClient() {
       </section>
 
       <div className="jobs-portal-grid">
-        <section aria-label="Daftar hasil lowongan">
+        <section
+          ref={listTopRef}
+          aria-label="Daftar hasil lowongan"
+          style={{ scrollMarginTop: 88 }}
+        >
           <div className="jobs-feed-toolbar">
             <span className="jobs-feed-count">
               {data ? (
@@ -913,7 +938,7 @@ export default function JobsFeedClient() {
               description="Isi bidang/posisi yang diminati dan keahlian di profil agar kami dapat mencari lowongan yang sesuai untukmu."
               action={
                 <Link href="/profile" className="btn btn-primary btn-sm">
-                  Lengkapi Profil
+                  <ButtonText>Lengkapi Profil</ButtonText>
                 </Link>
               }
             />
@@ -960,7 +985,7 @@ export default function JobsFeedClient() {
                   </Button>
                 ) : (
                   <Link href="/profile" className="btn btn-primary btn-sm">
-                    Perbarui Profil
+                    <ButtonText>Perbarui Profil</ButtonText>
                   </Link>
                 )
               }
@@ -1108,18 +1133,19 @@ export default function JobsFeedClient() {
                     variant="outline"
                     size="sm"
                     disabled={page <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    onClick={() => handlePageChange(page - 1)}
                   >
                     Sebelumnya
                   </Button>
-                  <span className="font-mono" style={{ fontSize: '0.82rem' }}>
-                    Halaman <strong>{data.page}</strong> dari <strong>{data.pages}</strong>
+                  <span style={{ fontSize: '0.875rem', color: 'var(--p-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                    Halaman <strong style={{ color: 'var(--p-ink)', fontWeight: 600 }}>{data.page}</strong> dari{' '}
+                    <strong style={{ color: 'var(--p-ink)', fontWeight: 600 }}>{data.pages}</strong>
                   </span>
                   <Button
                     variant="outline"
                     size="sm"
                     disabled={page >= data.pages}
-                    onClick={() => setPage((p) => Math.min(data.pages, p + 1))}
+                    onClick={() => handlePageChange(page + 1)}
                   >
                     Berikutnya
                   </Button>

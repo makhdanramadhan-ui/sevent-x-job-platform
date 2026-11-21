@@ -5,6 +5,7 @@ import { BrandMark } from './brand-mark';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch, SITE_NAME } from './api-client';
+import { ButtonText } from './button-text';
 import { ScrollProgressBar } from './scroll-motion';
 
 export type SessionInfo = {
@@ -364,10 +365,10 @@ export function SiteHeader() {
                   {!session.has_profile ? (
                     <Link
                       href="/onboarding"
-                      className="nav-onboarding-link"
+                      className="btn btn-primary nav-onboarding-link"
                       onClick={() => setMenuOpen(false)}
                     >
-                      Lengkapi profil
+                      <ButtonText>Lengkapi Profil</ButtonText>
                     </Link>
                   ) : null}
                 </>
@@ -385,7 +386,7 @@ export function SiteHeader() {
                     className="btn btn-primary nav-auth-btn"
                     onClick={() => setMenuOpen(false)}
                   >
-                    Daftar Akun
+                    <ButtonText>Daftar Akun</ButtonText>
                   </Link>
                 </>
               )}
@@ -422,7 +423,7 @@ export function SiteFooter() {
                 <span className="btn btn-primary btn-sm auth-cta-placeholder" aria-hidden="true" />
               ) : session ? null : (
                 <Link href="/signup" className="btn btn-primary btn-sm">
-                  Daftar Akun
+                  <ButtonText>Daftar Akun</ButtonText>
                 </Link>
               )}
               <Link
@@ -438,7 +439,7 @@ export function SiteFooter() {
                       }
                 }
               >
-                Cari Lowongan
+                <ButtonText>Cari Lowongan</ButtonText>
               </Link>
             </div>
           </div>

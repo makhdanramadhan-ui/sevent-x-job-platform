@@ -3,22 +3,18 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import {
-  apiFetch,
-  AuthGuard,
-  Badge,
-  Button,
-  EmptyState,
-  formatDateTimeId,
-  LoadingState,
-  NoticeBanner,
-  PageBanner,
-  type SessionInfo,
-} from '@/components/ui';
+import { apiFetch, formatDateTimeId } from '@/components/ui/api-client';
+import { AuthGuard } from '@/components/ui/auth-guard';
+import { ButtonText } from '@/components/ui/button-text';
+import { EmptyState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
+import { Badge, Button } from '@/components/ui/forms';
+import { type SessionInfo, useAuthSession } from '@/components/ui/navigation';
+import { PageBanner } from '@/components/ui/page-banner';
 import type { CvDocument, CvDocumentSummary, ProfileRecord } from '@/lib/contracts';
 import { CvImportDialog } from './_components/cv-import-dialog';
 import { createDefaultCvContent, getSampleAtsCvContent } from './_lib/cv-defaults';
 import { getPresetDefinition } from './_lib/presets';
+import './cv-styles.css';
 
 const LOCAL_STORAGE_KEY = 'seventx_demo_cv_documents';
 
@@ -223,7 +219,7 @@ function CvDashboardInner({
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {isDemo ? (
         <NoticeBanner
           variant="warning"
@@ -231,8 +227,8 @@ function CvDashboardInner({
           onDismiss={onExitDemo}
         >
           Anda sedang menggunakan Studio CV dalam mode pengujian lokal. Data disimpan ke peramban
-          (localStorage) sehingga Anda dapat mencoba membuat, mengimpor, menerjemahkan, dan mengunduh
-          PDF standar ATS tanpa login.{' '}
+          (localStorage) sehingga Anda dapat mencoba membuat, mengimpor, dan mengunduh PDF standar
+          ATS tanpa login.{' '}
           {onExitDemo ? (
             <button
               type="button"
@@ -242,7 +238,7 @@ function CvDashboardInner({
                 border: 'none',
                 color: 'inherit',
                 textDecoration: 'underline',
-                fontWeight: 700,
+                fontWeight: 600,
                 cursor: 'pointer',
                 padding: 0,
               }}
@@ -253,26 +249,50 @@ function CvDashboardInner({
         </NoticeBanner>
       ) : null}
 
-      {/* Header Halaman */}
-      <div className="page-header">
-        <div>
-          <span className="page-kicker">Studio &amp; Pemetaan Karier</span>
-          <h1 className="page-title">Studio CV Standar ATS</h1>
-          <p className="page-subtitle">
-            Buat CV berformat ATS profesional (1 kolom, Times New Roman, divider solid, teks dapat diseleksi,
-            dan link aktif). Dilengkapi fitur <strong>Auto-Generate Terjemahan Kontekstual</strong> dari
-            Bahasa Indonesia ke Bahasa Inggris dengan kaidah resume profesional.
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+      {/* Toolbar Aksi & Pencarian */}
+      <div className="cv-dashboard-toolbar">
+        {cvList.length > 0 ? (
+          <div className="cv-dashboard-search-group">
+            <div className="cv-search-wrap">
+              <span className="cv-search-icon" aria-hidden="true">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.3-4.3" />
+                </svg>
+              </span>
+              <input
+                type="search"
+                className="input-control cv-search-input"
+                aria-label="Cari judul dokumen CV"
+                placeholder="Cari judul CV..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <span className="cv-doc-count">
+              Menampilkan <strong style={{ color: 'var(--p-ink)' }}>{filteredList.length}</strong> dari{' '}
+              <strong style={{ color: 'var(--p-ink)' }}>{cvList.length}</strong> dokumen
+            </span>
+          </div>
+        ) : (
+          <div style={{ fontSize: '0.9rem', color: 'var(--p-muted)' }}>
+            Susun CV 1 kolom rapi, impor berkas lama, atau muat contoh format ATS.
+          </div>
+        )}
+
+        <div className="cv-dashboard-actions">
           <Button variant="outline" size="md" onClick={handleLoadSampleAtsTemplate} loading={creating}>
-            ⭐ Muat Contoh CV ATS
+            Muat Contoh CV ATS
           </Button>
           <Button variant="outline" size="md" onClick={() => setImportOpen(true)}>
-            📄 Impor CV (PDF / DOCX)
+            Impor CV (PDF / DOCX)
           </Button>
           <Button variant="primary" size="md" loading={creating} onClick={handleCreateFromScratch}>
-            + Buat CV Baru
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Buat CV Baru
           </Button>
         </div>
       </div>
@@ -285,51 +305,32 @@ function CvDashboardInner({
 
       {/* Main Content */}
       {loading ? (
-        <LoadingState title="Memuat dokumen CV..." description="Mohon tunggu sebentar." lines={4} />
+        <LoadingState
+          title="Memuat dokumen CV..."
+          description="Mohon tunggu sebentar."
+          lines={4}
+          reserved
+        />
       ) : (
         <>
-          {cvList.length > 0 ? (
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 16,
-                flexWrap: 'wrap',
-              }}
-            >
-              <div style={{ width: '100%', maxWidth: 360 }}>
-                <input
-                  type="search"
-                  className="input-control"
-                  placeholder="Cari judul CV..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <span
-                className="font-mono"
-                style={{ fontSize: '0.82rem', color: 'var(--ink-secondary)' }}
-              >
-                Menampilkan {filteredList.length} dari {cvList.length} dokumen
-              </span>
-            </div>
-          ) : null}
-
           {filteredList.length === 0 ? (
             <EmptyState
               kicker="Belum Ada Dokumen"
-              title="Studio CV Anda Masih Kosong"
-              description="Mulai susun CV standar ATS Anda dari awal, impor file CV lama, atau gunakan preset contoh ATS untuk melihat formatnya."
+              title={searchQuery.trim() ? 'Dokumen Tidak Ditemukan' : 'Studio CV Anda Masih Kosong'}
+              description={
+                searchQuery.trim()
+                  ? `Tidak ada dokumen CV yang cocok dengan "${searchQuery.trim()}".`
+                  : 'Mulai susun CV standar ATS dari data profil, impor berkas CV lama, atau gunakan contoh template ATS.'
+              }
               action={
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                   <Button
                     variant="primary"
                     size="md"
                     loading={creating}
                     onClick={handleLoadSampleAtsTemplate}
                   >
-                    ⭐ Buka Contoh CV ATS
+                    Buka Contoh CV ATS
                   </Button>
                   <Button
                     variant="outline"
@@ -340,43 +341,20 @@ function CvDashboardInner({
                     Mulai Buat CV Baru
                   </Button>
                   <Button variant="outline" size="md" onClick={() => setImportOpen(true)}>
-                    Unggah &amp; Impor CV Lama
+                    Impor CV Lama
                   </Button>
                 </div>
               }
             />
           ) : (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                gap: 16,
-              }}
-            >
+            <div className="cv-doc-grid">
               {filteredList.map((cv) => {
                 const presetDef = getPresetDefinition(cv.template_version);
                 return (
-                  <div
-                    key={cv.id}
-                    className="surface-card-interactive"
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      gap: 16,
-                    }}
-                  >
+                  <article key={cv.id} className="cv-doc-card">
                     <div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'flex-start',
-                          gap: 8,
-                          marginBottom: 8,
-                        }}
-                      >
-                        <h3 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700 }}>
+                      <div className="cv-doc-card__head">
+                        <h3 className="cv-doc-card__title">
                           <Link
                             href={`/cv/${cv.id}`}
                             style={{ textDecoration: 'none', color: 'inherit' }}
@@ -388,56 +366,45 @@ function CvDashboardInner({
                           {presetDef.shortLabel}
                         </Badge>
                       </div>
-                      <span
-                        className="font-mono"
-                        style={{ fontSize: '0.76rem', color: 'var(--ink-muted)' }}
-                      >
+                      <span className="cv-doc-card__meta">
                         Diperbarui: {formatDateTimeId(cv.updated_at)}
                       </span>
                     </div>
 
-                  <div
-                    style={{
-                      borderTop: '1px solid var(--border-subtle, rgba(0,0,0,0.1))',
-                      paddingTop: 12,
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    {deleteConfirmId === cv.id ? (
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <div className="cv-doc-card__foot">
+                      {deleteConfirmId === cv.id ? (
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            loading={deleting}
+                            onClick={() => handleDeleteCv(cv.id)}
+                          >
+                            Hapus Permanen
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmId(null)}>
+                            Batal
+                          </Button>
+                        </div>
+                      ) : (
                         <Button
-                          variant="danger"
+                          variant="ghost"
                           size="sm"
-                          loading={deleting}
-                          onClick={() => handleDeleteCv(cv.id)}
+                          onClick={() => setDeleteConfirmId(cv.id)}
+                          style={{ color: 'var(--status-danger)' }}
                         >
-                          Hapus Permanen
+                          Hapus
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmId(null)}>
-                          Batal
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeleteConfirmId(cv.id)}
-                        style={{ color: 'var(--status-danger)' }}
-                      >
-                        Hapus
-                      </Button>
-                    )}
+                      )}
 
-                    <Link href={`/cv/${cv.id}`} className="btn btn-secondary btn-sm">
-                      Buka Editor &amp; Unduh &rarr;
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                      <Link href={`/cv/${cv.id}`} className="btn btn-secondary btn-sm">
+                        <ButtonText>Buka Editor</ButtonText>
+                      </Link>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
           )}
         </>
       )}
@@ -447,7 +414,7 @@ function CvDashboardInner({
         isOpen={importOpen}
         onClose={() => setImportOpen(false)}
         currentProfile={currentProfile}
-        onImportComplete={(newCvId) => {
+        onImportComplete={() => {
           loadData();
         }}
       />
@@ -456,22 +423,26 @@ function CvDashboardInner({
 }
 
 export default function CvPage() {
+  const { session, loading: authLoading } = useAuthSession();
   const [useDemo, setUseDemo] = useState(false);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
       <PageBanner
         kicker="Studio &amp; Dokumen"
-        title="Studio CV Standar ATS Profesional"
-        subtitle="Rancang, kelola, dan ekspor CV 1-kolom berstandar internasional dengan terjemahan kontekstual ID/EN dan ekstraksi berkas 100% lokal di browser tanpa AI eksternal."
+        title="Studio CV Standar ATS"
+        subtitle="Rancang, kelola, dan ekspor CV 1 kolom rapi yang ramah sistem ATS serta impor berkas lama langsung di browser tanpa AI eksternal."
         tone="sand"
-        imageSrc="/images/cv-3d-workspace.jpg"
+        imageSrc="/images/banner-cv-vector.svg"
         actions={
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <>
             <Link href="/profile" prefetch={false} className="btn btn-outline btn-sm">
-              &larr; Profil Akun
+              <ButtonText>Profil Akun</ButtonText>
             </Link>
-          </div>
+            <Link href="/jobs" prefetch={false} className="btn btn-secondary btn-sm">
+              <ButtonText>Cari Lowongan</ButtonText>
+            </Link>
+          </>
         }
       />
 
@@ -492,31 +463,38 @@ export default function CvPage() {
         />
       ) : (
         <>
-          <div
-            style={{
-              background: 'var(--p-surface, #f4f4f4)',
-              border: '1px solid var(--border-subtle, rgba(0,0,0,0.1))',
-              borderRadius: 'var(--radius-md, 12px)',
-              padding: '12px 16px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 12,
-              flexWrap: 'wrap',
-              fontSize: '0.86rem',
-            }}
-          >
-            <span>
-              💡 <strong>Belum login atau ingin uji coba cepat?</strong> Anda bisa mencoba format CV ATS
-              dan auto-generate terjemahan tanpa login.
-            </span>
-            <Button variant="primary" size="sm" onClick={() => setUseDemo(true)}>
-              Buka Mode Uji Coba Demo (Tanpa Login) &rarr;
-            </Button>
-          </div>
+          {!authLoading && !session ? (
+            <div className="cv-demo-strip">
+              <span className="cv-demo-strip__copy">
+                <svg
+                  className="cv-demo-strip__icon"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+                <span>
+                  <strong>Belum masuk atau ingin uji coba cepat?</strong> Coba susun dan unduh CV ATS
+                  secara lokal tanpa perlu login.
+                </span>
+              </span>
+              <Button variant="primary" size="sm" onClick={() => setUseDemo(true)}>
+                Coba Mode Demo
+              </Button>
+            </div>
+          ) : null}
 
           <AuthGuard title="Masuk untuk Mengakses Studio CV">
-            {(session) => <CvDashboardInner session={session} isDemo={false} />}
+            {(activeSession) => <CvDashboardInner session={activeSession} isDemo={false} />}
           </AuthGuard>
         </>
       )}
