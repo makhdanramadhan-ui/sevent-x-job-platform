@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { SITE_NAME } from '@/components/ui/api-client';
 import { ButtonText } from '@/components/ui/button-text';
@@ -12,6 +11,7 @@ import {
   LandingWorkflowSteps,
 } from '@/components/ui/home-landing-client';
 import { HomeHeroAuthCta } from '@/components/ui/home-hero-auth-cta';
+import { HomeHeroVisual } from '@/components/ui/home-hero-visual';
 import { ScrollReveal, ScrollWordHighlight } from '@/components/ui/scroll-motion';
 
 export default function HomePage() {
@@ -41,15 +41,7 @@ export default function HomePage() {
             </div>
 
             <div className="tk-hero__visual">
-              <Image
-                src="/images/hero-seeker.jpg"
-                alt="Profesional muda tersenyum bekerja menyiapkan lamaran kerja di laptop dalam ruang kerja yang cerah"
-                width={960}
-                height={640}
-                priority
-                fetchPriority="high"
-                sizes="(max-width: 480px) 360px, (max-width: 960px) 640px, 480px"
-              />
+              <HomeHeroVisual />
             </div>
           </div>
 
@@ -191,14 +183,22 @@ export default function HomePage() {
                     rapi, lalu unduh dalam bentuk PDF siap kirim.
                   </p>
                 </div>
-                <div className="tk-feature-panel tk-feature-panel--photo">
-                  <Image
-                    src="/images/cv-workspace.jpg"
-                    alt="Tangan mengetik di laptop dengan buku catatan dan kacamata di atas meja kerja yang rapi"
-                    width={1200}
-                    height={802}
+                <div className="tk-feature-panel tk-feature-panel--vector">
+                  <span className="tk-feature-chip tk-feature-chip--left" aria-hidden="true">
+                    Impor PDF / DOCX
+                  </span>
+                  <span className="tk-feature-chip tk-feature-chip--right" aria-hidden="true">
+                    ATS A4 PDF
+                  </span>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/images/home-cv-vector.svg"
+                    alt="Ilustrasi vektor kandidat menyusun dan memperbarui dokumen CV di RakitKarier"
+                    width={732}
+                    height={576}
                     loading="lazy"
-                    sizes="(max-width: 960px) 92vw, 560px"
+                    decoding="async"
+                    className="tk-feature-vector-img"
                   />
                 </div>
               </article>
