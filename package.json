@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "check": "node --env-file-if-exists=.env.local --import tsx scripts/smoke.mts",
     "check:supabase": "node --env-file-if-exists=.env.local --import tsx scripts/integration-supabase.mts",
-    "test:match-email": "node --import tsx scripts/test-match-email.mts"
+    "test:match-email": "node --import tsx scripts/test-match-email.mts",
+    "test:email-verify": "node --import tsx scripts/test-email-verify.mts && node --import tsx scripts/test-auth-email-guards.mts && node --import tsx scripts/test-resend-identical.mts"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
