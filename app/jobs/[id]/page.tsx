@@ -232,7 +232,17 @@ async function getServerJobDetail(jobId: string): Promise<{
 
   try {
     const supabase = await createCookieClient(env);
-    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    const [authRes, jobRes] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase
+        .from('jobs')
+        .select('*, job_sources(*)')
+        .eq('id', jobId)
+        .order('fetched_at', { referencedTable: 'job_sources', ascending: false })
+        .maybeSingle(),
+    ]);
+
+    const { data: authData, error: authErr } = authRes;
     if (authErr || !authData.user) {
       return { authenticated: false, job: null, isBookmarked: false };
     }
@@ -240,24 +250,16 @@ async function getServerJobDetail(jobId: string): Promise<{
       return { authenticated: false, job: null, isBookmarked: false };
     }
 
-    const [jobRes, bmRes] = await Promise.all([
-      supabase
-        .from('jobs')
-        .select('*, job_sources(*)')
-        .eq('id', jobId)
-        .order('fetched_at', { referencedTable: 'job_sources', ascending: false })
-        .maybeSingle(),
-      supabase
-        .from('bookmarks')
-        .select('job_id')
-        .eq('user_id', authData.user.id)
-        .eq('job_id', jobId)
-        .maybeSingle(),
-    ]);
-
     if (jobRes.error || !jobRes.data) {
       return { authenticated: true, job: null, isBookmarked: false };
     }
+
+    const bmRes = await supabase
+      .from('bookmarks')
+      .select('job_id')
+      .eq('user_id', authData.user.id)
+      .eq('job_id', jobId)
+      .maybeSingle();
 
     return {
       authenticated: true,
