@@ -105,7 +105,6 @@ function CvEditorInner({
   const [templateVersion, setTemplateVersion] = useState<string>('v1-default');
   const [content, setContent] = useState<CvContent | null>(null);
   const [baseline, setBaseline] = useState<CvEditorSnapshot | null>(null);
-  const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
   const [activeSection, setActiveSection] = useState<CvSectionId>('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -538,24 +537,35 @@ function CvEditorInner({
         </NoticeBanner>
       ) : null}
 
-      {/* Mode View Switcher untuk Layar Mobile */}
-      <div className="cv-mode-toggle" role="tablist" aria-label="Pilih tampilan editor atau pratinjau">
+      {/* Mode Switcher untuk Layar Mobile: Editor Isi + Pratinjau Cetak A4 */}
+      <div className="cv-mode-toggle" role="group" aria-label="Mode editor dan pratinjau cetak ATS">
         <button
           type="button"
-          role="tab"
-          aria-selected={activeTab === 'editor'}
-          className={`cv-mode-btn${activeTab === 'editor' ? ' cv-mode-btn--active' : ''}`}
-          onClick={() => setActiveTab('editor')}
+          className="cv-mode-btn cv-mode-btn--active"
+          aria-current="true"
         >
           Editor Isi
         </button>
         <button
           type="button"
-          role="tab"
-          aria-selected={activeTab === 'preview'}
-          className={`cv-mode-btn${activeTab === 'preview' ? ' cv-mode-btn--active' : ''}`}
-          onClick={() => setActiveTab('preview')}
+          className="cv-mode-btn"
+          title="Buka pratinjau cetak A4 (tidak otomatis mengunduh)"
+          onClick={() => triggerCvPrint(content.profile.full_name)}
         >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
           Pratinjau ATS
         </button>
       </div>
@@ -564,7 +574,7 @@ function CvEditorInner({
       <div className="cv-workspace-grid">
         {/* Kolom Kiri: Editor Form & Pengaturan Urutan */}
         <div
-          className={`cv-editor-column ${activeTab === 'preview' ? 'cv-column-hidden-mobile' : ''}`}
+          className="cv-editor-column"
           style={{ display: 'flex', flexDirection: 'column', gap: 18 }}
         >
           <CvSectionForm
@@ -583,10 +593,8 @@ function CvEditorInner({
           />
         </div>
 
-        {/* Kolom Kanan: Pratinjau Standar ATS */}
-        <div
-          className={`cv-preview-column ${activeTab === 'editor' ? 'cv-column-hidden-mobile' : ''}`}
-        >
+        {/* Kolom Kanan: Pratinjau Standar ATS (Desktop live preview & sumber cetak A4) */}
+        <div className="cv-preview-column cv-column-hidden-mobile">
           <div className="cv-preview-sticky">
             <CvPreview content={content} />
           </div>
