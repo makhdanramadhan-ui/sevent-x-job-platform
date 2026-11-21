@@ -271,7 +271,6 @@ function JobsFeedInner() {
   const [pendingPolled, setPendingPolled] = useState(false);
 
   const pillsRef = useRef<HTMLDivElement | null>(null);
-  const prefersReducedMotion = useReducedMotion();
 
   // Fitur #4 & #5: Muat filter awal dari URL query string & hiddenIds dari localStorage
   useEffect(() => {
