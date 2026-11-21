@@ -107,11 +107,13 @@ export type ProfileAchievement = {
 };
 
 export type ProfilePreferences = {
+  country?: string;
   positions: string[];
   locations: string[];
   levels: ExperienceLevel[];
   work_modes: WorkMode[];
   employment_types: EmploymentType[];
+  email_match_alerts?: boolean;
 };
 
 export type ProfileRecord = {

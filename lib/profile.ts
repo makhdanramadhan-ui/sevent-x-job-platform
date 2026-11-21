@@ -1,3 +1,7 @@
+import { canonicalizeOrThrow } from './catalog';
+import { findCountry } from './countries';
+import { findLocation, LOCATION_CANONICAL } from './locations';
+import { POSITION_CANONICAL } from './positions';
 import type {
   ProfileAchievement,
   ProfileEducation,
@@ -140,19 +144,81 @@ function parseAchievements(value: unknown): ProfileAchievement[] {
   });
 }
 
+function parseCountry(value: unknown): string {
+  const raw = optionalText(value, 'preferences.country', 2, 2) ?? '';
+  if (!raw) {
+    throw new ApiError(400, 'validation_error', 'Negara wajib dipilih.', {
+      field: 'preferences.country',
+    });
+  }
+  const match = findCountry(raw);
+  if (!match || !/^[A-Z]{2}$/.test(raw.toUpperCase()) || match.code !== raw.toUpperCase()) {
+    throw new ApiError(400, 'validation_error', `Negara tidak dikenal: ${raw}.`, {
+      field: 'preferences.country',
+      invalid: [raw],
+    });
+  }
+  return match.code;
+}
+
+function parseLocations(value: unknown, country: string): string[] {
+  const raw = stringList(value, 'preferences.locations', 10);
+  if (raw.length < 1) {
+    throw new ApiError(400, 'validation_error', 'Pilih minimal satu lokasi kerja preferensi.', {
+      field: 'preferences.locations',
+    });
+  }
+  const canonical = canonicalizeOrThrow(raw, LOCATION_CANONICAL, 'preferences.locations');
+  const invalid = canonical.filter((name) => {
+    const location = findLocation(name);
+    return !location || (location.country !== country && location.country !== '*');
+  });
+  if (invalid.length > 0) {
+    throw new ApiError(
+      400,
+      'validation_error',
+      `Lokasi tidak sesuai negara ${country}: ${invalid.join(', ')}.`,
+      { field: 'preferences.locations', invalid, country },
+    );
+  }
+  return canonical;
+}
+
 function parsePreferences(value: unknown): ProfilePreferences {
   if (value === undefined || value === null) {
-    return { positions: [], locations: [], levels: [], work_modes: [], employment_types: [] };
+    return {
+      country: '',
+      positions: [],
+      locations: [],
+      levels: [],
+      work_modes: [],
+      employment_types: [],
+      email_match_alerts: true,
+    };
   }
   const entry = asObject(value, 'preferences');
   rejectUnknownKeys(
     entry,
-    ['positions', 'locations', 'levels', 'work_modes', 'employment_types'],
+    [
+      'country',
+      'positions',
+      'locations',
+      'levels',
+      'work_modes',
+      'employment_types',
+      'email_match_alerts',
+    ],
     'preferences',
   );
+  const country = parseCountry(entry.country);
   return {
-    positions: stringList(entry.positions, 'preferences.positions', 10),
-    locations: stringList(entry.locations, 'preferences.locations', 10),
+    country,
+    positions: canonicalizeOrThrow(
+      stringList(entry.positions, 'preferences.positions', 10),
+      POSITION_CANONICAL,
+      'preferences.positions',
+    ),
+    locations: parseLocations(entry.locations, country),
     levels: enumList(entry.levels, 'preferences.levels', EXPERIENCE_LEVELS, 10),
     work_modes: enumList(entry.work_modes, 'preferences.work_modes', WORK_MODES, 10),
     employment_types: enumList(
@@ -161,6 +227,10 @@ function parsePreferences(value: unknown): ProfilePreferences {
       EMPLOYMENT_TYPES,
       10,
     ),
+    email_match_alerts:
+      entry.email_match_alerts === undefined || entry.email_match_alerts === null
+        ? true
+        : flag(entry.email_match_alerts, 'preferences.email_match_alerts'),
   };
 }
 

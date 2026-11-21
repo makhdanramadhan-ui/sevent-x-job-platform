@@ -403,6 +403,7 @@ export function normalizeSkills(
     if (!cleaned) return;
     const key = cleaned.toLowerCase();
     const canonical = SKILL_CANONICAL_DISPLAY[key] ?? cleaned;
+    if (ROLE_TITLE_RE.test(canonical) && !(key in SKILL_CANONICAL_DISPLAY)) return;
     const canonicalKey = canonical.toLowerCase();
     if (!seenLower.has(canonicalKey) && result.length < MAX_SKILLS_PER_JOB) {
       seenLower.add(canonicalKey);

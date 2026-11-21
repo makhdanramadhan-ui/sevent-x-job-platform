@@ -6,34 +6,20 @@ import type {
   RecommendationOutput,
 } from '../recommendation-contract';
 import { scoreSingleJob, SCORE_WEIGHTS, type DetailedScoreResult } from './scoring';
+import type { LocationMatchTier } from './location-filter';
 import { cleanToken, normalizeSkill } from './synonyms';
 
 export { SCORE_WEIGHTS, normalizeSkill };
 
 /**
- * Menyaring daftar lowongan berdasarkan RecommendationFilters jika filter diberikan.
- * Filter kosong (array kosong) berarti tidak membatasi dimensi tersebut.
+ * Mode kerja, tipe pekerjaan dan level adalah preferensi lunak: mereka memengaruhi
+ * skor lewat scoreSingleJob, tetapi tidak pernah menghilangkan lowongan.
  */
 export function applyRecommendationFilters(
   jobs: ReadonlyArray<RecommendationJobInput>,
-  filters?: Partial<RecommendationFilters>,
+  _filters?: Partial<RecommendationFilters>,
 ): RecommendationJobInput[] {
-  if (!filters) return [...jobs];
-
-  const workModes =
-    filters.work_modes && filters.work_modes.length > 0 ? new Set(filters.work_modes) : null;
-  const employmentTypes =
-    filters.employment_types && filters.employment_types.length > 0
-      ? new Set(filters.employment_types)
-      : null;
-  const levels = filters.levels && filters.levels.length > 0 ? new Set(filters.levels) : null;
-
-  return jobs.filter((job) => {
-    if (workModes && !workModes.has(job.work_mode)) return false;
-    if (employmentTypes && !employmentTypes.has(job.employment_type)) return false;
-    if (levels && !levels.has(job.level)) return false;
-    return true;
-  });
+  return [...jobs];
 }
 
 function buildConservativeDuplicateSignature(job: RecommendationJobInput): string {
@@ -49,16 +35,21 @@ function buildConservativeDuplicateSignature(job: RecommendationJobInput): strin
 export type RankJobsOptions = {
   referenceDate?: string;
   filters?: Partial<RecommendationFilters>;
+  locationTiers?: ReadonlyMap<string, LocationMatchTier>;
+  nearbyLabels?: ReadonlyMap<string, string>;
 };
+
+const TIER_RANK: Record<LocationMatchTier, number> = { exact: 0, remote: 0, nearby: 1 };
 
 /**
  * Fungsi utama mesin rekomendasi berbasis aturan (contract_version: 1).
  * Mengurutkan lowongan secara deterministik berdasarkan:
  * 1. Lowongan aktif/belum kedaluwarsa di atas lowongan tutup/kedaluwarsa
  * 2. Skor kecocokan tertinggi (0-100)
- * 3. Jumlah syarat yang terpenuhi (matchedRequirementCount) tertinggi
- * 4. Jumlah syarat yang belum terpenuhi (missing.length) terendah
- * 5. job_id secara leksikografis (penentu seri deterministik)
+ * 3. Kecocokan lokasi persis/remote di atas lowongan lokasi terdekat
+ * 4. Jumlah syarat yang terpenuhi (matchedRequirementCount) tertinggi
+ * 5. Jumlah syarat yang belum terpenuhi (missing.length) terendah
+ * 6. job_id secara leksikografis (penentu seri deterministik)
  */
 export function rankJobs(
   input: RecommendationInput,
@@ -94,6 +85,11 @@ export function rankJobs(
     if (b.score !== a.score) {
       return b.score - a.score;
     }
+    const tierA = options.locationTiers?.get(a.job_id) ?? 'exact';
+    const tierB = options.locationTiers?.get(b.job_id) ?? 'exact';
+    if (TIER_RANK[tierA] !== TIER_RANK[tierB]) {
+      return TIER_RANK[tierA] - TIER_RANK[tierB];
+    }
     if (b.matchedRequirementCount !== a.matchedRequirementCount) {
       return b.matchedRequirementCount - a.matchedRequirementCount;
     }
@@ -109,6 +105,7 @@ export function rankJobs(
     matched: res.matched,
     missing: res.missing,
     unknown: res.unknown,
+    location_note: options.nearbyLabels?.get(res.job_id) ?? null,
   }));
 
   return {

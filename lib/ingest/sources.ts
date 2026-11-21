@@ -267,6 +267,8 @@ export async function fetchLinkedinGuestJobs(options: {
   fetchDetail?: boolean;
   delaySeconds?: number;
   referenceDate?: string;
+  experienceLevel?: string;
+  jobType?: string;
 }): Promise<SourceFetchResult> {
   const keywords = options.keywords.filter((k) => k.trim().length > 0);
   const location = options.location ?? 'Indonesia';
@@ -287,8 +289,11 @@ export async function fetchLinkedinGuestJobs(options: {
     if (!kw) continue;
     if (idx > 0 && delayMs > 0) await delay(delayMs);
 
+    const searchParams: Record<string, string> = { keywords: kw, location, start: '0' };
+    if (options.experienceLevel) searchParams.f_E = options.experienceLevel;
+    if (options.jobType) searchParams.f_JT = options.jobType;
     const searchUrl = `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?${new URLSearchParams(
-      { keywords: kw, location, start: '0' },
+      searchParams,
     ).toString()}`;
 
     let statusCode: number;

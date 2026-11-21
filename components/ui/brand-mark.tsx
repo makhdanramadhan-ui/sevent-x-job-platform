@@ -1,0 +1,24 @@
+type BrandMarkProps = {
+  size?: number;
+  className?: string;
+};
+
+export function BrandMark({ size = 28, className }: BrandMarkProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 64 64"
+      width={size}
+      height={size}
+      className={className}
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect width="64" height="64" rx="14" fill="#1a4be0" />
+      <path
+        fill="#ffffff"
+        d="M10 14h7v36h-7V14zm7 0h8.5c5.8 0 9.5 3.2 9.5 8.2 0 3.6-2 6.3-5.4 7.5L35.5 50H27l-5.8-15.5H17V14zm0 6.5v7.5h7c2.4 0 3.8-1.4 3.8-3.75S26.4 20.5 24 20.5h-7zM36 14h7v14.2L50 14h8.5L49 31.8 59 50h-8.8L43 36v-0.2V50h-7V14z"
+      />
+    </svg>
+  );
+}

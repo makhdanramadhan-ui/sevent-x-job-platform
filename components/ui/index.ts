@@ -25,6 +25,7 @@ export {
   type NoticeVariant,
 } from './feedback';
 export { AuthDivider, GoogleAuthButton } from './google-button';
+export { BrandMark } from './brand-mark';
 export {
   EmptyArchiveIllustration,
   HeroCareerIllustration,
@@ -42,6 +43,8 @@ export {
   FormField,
   type FormFieldProps,
   JobStatusBadge,
+  PasswordInput,
+  type PasswordInputProps,
   SelectInput,
   type SelectInputProps,
   TagListInput,

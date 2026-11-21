@@ -9,6 +9,7 @@ import {
   WORK_MODES,
 } from '@/lib/contracts';
 import type { ProfileInput } from '@/lib/profile';
+import { findCountry } from '@/lib/countries';
 import {
   type ApiCallError,
   apiFetch,
@@ -23,11 +24,11 @@ import {
   Button,
   CheckboxGroup,
   FormField,
-  TagListInput,
   TextArea,
   TextInput,
 } from './forms';
 import { SkillComboboxInput } from './skill-combobox';
+import { CatalogComboboxInput } from './catalog-combobox';
 
 const WORK_MODE_OPTIONS = WORK_MODES.filter((m) => m !== 'unknown').map((value) => ({
   value,
@@ -59,6 +60,7 @@ export function ProfileEditorForm({
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState<ApiCallError | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
+  const [countryNotice, setCountryNotice] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [cvExtraOpen, setCvExtraOpen] = useState(
     () =>
@@ -74,6 +76,14 @@ export function ProfileEditorForm({
     setSuccessMsg(null);
 
     const payload = sanitizeProfilePayload(draft);
+    if (!payload.preferences.country) {
+      setClientError('Negara wajib dipilih.');
+      return;
+    }
+    if (payload.preferences.locations.length < 1) {
+      setClientError('Pilih minimal satu lokasi kerja preferensi.');
+      return;
+    }
 
     // Client-side validation for URLs and dates before sending to server
     for (let i = 0; i < payload.links.length; i += 1) {
@@ -169,11 +179,39 @@ export function ProfileEditorForm({
             />
           </FormField>
 
+          <CatalogComboboxInput
+            id="profile-country"
+            label="Negara"
+            type="countries"
+            values={draft.preferences.country ? [draft.preferences.country] : []}
+            onChange={(next) =>
+              setDraft((current) => {
+                const code = next[0] ?? '';
+                if (code === current.preferences.country) return current;
+                const kept = current.preferences.locations.filter((location) => location === 'Remote');
+                const dropped = current.preferences.locations.length - kept.length;
+                setCountryNotice(
+                  dropped > 0
+                    ? `${dropped} lokasi dihapus karena tidak sesuai negara baru. Remote tetap dipertahankan.`
+                    : null,
+                );
+                return {
+                  ...current,
+                  preferences: { ...current.preferences, country: code, locations: kept },
+                };
+              })
+            }
+            labelForValue={(code) => findCountry(code)?.name ?? code}
+            hint="Pilih negara dari daftar. Indonesia adalah saran pertama."
+            multiple={false}
+            maxLength={50}
+          />
+
           <FormField id="profile-headline" label="Headline / Fokus Peran" hint="Maksimal 200 karakter">
             <TextInput
               id="profile-headline"
               maxLength={200}
-              placeholder="Contoh: Frontend Engineer · Lulusan Teknik Informatika"
+              placeholder="Contoh: Backend Developer · Lulusan Teknik Informatika"
               value={draft.headline ?? ''}
               onChange={(e) => setDraft({ ...draft, headline: e.target.value })}
             />
@@ -213,9 +251,10 @@ export function ProfileEditorForm({
           />
 
           <div className="form-grid-2">
-            <TagListInput
+            <CatalogComboboxInput
               id="pref-positions"
               label="Posisi yang Diminati"
+              type="positions"
               values={draft.preferences.positions}
               onChange={(positions) =>
                 setDraft({
@@ -223,14 +262,16 @@ export function ProfileEditorForm({
                   preferences: { ...draft.preferences, positions },
                 })
               }
-              placeholder="Contoh: Software Engineer, Data Analyst"
+              hint="Ketik untuk mencari, gunakan panah dan Enter untuk memilih dari daftar."
               maxItems={10}
-              maxLength={60}
+              maxLength={80}
             />
 
-            <TagListInput
+            <CatalogComboboxInput
               id="pref-locations"
               label="Lokasi Kerja Preferensi"
+              type="locations"
+              country={draft.preferences.country}
               values={draft.preferences.locations}
               onChange={(locations) =>
                 setDraft({
@@ -238,11 +279,16 @@ export function ProfileEditorForm({
                   preferences: { ...draft.preferences, locations },
                 })
               }
-              placeholder="Contoh: Jakarta, Yogyakarta, Remote"
+              hint="Wajib minimal satu. Pilih kota, provinsi, atau Remote dari daftar negara terpilih."
               maxItems={10}
-              maxLength={60}
+              maxLength={80}
             />
           </div>
+          {countryNotice ? (
+            <p role="status" style={{ margin: 0, fontSize: '0.85rem', color: 'var(--ink-secondary)' }}>
+              {countryNotice}
+            </p>
+          ) : null}
 
           <CheckboxGroup
             legend="Preferensi Mode Kerja (Work Mode)"
@@ -279,6 +325,42 @@ export function ProfileEditorForm({
               })
             }
           />
+          <label
+            htmlFor="pref-email-match-alerts"
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 10,
+              padding: '12px 14px',
+              border: '1px solid #dde4ee',
+              borderRadius: 12,
+              cursor: 'pointer',
+            }}
+          >
+            <input
+              id="pref-email-match-alerts"
+              type="checkbox"
+              checked={draft.preferences.email_match_alerts !== false}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  preferences: {
+                    ...current.preferences,
+                    email_match_alerts: event.target.checked,
+                  },
+                }))
+              }
+              style={{ marginTop: 3 }}
+            />
+            <span>
+              <strong style={{ display: 'block', fontSize: '0.92rem' }}>
+                Kirim email saat ada lowongan dengan kecocokan ≥70%
+              </strong>
+              <span style={{ display: 'block', fontSize: '0.82rem', color: 'var(--ink-secondary)' }}>
+                Kamu bisa berhenti berlangganan lewat tautan di bawah email.
+              </span>
+            </span>
+          </label>
         </div>
       </section>
 
