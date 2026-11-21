@@ -9,7 +9,20 @@ import {
   getPresetDefinition,
   getSectionsForPreset,
 } from '../_lib/presets';
-import { type CvContent, type CvSectionId, SECTION_LABELS } from '../_lib/types';
+import { type CvContent, type CvSectionId } from '../_lib/types';
+
+const SECTION_DISPLAY_LABELS: Record<CvSectionId, string> = {
+  profile: 'Identitas & Kontak',
+  summary: 'Ringkasan Profil',
+  experience: 'Pengalaman Kerja',
+  education: 'Pendidikan',
+  organization: 'Pengalaman Organisasi',
+  projects: 'Proyek & Portofolio',
+  skills: 'Keahlian & Tools',
+  certifications: 'Kursus & Sertifikasi',
+  achievements: 'Penghargaan & Sertifikasi',
+  custom: 'Bagian Khusus',
+};
 
 export function CvSectionReorder({
   content,
@@ -22,8 +35,7 @@ export function CvSectionReorder({
   templateVersion?: string | null;
   onPresetChange?: (nextPreset: CvPresetId) => void;
 }) {
-  const { language = 'en', section_order, hidden_sections } = content;
-  const labels = SECTION_LABELS[language] || SECTION_LABELS.en;
+  const { section_order, hidden_sections } = content;
 
   const currentPresetId = detectActivePreset(templateVersion, section_order);
   const activePresetDef = getPresetDefinition(currentPresetId);
@@ -189,7 +201,7 @@ export function CvSectionReorder({
       >
         {section_order.map((secId, index) => {
           const isHidden = hidden_sections.includes(secId);
-          const label = labels[secId] || secId;
+          const label = SECTION_DISPLAY_LABELS[secId] || secId;
           const isBeingDragged = draggedIndex === index;
           const isOver = dragOverIndex === index && !isBeingDragged;
 
@@ -212,84 +224,95 @@ export function CvSectionReorder({
               onDragEnd={handleDragEnd}
               className={itemClass}
             >
-              <div className="cv-reorder-meta">
-                <span
-                  className="cv-reorder-handle"
-                  title="Seret untuk mengubah urutan"
-                  aria-hidden="true"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="9" cy="5" r="1.6" />
-                    <circle cx="15" cy="5" r="1.6" />
-                    <circle cx="9" cy="12" r="1.6" />
-                    <circle cx="15" cy="12" r="1.6" />
-                    <circle cx="9" cy="19" r="1.6" />
-                    <circle cx="15" cy="19" r="1.6" />
-                  </svg>
-                </span>
-                <span className="cv-reorder-index">#{index + 1}</span>
-                <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{label}</span>
-                {isHidden ? (
-                  <Badge variant="neutral">Disembunyikan</Badge>
-                ) : (
-                  <Badge variant="open">Tampil</Badge>
-                )}
+              <div className="cv-reorder-head">
+                <div className="cv-reorder-meta">
+                  <span
+                    className="cv-reorder-handle"
+                    title="Seret untuk mengubah urutan"
+                    aria-hidden="true"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <circle cx="9" cy="5" r="1.6" />
+                      <circle cx="15" cy="5" r="1.6" />
+                      <circle cx="9" cy="12" r="1.6" />
+                      <circle cx="15" cy="12" r="1.6" />
+                      <circle cx="9" cy="19" r="1.6" />
+                      <circle cx="15" cy="19" r="1.6" />
+                    </svg>
+                  </span>
+                  <span className="cv-reorder-index">#{index + 1}</span>
+                  <span className="cv-reorder-label">{label}</span>
+                </div>
+
+                <div className="cv-reorder-status">
+                  {isHidden ? (
+                    <Badge variant="neutral">Tersembunyi</Badge>
+                  ) : (
+                    <Badge variant="open">Tampil</Badge>
+                  )}
+                </div>
               </div>
 
               <div className="cv-reorder-actions">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={index === 0}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    moveSection(index, 'up');
-                  }}
-                  aria-label={`Pindahkan ${label} ke atas`}
-                  title="Pindahkan ke atas"
-                >
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
+                <div className="cv-reorder-moves">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="cv-reorder-move-btn"
+                    disabled={index === 0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      moveSection(index, 'up');
+                    }}
+                    aria-label={`Pindahkan ${label} ke atas`}
+                    title="Pindahkan ke atas"
                   >
-                    <polyline points="18 15 12 9 6 15" />
-                  </svg>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={index === section_order.length - 1}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    moveSection(index, 'down');
-                  }}
-                  aria-label={`Pindahkan ${label} ke bawah`}
-                  title="Pindahkan ke bawah"
-                >
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="18 15 12 9 6 15" />
+                    </svg>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="cv-reorder-move-btn"
+                    disabled={index === section_order.length - 1}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      moveSection(index, 'down');
+                    }}
+                    aria-label={`Pindahkan ${label} ke bawah`}
+                    title="Pindahkan ke bawah"
                   >
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </Button>
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </Button>
+                </div>
+
                 <Button
                   variant="outline"
                   size="sm"
+                  className="cv-reorder-toggle-btn"
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleVisibility(secId);

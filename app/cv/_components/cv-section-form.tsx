@@ -606,8 +606,23 @@ export function CvSectionForm({
             <div className="form-stack">
               {achievements.map((ach, idx) => (
                 <div key={idx} className="cv-item-card">
-                  <div className="form-grid-3">
-                    <FormField id={`ach-title-${idx}`} label="Nama Sertifikat / Course" required>
+                  <div className="cv-item-head">
+                    <span className="cv-item-index">SERTIFIKASI #{idx + 1}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Hapus sertifikasi ${idx + 1}`}
+                      onClick={() => {
+                        const next = achievements.filter((_, i) => i !== idx);
+                        onChange({ ...content, achievements: next });
+                      }}
+                    >
+                      Hapus
+                    </Button>
+                  </div>
+
+                  <div className="form-stack" style={{ gap: 12 }}>
+                    <FormField id={`ach-title-${idx}`} label="Nama Sertifikat / Kursus" required>
                       <TextInput
                         id={`ach-title-${idx}`}
                         placeholder="Contoh: Cloud Essentials Knowledge Badge Assessment"
@@ -620,21 +635,21 @@ export function CvSectionForm({
                       />
                     </FormField>
 
-                    <FormField id={`ach-issuer-${idx}`} label="Penerbit / Penyelenggara">
-                      <TextInput
-                        id={`ach-issuer-${idx}`}
-                        placeholder="Contoh: AWS Training and Certification"
-                        value={ach.issuer ?? ''}
-                        onChange={(e) => {
-                          const next = [...achievements];
-                          next[idx] = { ...ach, issuer: e.target.value || null };
-                          onChange({ ...content, achievements: next });
-                        }}
-                      />
-                    </FormField>
+                    <div className="cv-cert-row-2">
+                      <FormField id={`ach-issuer-${idx}`} label="Penerbit / Penyelenggara">
+                        <TextInput
+                          id={`ach-issuer-${idx}`}
+                          placeholder="Contoh: AWS Training and Certification"
+                          value={ach.issuer ?? ''}
+                          onChange={(e) => {
+                            const next = [...achievements];
+                            next[idx] = { ...ach, issuer: e.target.value || null };
+                            onChange({ ...content, achievements: next });
+                          }}
+                        />
+                      </FormField>
 
-                    <FormField id={`ach-date-${idx}`} label="Tahun">
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <FormField id={`ach-date-${idx}`} label="Tahun">
                         <TextInput
                           id={`ach-date-${idx}`}
                           placeholder="Contoh: 2024"
@@ -645,33 +660,8 @@ export function CvSectionForm({
                             onChange({ ...content, achievements: next });
                           }}
                         />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          aria-label={`Hapus sertifikasi ${idx + 1}`}
-                          title="Hapus sertifikasi"
-                          onClick={() => {
-                            const next = achievements.filter((_, i) => i !== idx);
-                            onChange({ ...content, achievements: next });
-                          }}
-                        >
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.1"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                          >
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                          </svg>
-                        </Button>
-                      </div>
-                    </FormField>
+                      </FormField>
+                    </div>
                   </div>
                 </div>
               ))}
