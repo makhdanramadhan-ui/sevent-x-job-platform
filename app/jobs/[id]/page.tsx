@@ -294,8 +294,8 @@ export default async function JobDetailPage({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <JobDetailTopActions jobId={job.id} initialBookmarked={isBookmarked} />
 
-      {/* Main Header Card */}
-      <section className="ledger-card">
+      {/* Main Header Card: gunakan <header> agar <h1> tidak berada di dalam <section> */}
+      <header className="ledger-card">
         <div
           style={{
             display: 'flex',
@@ -329,7 +329,10 @@ export default async function JobDetailPage({
           }}
         >
           <div style={{ minWidth: 0, flex: 1 }}>
-            <h1 className="page-title" style={{ marginBottom: 6 }}>
+            <h1
+              className="page-title"
+              style={{ fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', marginBottom: 6 }}
+            >
               {job.title}
             </h1>
             <p
@@ -427,7 +430,7 @@ export default async function JobDetailPage({
             </div>
           </div>
         </div>
-      </section>
+      </header>
 
       {/* Skills & Description */}
       <div className="job-detail-layout">

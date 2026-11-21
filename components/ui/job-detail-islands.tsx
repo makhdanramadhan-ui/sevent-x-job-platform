@@ -104,6 +104,7 @@ export function SourceSiteLogo({ host }: { host: string | null }) {
           alt=""
           width={20}
           height={20}
+          loading="lazy"
           decoding="async"
           className="job-source-card__logo-img"
           referrerPolicy="no-referrer"

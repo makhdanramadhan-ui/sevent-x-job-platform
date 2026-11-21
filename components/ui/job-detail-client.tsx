@@ -535,7 +535,7 @@ export default function JobDetailClient() {
       ) : null}
 
       {/* Main Header Card */}
-      <section className="ledger-card">
+      <header className="ledger-card">
         <div
           style={{
             display: 'flex',
@@ -567,7 +567,10 @@ export default function JobDetailClient() {
           }}
         >
           <div style={{ minWidth: 0, flex: 1 }}>
-            <h1 className="page-title" style={{ marginBottom: 6 }}>
+            <h1
+              className="page-title"
+              style={{ fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', marginBottom: 6 }}
+            >
               {job.title}
             </h1>
             <p style={{ margin: 0, fontSize: '1.08rem', fontWeight: 600, color: 'var(--ink-secondary)' }}>
@@ -656,7 +659,7 @@ export default function JobDetailClient() {
             </div>
           </div>
         </div>
-      </section>
+      </header>
 
       {/* Skills & Description */}
       <div className="job-detail-layout">
