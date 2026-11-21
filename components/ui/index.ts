@@ -65,6 +65,7 @@ export {
 } from './navigation';
 export { PageBanner, type PageBannerProps, type PageBannerTone } from './page-banner';
 export { ProfileEditorForm } from './profile-editor';
+export { ResendVerificationButton } from './resend-verification';
 export {
   ScrollProgressBar,
   ScrollReveal,

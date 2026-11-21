@@ -8,6 +8,7 @@ import { ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback
 import { Button, FormField, PasswordInput, TextInput } from '@/components/ui/forms';
 import { AuthDivider, GoogleAuthButton } from '@/components/ui/google-button';
 import { notifyAuthChanged, type SessionInfo } from '@/components/ui/navigation';
+import { ResendVerificationButton } from '@/components/ui/resend-verification';
 
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   oauth: 'Proses masuk dengan Google tidak selesai. Silakan coba lagi.',
@@ -22,17 +23,20 @@ function LoginFormContent() {
   const safeNext =
     nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : '/jobs';
   const oauthMessage = OAUTH_ERROR_MESSAGES[searchParams.get('error') ?? ''] ?? null;
+  const verifyInvalid = searchParams.get('verify') === 'invalid';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [apiError, setApiError] = useState<ApiCallError | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setFieldErrors({});
     setApiError(null);
+    setEmailNotConfirmed(false);
 
     const trimmedEmail = email.trim();
     const errors: { email?: string; password?: string } = {};
@@ -64,6 +68,10 @@ function LoginFormContent() {
 
     if (!res.ok) {
       setSubmitting(false);
+      if (res.error.status === 403 && res.error.code === 'email_not_confirmed') {
+        setEmailNotConfirmed(true);
+        return;
+      }
       setApiError(res.error);
       return;
     }
@@ -96,6 +104,24 @@ function LoginFormContent() {
         {oauthMessage ? (
           <NoticeBanner variant="error" title="Belum Berhasil Masuk dengan Google">
             {oauthMessage}
+          </NoticeBanner>
+        ) : null}
+
+        {verifyInvalid ? (
+          <NoticeBanner variant="warning" title="Link verifikasi tidak valid atau kedaluwarsa">
+            <p style={{ margin: '0 0 8px' }}>
+              Minta tautan verifikasi baru untuk email yang kamu daftarkan.
+            </p>
+            <ResendVerificationButton email={email} disabled={!email.trim()} />
+          </NoticeBanner>
+        ) : null}
+
+        {emailNotConfirmed ? (
+          <NoticeBanner variant="warning" title="Email belum diverifikasi">
+            <p style={{ margin: '0 0 8px' }}>
+              Verifikasi emailmu terlebih dahulu sebelum masuk.
+            </p>
+            <ResendVerificationButton email={email} disabled={!email.trim()} />
           </NoticeBanner>
         ) : null}
 

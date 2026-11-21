@@ -1,16 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { type FormEvent, useState } from 'react';
 import { type ApiCallError, apiFetch, SITE_NAME } from '@/components/ui/api-client';
-import { ErrorState } from '@/components/ui/feedback';
+import { ErrorState, NoticeBanner } from '@/components/ui/feedback';
 import { Button, FormField, PasswordInput, TextInput } from '@/components/ui/forms';
 import { AuthDivider, GoogleAuthButton } from '@/components/ui/google-button';
-import { notifyAuthChanged } from '@/components/ui/navigation';
+import { ResendVerificationButton } from '@/components/ui/resend-verification';
 
 export default function SignupPage() {
-  const router = useRouter();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,6 +19,7 @@ export default function SignupPage() {
   }>({});
   const [apiError, setApiError] = useState<ApiCallError | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -59,10 +58,13 @@ export default function SignupPage() {
     }
 
     setSubmitting(true);
-    const res = await apiFetch<{ user: { id: string; email: string } }>('/api/auth/signup', {
-      method: 'POST',
-      body,
-    });
+    const res = await apiFetch<{ status?: string; email?: string; user?: { id: string; email: string } }>(
+      '/api/auth/signup',
+      {
+        method: 'POST',
+        body,
+      },
+    );
     setSubmitting(false);
 
     if (!res.ok) {
@@ -70,9 +72,56 @@ export default function SignupPage() {
       return;
     }
 
-    notifyAuthChanged();
-    router.push('/onboarding');
-    router.refresh();
+    if (res.data?.status === 'verification_sent') {
+      setPendingVerificationEmail(res.data.email ?? trimmedEmail);
+      return;
+    }
+
+    // Fallback for legacy response shape during rollout.
+    setPendingVerificationEmail(trimmedEmail);
+  }
+
+  if (pendingVerificationEmail) {
+    return (
+      <div className="container-auth">
+        <div className="ledger-card">
+          <h1 className="page-title" style={{ fontSize: '1.75rem', marginBottom: 8 }}>
+            Cek Email Kamu
+          </h1>
+          <p style={{ margin: '0 0 16px', fontSize: '0.9rem', color: 'var(--ink-secondary)' }}>
+            Kami telah mengirim tautan verifikasi ke{' '}
+            <strong style={{ color: 'var(--ink-primary)' }}>{pendingVerificationEmail}</strong>.
+            Buka email tersebut untuk mengaktifkan akunmu.
+          </p>
+
+          <NoticeBanner variant="info" title="Belum menerima email?">
+            <p style={{ margin: '0 0 8px' }}>
+              Periksa folder Spam atau Promosi. Tautan verifikasi berlaku dalam waktu terbatas.
+            </p>
+            <ResendVerificationButton email={pendingVerificationEmail} />
+          </NoticeBanner>
+
+          <div
+            style={{
+              marginTop: 22,
+              paddingTop: 16,
+              borderTop: '1px solid var(--border-subtle)',
+              fontSize: '0.88rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 8,
+            }}
+          >
+            <span style={{ color: 'var(--ink-secondary)' }}>Sudah verifikasi email?</span>
+            <Link href="/login" className="btn btn-outline btn-sm">
+              Masuk ke Akun
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { type ApiCallError, apiFetch } from '@/components/ui/api-client';
 import { AuthGuard } from '@/components/ui/auth-guard';
 import { ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
@@ -13,10 +13,13 @@ import type { ProfileRecord } from '@/lib/contracts';
 
 function OnboardingInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const verified = searchParams.get('verified') === '1';
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiCallError | null>(null);
   const [completed, setCompleted] = useState(false);
+  const [showVerified, setShowVerified] = useState(verified);
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
@@ -36,6 +39,16 @@ function OnboardingInner() {
 
   return (
     <>
+      {showVerified ? (
+        <NoticeBanner
+          variant="success"
+          title="Email berhasil diverifikasi"
+          onDismiss={() => setShowVerified(false)}
+        >
+          Akunmu sudah aktif. Kamu bisa melanjutkan pengisian profil.
+        </NoticeBanner>
+      ) : null}
+
       {completed ? (
         <NoticeBanner
           variant="success"
@@ -107,7 +120,11 @@ export default function OnboardingPage() {
       />
 
       <AuthGuard title="Masuk untuk Mengisi Onboarding Profil">
-        {() => <OnboardingInner />}
+        {() => (
+          <Suspense fallback={<LoadingState title="Memuat onboarding..." lines={3} />}>
+            <OnboardingInner />
+          </Suspense>
+        )}
       </AuthGuard>
     </div>
   );

@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   type ChangeEvent,
+  Suspense,
   useCallback,
   useEffect,
   useId,
@@ -389,6 +391,8 @@ function ProfileAvatarSection({ session }: { session: SessionInfo }) {
 }
 
 function ProfileInner({ session: initialSession }: { session: SessionInfo }) {
+  const searchParams = useSearchParams();
+  const verified = searchParams.get('verified') === '1';
   const [session, setSession] = useState(initialSession);
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
   const [formVersion, setFormVersion] = useState(0);
@@ -397,6 +401,7 @@ function ProfileInner({ session: initialSession }: { session: SessionInfo }) {
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [clearNotice, setClearNotice] = useState<string | null>(null);
+  const [showVerified, setShowVerified] = useState(verified);
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
@@ -452,6 +457,16 @@ function ProfileInner({ session: initialSession }: { session: SessionInfo }) {
   return (
     <>
       <ProfileAvatarSection session={session} />
+
+      {showVerified ? (
+        <NoticeBanner
+          variant="success"
+          title="Email berhasil diverifikasi"
+          onDismiss={() => setShowVerified(false)}
+        >
+          Email akunmu sudah terverifikasi.
+        </NoticeBanner>
+      ) : null}
 
       {clearNotice ? (
         <NoticeBanner
@@ -712,7 +727,11 @@ export default function ProfilePage() {
       />
 
       <AuthGuard title="Masuk untuk Mengakses Profil & Preferensi">
-        {(session) => <ProfileInner session={session} />}
+        {(session) => (
+          <Suspense fallback={<LoadingState title="Memuat profil..." lines={4} />}>
+            <ProfileInner session={session} />
+          </Suspense>
+        )}
       </AuthGuard>
     </div>
   );
