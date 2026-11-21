@@ -1,6 +1,7 @@
 'use client';
 
 import { motion, useReducedMotion } from 'motion/react';
+import Image from 'next/image';
 import type { ReactNode } from 'react';
 
 export type PageBannerTone = 'sky' | 'mist' | 'sand' | 'sage';
@@ -34,12 +35,13 @@ export function PageBanner({
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
     >
       <div className="page-banner__media" aria-hidden="true">
-        <img
+        <Image
           src={imageSrc}
           alt={imageAlt}
+          fill
+          priority
+          sizes="(max-width: 768px) 100vw, 1280px"
           className="page-banner__img"
-          loading="eager"
-          decoding="async"
         />
         <div className="page-banner__scrim" />
       </div>

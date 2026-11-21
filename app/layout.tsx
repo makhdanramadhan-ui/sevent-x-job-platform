@@ -1,7 +1,23 @@
 import type { Metadata } from 'next';
+import { DM_Mono, Instrument_Sans } from 'next/font/google';
 import type { ReactNode } from 'react';
-import { SITE_NAME, SiteFooter, SiteHeader } from '@/components/ui';
+import { SITE_NAME } from '@/components/ui/api-client';
+import { SiteFooter, SiteHeader } from '@/components/ui/navigation';
 import './globals.css';
+
+const instrumentSans = Instrument_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-instrument-sans',
+});
+
+const dmMono = DM_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  display: 'swap',
+  variable: '--font-dm-mono',
+});
 
 export const metadata: Metadata = {
   title: `${SITE_NAME} — Cari Lowongan Kerja & Cek Kecocokan Profil`,
@@ -11,17 +27,17 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="id" data-type="software" data-radius="soft" data-buttons="solid">
+    <html
+      lang="id"
+      data-type="software"
+      data-radius="soft"
+      data-buttons="solid"
+      className={`${instrumentSans.variable} ${dmMono.variable}`}
+    >
       <head>
         <meta name="page-type" content="software" />
         <meta name="site-kind" content="software" />
         <meta name="theme-color" content="#ffffff" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap"
-          rel="stylesheet"
-        />
       </head>
       <body>
         <div className="app-shell">

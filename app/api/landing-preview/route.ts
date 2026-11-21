@@ -5,6 +5,7 @@ import { ok, run } from '@/lib/http';
 import { rankJobs } from '@/lib/recommendation';
 import { filterEligibleJobs } from '@/lib/recommendation/job-context';
 import { isProfileLocationReady } from '@/lib/recommendation/location-filter';
+import { filterRelevantJobs } from '@/lib/recommendation/relevance';
 import type {
   RecommendationItem,
   RecommendationJobInput,
@@ -15,7 +16,7 @@ import { createAdminClient, createBearerClient, createCookieClient } from '@/lib
 export const dynamic = 'force-dynamic';
 
 const JOB_COLUMNS =
-  'id, title, company, company_logo_url, location, work_mode, employment_type, level, education, skills, status, deadline, last_fetched_at, updated_at';
+  'id, title, company, company_logo_url, location, work_mode, employment_type, level, education, skills, description, status, deadline, last_fetched_at, updated_at';
 const PROFILE_COLUMNS = 'skills, education, experiences, projects, preferences';
 const SOURCE_COLUMNS = 'job_id, source_name, published_at, fetched_at';
 
@@ -33,6 +34,7 @@ type JobRow = {
   level: string;
   education: string | null;
   skills: string[] | null;
+  description: string | null;
   status: string;
   deadline: string | null;
   last_fetched_at: string | null;
@@ -46,7 +48,7 @@ type SourceRow = {
   fetched_at: string | null;
 };
 
-type PreviewJob = Omit<JobRow, 'skills' | 'education'> & {
+type PreviewJob = Omit<JobRow, 'skills' | 'education' | 'description'> & {
   source_name: string | null;
   source_published_at: string | null;
   source_fetched_at: string | null;
@@ -108,7 +110,7 @@ function emptyPayload(reason?: string) {
 }
 
 function toPreviewJob(job: JobRow, source: SourceRow | undefined): PreviewJob {
-  const { skills: _skills, education: _education, ...rest } = job;
+  const { skills: _skills, education: _education, description: _description, ...rest } = job;
   return {
     ...rest,
     source_name: source?.source_name ?? null,
@@ -151,17 +153,17 @@ export async function GET(req: NextRequest) {
       .select(JOB_COLUMNS)
       .order('last_fetched_at', { ascending: false, nullsFirst: false })
       .order('id', { ascending: true })
-      .limit(mode === 'recommendations' ? 50 : 3);
+      .limit(mode === 'recommendations' ? 200 : 3);
     if (jobsResult.error) return ok(emptyPayload('data_unavailable'));
 
     const jobs = (jobsResult.data ?? []) as JobRow[];
     if (mode === 'recommendations' && profile) {
-      const selection = filterEligibleJobs(jobs, profile.preferences);
+      const relevance = filterRelevantJobs(jobs, profile);
+      const selection = filterEligibleJobs(relevance.relevant, profile.preferences);
       rankedItems = rankJobs(
         { profile, jobs: selection.eligible as RecommendationJobInput[] },
         { locationTiers: selection.tiers, nearbyLabels: selection.nearbyLabels },
       ).items;
-
     }
 
     const selectedJobs =
@@ -216,7 +218,7 @@ export async function GET(req: NextRequest) {
       mode,
       auth_state: authState,
       count: mode === 'recommendations' ? rankedItems.length : 0,
-      count_capped: mode === 'recommendations' && rankedItems.length >= 50,
+      count_capped: mode === 'recommendations' && rankedItems.length >= 200,
       total_jobs: countResult.count ?? 0,
       source_count: sourceNames.size,
       updated_at: latest,

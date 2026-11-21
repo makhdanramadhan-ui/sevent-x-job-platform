@@ -56,12 +56,12 @@
   --accent-primary-hover: var(--p-accent-hover);
   --accent-primary-soft: var(--p-accent-soft);
 
-  /* Typography (dealt: Instrument Sans + DM Mono) */
-  --font-display: 'Instrument Sans', system-ui, -apple-system, sans-serif;
-  --font-text: 'Instrument Sans', system-ui, -apple-system, sans-serif;
+  /* Typography (dealt: Instrument Sans + DM Mono via next/font) */
+  --font-display: var(--font-instrument-sans), 'Instrument Sans', system-ui, -apple-system, sans-serif;
+  --font-text: var(--font-instrument-sans), 'Instrument Sans', system-ui, -apple-system, sans-serif;
   --font-sans: var(--font-text);
   --font-serif: var(--font-display);
-  --font-mono: 'DM Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --font-mono: var(--font-dm-mono), 'DM Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 
   --display-weight: 500;
   --display-tracking: -0.028em;
@@ -3381,6 +3381,87 @@ h4 {
   background: var(--p-surface-hover);
 }
 
+.unsaved-modal-dialog {
+  width: 100%;
+  max-width: 460px;
+  background: var(--p-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  box-shadow: 0 24px 64px rgba(17, 17, 17, 0.16);
+  padding: 26px;
+  animation: modal-enter 0.18s ease-out;
+  margin: auto;
+}
+
+.unsaved-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.unsaved-modal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.unsaved-modal-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+  border: 1px solid var(--status-warning-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.unsaved-modal-desc {
+  margin: 14px 0 22px;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--ink-secondary);
+}
+
+.unsaved-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.unsaved-dirty-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+  border: 1px solid var(--status-warning-border);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+@media (max-width: 480px) {
+  .unsaved-modal-dialog {
+    padding: 20px 18px;
+  }
+
+  .unsaved-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .unsaved-modal-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 .auth-modal-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -3415,27 +3496,9 @@ h4 {
    HOMEPAGE (tasteskill 2.5 dealt software architecture)
    Hero: centred over live app-frame | Cards: 2x2 lit panels | Steps | Close-word
    ============================================================ */
-@keyframes hero-enter {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .tk-hero {
   background: var(--p-bg);
   padding: 28px 0 0;
-  animation: hero-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tk-hero {
-    animation: none;
-  }
 }
 
 .tk-hero__top {
@@ -3481,6 +3544,7 @@ h4 {
   align-items: center;
   gap: 12px;
   margin-top: 24px;
+  min-height: 24px;
 }
 
 .tk-avatar-stack {
@@ -4010,16 +4074,18 @@ h4 {
 }
 
 .tk-word-moment__word {
-  color: rgba(17, 17, 17, 0.2);
-  transition: color 0.28s ease;
-}
-
-.tk-word-moment__word--lit {
   color: var(--p-ink);
+  opacity: 0.58;
+  transition: opacity 0.28s ease;
 }
 
 .tk-word-moment__word--accent {
   color: var(--p-action);
+  opacity: 0.8;
+}
+
+.tk-word-moment__word--lit {
+  opacity: 1;
 }
 
 .tk-steps-track {
@@ -4138,11 +4204,15 @@ h4 {
 
 .tk-step-row--active .tk-step-num {
   color: var(--p-action);
-  font-weight: 500;
+  font-weight: 600;
+}
+
+.tk-step-row--active .tk-step-title {
+  color: var(--p-action);
 }
 
 .tk-step-row--dim {
-  opacity: 0.52;
+  opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -4153,7 +4223,7 @@ h4 {
   }
 
   .tk-word-moment__word {
-    color: var(--p-ink);
+    opacity: 1;
     transition: none;
   }
 
