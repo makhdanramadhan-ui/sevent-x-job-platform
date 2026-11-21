@@ -289,6 +289,12 @@ function CvEditorInner({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [pendingAction]);
 
+  useEffect(() => {
+    if (content && !content.section_order.includes(activeSection)) {
+      setActiveSection(content.section_order[0] ?? 'profile');
+    }
+  }, [content, activeSection]);
+
   const loadDocument = useCallback(async () => {
     bypassGuardRef.current = false;
     setLoading(true);
@@ -573,6 +579,7 @@ function CvEditorInner({
             onChange={setContent}
             templateVersion={templateVersion}
             onPresetChange={setTemplateVersion}
+            onSelectSection={setActiveSection}
           />
         </div>
 
