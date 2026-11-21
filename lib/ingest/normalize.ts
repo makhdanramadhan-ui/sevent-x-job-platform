@@ -357,6 +357,8 @@ export function normalizeEducation(
   return null;
 }
 
+const ROLE_TITLE_RE =
+  /\b(developer|engineer|manager|analyst|executive|specialist|officer|staff|staf|intern|magang|lead|consultant|designer|writer|administrator|architect|sales|account|recruiter|secretary|asisten)\b/i;
 const MAX_SKILLS_PER_JOB = 10;
 const AMBIGUOUS_PROSE_SKILL_ALIASES = new Set(['go', 'next', 'rest', 'express', 'js', 'ts', 'py']);
 const SLASH_PRESERVED_SKILL_RE =
