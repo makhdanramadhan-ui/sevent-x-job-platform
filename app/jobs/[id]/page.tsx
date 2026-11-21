@@ -5,21 +5,16 @@ import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import {
   type ApiCallError,
-  AuthGuard,
   apiFetch,
-  Badge,
-  Button,
   EMPLOYMENT_TYPE_LABELS,
-  EmptyState,
-  ErrorState,
   EXPERIENCE_LEVEL_LABELS,
   formatDateId,
   formatDateTimeId,
-  JobStatusBadge,
-  LoadingState,
-  NoticeBanner,
   WORK_MODE_LABELS,
-} from '@/components/ui';
+} from '@/components/ui/api-client';
+import { AuthGuard } from '@/components/ui/auth-guard';
+import { EmptyState, ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
+import { Badge, Button, JobStatusBadge } from '@/components/ui/forms';
 import type { BookmarkRecord, JobDetail } from '@/lib/contracts';
 import { type DescriptionBlock, parseJobDescriptionBlocks } from '@/lib/job-description';
 import { displaySourceName } from '@/lib/job-source';
@@ -88,7 +83,7 @@ function extractSourceHost(url: string): string {
   }
 }
 
-function SourceSiteLogo({ host, label }: { host: string | null; label: string }) {
+function SourceSiteLogo({ host }: { host: string | null }) {
   const [failed, setFailed] = useState(false);
   const faviconUrl = host
     ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`
@@ -100,7 +95,10 @@ function SourceSiteLogo({ host, label }: { host: string | null; label: string })
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={faviconUrl}
-          alt={label}
+          alt=""
+          width={20}
+          height={20}
+          decoding="async"
           className="job-source-card__logo-img"
           referrerPolicy="no-referrer"
           onError={() => setFailed(true)}
@@ -323,7 +321,10 @@ function DetailCompanyLogo({
       {canRenderLogo ? (
         <img
           src={logoUrl}
-          alt={company}
+          alt=""
+          width={68}
+          height={68}
+          decoding="async"
           referrerPolicy="no-referrer"
           onError={() => setFailedUrl(logoUrl ?? null)}
           onLoad={(e) => {
@@ -452,6 +453,7 @@ function JobDetailInner() {
         title="Memuat detail lowongan & sumber asli..."
         description="Mengambil informasi lengkap lowongan beserta riwayat job_sources."
         lines={5}
+        reserved
       />
     );
   }
@@ -737,7 +739,7 @@ function JobDetailInner() {
                     <div key={src.id} className="job-source-card">
                       <div className="job-source-card__head">
                         <div className="job-source-card__brand">
-                          <SourceSiteLogo host={sourceHost} label={sourceLabel} />
+                          <SourceSiteLogo host={sourceHost} />
                           <div className="job-source-card__title-wrap">
                             <strong className="job-source-card__name">{sourceLabel}</strong>
                             {sourceHost ? (
@@ -878,7 +880,7 @@ function JobDetailInner() {
             <p style={{ margin: '0 0 14px', fontSize: '0.84rem', color: 'var(--ink-secondary)', lineHeight: 1.55 }}>
               Sesuaikan ringkasan pengalaman dan keahlianmu dengan kualifikasi posisi ini agar lamaran lebih menonjol.
             </p>
-            <Link href="/cv" className="btn btn-outline btn-sm" style={{ width: '100%' }}>
+            <Link href="/cv" prefetch={false} className="btn btn-outline btn-sm" style={{ width: '100%' }}>
               Buka Studio CV
             </Link>
           </section>
@@ -890,7 +892,7 @@ function JobDetailInner() {
 
 export default function JobDetailPage() {
   return (
-    <AuthGuard title="Masuk untuk Melihat Detail & Sumber Lowongan">
+    <AuthGuard title="Masuk untuk Melihat Detail & Sumber Lowongan" headingAs="h1">
       {() => <JobDetailInner />}
     </AuthGuard>
   );

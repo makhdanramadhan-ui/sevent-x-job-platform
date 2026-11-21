@@ -1,6 +1,5 @@
 'use client';
 
-import { motion, useReducedMotion } from 'motion/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -14,21 +13,17 @@ import {
 } from 'react';
 import {
   type ApiCallError,
-  AuthGuard,
   apiFetch,
-  Button,
   EMPLOYMENT_TYPE_LABELS,
-  EmptyState,
-  ErrorState,
   EXPERIENCE_LEVEL_LABELS,
   formatDateId,
   JOB_STATUS_LABELS,
-  JobStatusBadge,
-  LoadingState,
-  NoticeBanner,
-  PageBanner,
   WORK_MODE_LABELS,
-} from '@/components/ui';
+} from '@/components/ui/api-client';
+import { AuthGuard } from '@/components/ui/auth-guard';
+import { EmptyState, ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
+import { Button, JobStatusBadge } from '@/components/ui/forms';
+import { PageBanner } from '@/components/ui/page-banner';
 import {
   type BookmarkRecord,
   EMPLOYMENT_TYPES,
@@ -217,8 +212,11 @@ function CompanyLogoBox({
       {canRenderLogo ? (
         <img
           src={logoUrl}
-          alt={company}
+          alt=""
+          width={44}
+          height={44}
           loading="lazy"
+          decoding="async"
           referrerPolicy="no-referrer"
           onError={() => setFailedUrl(logoUrl ?? null)}
           onLoad={(e) => {
@@ -288,7 +286,6 @@ function JobsFeedInner() {
 
   const pillsRef = useRef<HTMLDivElement | null>(null);
   const sortRef = useRef<HTMLDivElement | null>(null);
-  const prefersReducedMotion = useReducedMotion();
 
   // Fitur #4 & #5: Muat filter awal dari URL query string & hiddenIds dari localStorage
   useEffect(() => {
@@ -605,26 +602,7 @@ function JobsFeedInner() {
     (data.items?.length ?? 0) === 0;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-      <PageBanner
-        kicker="Eksplorasi Karier"
-        title="Cari Lowongan Kerja"
-        subtitle="Temukan peluang kerja yang sesuai dengan bidang, lokasi, dan sistem kerja pilihanmu."
-        tone="sky"
-        imageSrc="/images/banner-jobs.jpg"
-        imageAlt="Ilustrasi pencarian lowongan kerja"
-        actions={
-          <>
-            <Link href="/recommendations" className="btn btn-secondary btn-sm">
-              Cek Kecocokan Profil
-            </Link>
-            <Link href="/bookmarks" className="btn btn-outline btn-sm">
-              Lowongan Tersimpan
-            </Link>
-          </>
-        }
-      />
-
+    <>
       {actionNotice ? (
         <NoticeBanner
           variant={actionNotice.type}
@@ -715,13 +693,10 @@ function JobsFeedInner() {
                         onClick={() => setOpenPill(null)}
                         aria-hidden="true"
                       />
-                      <motion.div
+                      <div
                         className="jobs-pill-popover"
                         role="listbox"
                         aria-label={`Filter ${pill.label}`}
-                        initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.16 }}
                       >
                         <div className="jobs-pill-popover-head">
                           <p className="jobs-pill-popover-title">{pill.label}</p>
@@ -764,7 +739,7 @@ function JobsFeedInner() {
                           );
                         })}
                         </div>
-                      </motion.div>
+                      </div>
                     </>
                   ) : null}
                 </div>
@@ -901,6 +876,7 @@ function JobsFeedInner() {
                   : 'Memuat data lowongan terbaru untukmu.'
               }
               lines={5}
+              reserved
             />
           ) : error ? (
             <ErrorState
@@ -1204,14 +1180,34 @@ function JobsFeedInner() {
           )}
         </aside>
       </div>
-    </div>
+    </>
   );
 }
 
 export default function JobsPage() {
   return (
-    <AuthGuard title="Masuk untuk Membuka Feed Lowongan">
-      {() => <JobsFeedInner />}
-    </AuthGuard>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <PageBanner
+        kicker="Eksplorasi Karier"
+        title="Cari Lowongan Kerja"
+        subtitle="Temukan peluang kerja yang sesuai dengan bidang, lokasi, dan sistem kerja pilihanmu."
+        tone="sky"
+        imageSrc="/images/banner-jobs.jpg"
+        actions={
+          <>
+            <Link href="/recommendations" className="btn btn-secondary btn-sm">
+              Cek Kecocokan Profil
+            </Link>
+            <Link href="/bookmarks" className="btn btn-outline btn-sm">
+              Lowongan Tersimpan
+            </Link>
+          </>
+        }
+      />
+
+      <AuthGuard title="Masuk untuk Membuka Feed Lowongan">
+        {() => <JobsFeedInner />}
+      </AuthGuard>
+    </div>
   );
 }

@@ -19,7 +19,9 @@ export type SessionInfo = {
   has_profile: boolean;
 };
 
+const SESSION_CACHE_TTL_MS = 15_000;
 let inflightSessionPromise: Promise<SessionInfo | null> | null = null;
+let cachedSession: { value: SessionInfo | null; expiresAt: number } | null = null;
 
 export function hasAuthSessionCookie(): boolean {
   if (typeof document === 'undefined') return false;
@@ -29,13 +31,21 @@ export function hasAuthSessionCookie(): boolean {
   });
 }
 
-async function fetchSessionIfCookie(): Promise<SessionInfo | null> {
+export async function fetchSessionIfCookie(forceRefresh = false): Promise<SessionInfo | null> {
   if (!hasAuthSessionCookie()) {
+    cachedSession = null;
     return null;
   }
-  if (!inflightSessionPromise) {
+  if (!forceRefresh && cachedSession && Date.now() < cachedSession.expiresAt) {
+    return cachedSession.value;
+  }
+  if (!inflightSessionPromise || forceRefresh) {
     inflightSessionPromise = apiFetch<SessionInfo>('/api/auth/me')
-      .then((res) => (res.ok ? res.data : null))
+      .then((res) => {
+        const value = res.ok ? res.data : null;
+        cachedSession = { value, expiresAt: Date.now() + SESSION_CACHE_TTL_MS };
+        return value;
+      })
       .finally(() => {
         inflightSessionPromise = null;
       });
@@ -45,6 +55,7 @@ async function fetchSessionIfCookie(): Promise<SessionInfo | null> {
 
 export function notifyAuthChanged(): void {
   inflightSessionPromise = null;
+  cachedSession = null;
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('seventx:auth-changed'));
   }
@@ -129,6 +140,9 @@ function AvatarMenu({ user, loggingOut, onNavigate, onLogout }: AvatarMenuProps)
             <img
               src={user.avatar_url ?? undefined}
               alt={label}
+              width={32}
+              height={32}
+              decoding="async"
               className="avatar-image"
               referrerPolicy="no-referrer"
               onError={() => setImageFailed(true)}
@@ -167,7 +181,7 @@ function AvatarMenu({ user, loggingOut, onNavigate, onLogout }: AvatarMenuProps)
           <Link href="/profile" role="menuitem" className="avatar-dropdown-item" onClick={handleNavigate}>
             Profil
           </Link>
-          <Link href="/cv" role="menuitem" className="avatar-dropdown-item" onClick={handleNavigate}>
+          <Link href="/cv" prefetch={false} role="menuitem" className="avatar-dropdown-item" onClick={handleNavigate}>
             Studio CV
           </Link>
           <div className="avatar-dropdown-divider" role="separator" />
@@ -304,6 +318,7 @@ export function SiteHeader() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    prefetch={item.href === '/cv' ? false : undefined}
                     aria-current={isActive ? 'page' : undefined}
                     className={`nav-link ${isActive ? 'nav-link-active' : ''}`}
                     onClick={() => setMenuOpen(false)}
@@ -446,7 +461,7 @@ export function SiteFooter() {
                 <Link href="/bookmarks">Lowongan Tersimpan</Link>
               </li>
               <li>
-                <Link href="/cv">Studio CV</Link>
+                <Link href="/cv" prefetch={false}>Studio CV</Link>
               </li>
             </ul>
           </div>
@@ -498,7 +513,7 @@ export function SiteFooter() {
             <Link href="/">Beranda</Link>
             <Link href="/jobs">Lowongan</Link>
             <Link href="/recommendations">Rekomendasi</Link>
-            <Link href="/cv">Studio CV</Link>
+            <Link href="/cv" prefetch={false}>Studio CV</Link>
           </div>
         </div>
       </div>

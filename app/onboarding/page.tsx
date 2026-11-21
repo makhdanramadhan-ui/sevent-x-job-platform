@@ -3,17 +3,12 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import {
-  type ApiCallError,
-  AuthGuard,
-  apiFetch,
-  ErrorState,
-  LoadingState,
-  NoticeBanner,
-  notifyAuthChanged,
-  PageBanner,
-  ProfileEditorForm,
-} from '@/components/ui';
+import { type ApiCallError, apiFetch } from '@/components/ui/api-client';
+import { AuthGuard } from '@/components/ui/auth-guard';
+import { ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
+import { notifyAuthChanged } from '@/components/ui/navigation';
+import { PageBanner } from '@/components/ui/page-banner';
+import { ProfileEditorForm } from '@/components/ui/profile-editor';
 import type { ProfileRecord } from '@/lib/contracts';
 
 function OnboardingInner() {
@@ -40,21 +35,7 @@ function OnboardingInner() {
   }, [loadProfile]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <PageBanner
-        kicker="Langkah Awal"
-        title="Lengkapi Profil & Preferensi Kerjamu"
-        subtitle="Isi informasi dasar, keahlian, dan kriteria pekerjaan yang kamu cari agar kami dapat memberikan rekomendasi lowongan yang sesuai serta memudahkan penyusunan CV-mu."
-        tone="sand"
-        imageSrc="/images/banner-profile.jpg"
-        imageAlt="Ilustrasi melengkapi profil dan preferensi kerja"
-        actions={
-          <Link href="/jobs" className="btn btn-outline btn-sm">
-            Lihat Lowongan
-          </Link>
-        }
-      />
-
+    <>
       {completed ? (
         <NoticeBanner
           variant="success"
@@ -83,6 +64,7 @@ function OnboardingInner() {
         <LoadingState
           title="Memuat profil..."
           description="Mohon tunggu sebentar."
+          reserved
         />
       ) : error ? (
         <ErrorState
@@ -104,14 +86,29 @@ function OnboardingInner() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }
 
 export default function OnboardingPage() {
   return (
-    <AuthGuard title="Masuk untuk Mengisi Onboarding Profil">
-      {() => <OnboardingInner />}
-    </AuthGuard>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <PageBanner
+        kicker="Langkah Awal"
+        title="Lengkapi Profil & Preferensi Kerjamu"
+        subtitle="Isi informasi dasar, keahlian, dan kriteria pekerjaan yang kamu cari agar kami dapat memberikan rekomendasi lowongan yang sesuai serta memudahkan penyusunan CV-mu."
+        tone="sand"
+        imageSrc="/images/banner-profile.jpg"
+        actions={
+          <Link href="/jobs" className="btn btn-outline btn-sm">
+            Lihat Lowongan
+          </Link>
+        }
+      />
+
+      <AuthGuard title="Masuk untuk Mengisi Onboarding Profil">
+        {() => <OnboardingInner />}
+      </AuthGuard>
+    </div>
   );
 }

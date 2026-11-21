@@ -83,7 +83,10 @@ export function CompanyLogo({
         <img
           src={logoUrl}
           alt=""
+          width={size}
+          height={size}
           loading="lazy"
+          decoding="async"
           referrerPolicy="no-referrer"
           onError={() => setFailedUrl(logoUrl)}
           onLoad={(event) => {

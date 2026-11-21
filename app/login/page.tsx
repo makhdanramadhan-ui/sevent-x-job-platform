@@ -3,22 +3,11 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { type FormEvent, Suspense, useState } from 'react';
-import {
-  type ApiCallError,
-  apiFetch,
-  AuthDivider,
-  Button,
-  ErrorState,
-  FormField,
-  GoogleAuthButton,
-  LoadingState,
-  NoticeBanner,
-  notifyAuthChanged,
-  PasswordInput,
-  SITE_NAME,
-  type SessionInfo,
-  TextInput,
-} from '@/components/ui';
+import { type ApiCallError, apiFetch, SITE_NAME } from '@/components/ui/api-client';
+import { ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
+import { Button, FormField, PasswordInput, TextInput } from '@/components/ui/forms';
+import { AuthDivider, GoogleAuthButton } from '@/components/ui/google-button';
+import { notifyAuthChanged, type SessionInfo } from '@/components/ui/navigation';
 
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   oauth: 'Proses masuk dengan Google tidak selesai. Silakan coba lagi.',
@@ -188,7 +177,13 @@ function LoginFormContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<LoadingState title="Memuat formulir login..." lines={2} />}>
+    <Suspense
+      fallback={
+        <div className="container-auth">
+          <LoadingState title="Memuat formulir login..." lines={3} reserved />
+        </div>
+      }
+    >
       <LoginFormContent />
     </Suspense>
   );
