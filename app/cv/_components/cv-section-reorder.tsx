@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Badge, Button } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import {
   CV_PRESETS,
   type CvPresetId,
@@ -44,23 +44,6 @@ export function CvSectionReorder({
     });
     if (onPresetChange) {
       onPresetChange(presetId);
-    }
-  }
-
-  function moveSection(index: number, direction: 'up' | 'down') {
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= section_order.length) return;
-
-    const newOrder = [...section_order];
-    const [moved] = newOrder.splice(index, 1);
-    newOrder.splice(targetIndex, 0, moved);
-
-    onChange({
-      ...content,
-      section_order: newOrder,
-    });
-    if (onPresetChange) {
-      onPresetChange('v1-[#custom]');
     }
   }
 
@@ -322,19 +305,6 @@ export function CvSectionReorder({
 
               {/* Action Buttons */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={index === section_order.length - 1}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    moveSection(index, 'down');
-                  }}
-                  aria-label={`Pindahkan ${label} ke bawah`}
-                  title="Pindahkan ke bawah"
-                >
-                  ↓
-                </Button>
                 <button
                   type="button"
                   onClick={(e) => {
