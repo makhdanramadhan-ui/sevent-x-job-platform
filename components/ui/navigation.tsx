@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { BrandMark } from './brand-mark';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { startTransition, useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch, SITE_NAME } from './api-client';
 import { ButtonText } from './button-text';
 import { ScrollProgressBar } from './scroll-motion';
@@ -69,13 +69,17 @@ export function useAuthSession() {
 
   const loadSession = useCallback(async () => {
     if (!hasAuthSessionCookie()) {
-      setSession(null);
-      setLoading(false);
+      startTransition(() => {
+        setSession(null);
+        setLoading(false);
+      });
       return;
     }
     const nextSession = await fetchSessionIfCookie();
-    setSession(nextSession);
-    setLoading(false);
+    startTransition(() => {
+      setSession(nextSession);
+      setLoading(false);
+    });
   }, []);
 
   useEffect(() => {
