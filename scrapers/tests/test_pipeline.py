@@ -309,6 +309,46 @@ class TestNormalizerAndContract(unittest.TestCase):
         self.assertIn("• Pengalaman REST API.", desc)
         self.assertNotIn("• •", desc)
 
+    def test_normalize_skills_always_extracts_from_title_and_description_up_to_10(self) -> None:
+        moneta_desc = (
+            "Requirements:\n"
+            "4. Proficient in JavaScript/TypeScript, HTML, CSS, and modern frontend frameworks (React.js, Angular, or Vue.js).\n"
+            "5. Strong backend development experience (Node.js, Java, Python, PHP, or equivalent).\n"
+            "6. Experienced in RESTful APIs, database management (SQL/NoSQL), and system integration.\n"
+            "7. Familiar with cloud platforms, Docker, CI/CD, and Git."
+        )
+        skills = normalize_skills(
+            ["SQL"],
+            title_hint="Senior Full Stack Developer",
+            description_hint=moneta_desc,
+        )
+        self.assertEqual(skills[0], "SQL")
+        self.assertEqual(len(skills), 10)
+        for expected in ["JavaScript", "TypeScript", "HTML", "CSS", "React", "Angular", "Vue.js", "Node.js", "Java"]:
+            self.assertIn(expected, skills)
+
+        # Pastikan kata bahasa Inggris umum ('next', 'go', 'rest') tidak memicu false-positive
+        prose_only = normalize_skills(
+            ["Software Engineering"],
+            title_hint="Staff Engineer",
+            description_hint="In the next step, you will go through the rest of the onboarding process with RESTful APIs and CI/CD.",
+        )
+        self.assertIn("Software Engineering", prose_only)
+        self.assertIn("REST API", prose_only)
+        self.assertIn("CI/CD", prose_only)
+        self.assertNotIn("Next.js", prose_only)
+        self.assertNotIn("Go", prose_only)
+
+    def test_linkedin_detail_nested_div_does_not_truncate_requirements(self) -> None:
+        nested_html = """
+        <div class="show-more-less-html__markup">
+          <div><p>Job overview section.</p></div>
+          <div><p>Requirements: Proficient in Angular, PHP, NoSQL, and CI/CD.</p></div>
+        </div>
+        """
+        parsed = parse_linkedin_guest_detail_html(nested_html)
+        self.assertIn("Requirements: Proficient in Angular, PHP, NoSQL, and CI/CD.", parsed["description"] or "")
+
 
 class TestConservativeDeduplication(unittest.TestCase):
     def test_same_title_and_company_with_different_or_unknown_attributes_are_not_merged(self) -> None:

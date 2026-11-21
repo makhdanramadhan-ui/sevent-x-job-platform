@@ -52,9 +52,22 @@ SKILL_CANONICAL_DISPLAY: Dict[str, str] = {
     "py": "Python",
     "python": "Python",
     "python3": "Python",
+    "java": "Java",
+    "php": "PHP",
+    "c#": "C#",
+    "csharp": "C#",
+    ".net": ".NET",
+    "dotnet": ".NET",
+    "c++": "C++",
+    "cpp": "C++",
+    "kotlin": "Kotlin",
+    "swift": "Swift",
     "react": "React",
     "reactjs": "React",
     "react.js": "React",
+    "react native": "React Native",
+    "angular": "Angular",
+    "angularjs": "Angular",
     "next": "Next.js",
     "nextjs": "Next.js",
     "next.js": "Next.js",
@@ -64,6 +77,17 @@ SKILL_CANONICAL_DISPLAY: Dict[str, str] = {
     "node": "Node.js",
     "nodejs": "Node.js",
     "node.js": "Node.js",
+    "express": "Express.js",
+    "expressjs": "Express.js",
+    "express.js": "Express.js",
+    "nestjs": "NestJS",
+    "nest.js": "NestJS",
+    "laravel": "Laravel",
+    "spring boot": "Spring Boot",
+    "springboot": "Spring Boot",
+    "django": "Django",
+    "fastapi": "FastAPI",
+    "flutter": "Flutter",
     "golang": "Go",
     "go": "Go",
     "postgres": "PostgreSQL",
@@ -72,6 +96,10 @@ SKILL_CANONICAL_DISPLAY: Dict[str, str] = {
     "mysql": "MySQL",
     "mongodb": "MongoDB",
     "redis": "Redis",
+    "nosql": "NoSQL",
+    "elasticsearch": "Elasticsearch",
+    "kafka": "Apache Kafka",
+    "apache kafka": "Apache Kafka",
     "tailwind": "Tailwind CSS",
     "tailwindcss": "Tailwind CSS",
     "tailwind css": "Tailwind CSS",
@@ -84,12 +112,32 @@ SKILL_CANONICAL_DISPLAY: Dict[str, str] = {
     "kubernetes": "Kubernetes",
     "aws": "AWS",
     "gcp": "GCP",
+    "azure": "Azure",
+    "microsoft azure": "Azure",
+    "linux": "Linux",
+    "terraform": "Terraform",
+    "ci/cd": "CI/CD",
+    "cicd": "CI/CD",
     "sql": "SQL",
     "git": "Git",
     "rest": "REST API",
     "rest api": "REST API",
+    "rest apis": "REST API",
     "restful api": "REST API",
+    "restful apis": "REST API",
     "graphql": "GraphQL",
+    "power bi": "Power BI",
+    "powerbi": "Power BI",
+    "tableau": "Tableau",
+    "machine learning": "Machine Learning",
+    "data analysis": "Data Analysis",
+    "data analytics": "Data Analysis",
+    "analisis data": "Data Analysis",
+    "qa": "QA / Testing",
+    "quality assurance": "QA / Testing",
+    "software testing": "QA / Testing",
+    "manual testing": "QA / Testing",
+    "automation testing": "QA / Testing",
     "ui/ux": "UI/UX Design",
     "ui/ux design": "UI/UX Design",
     "figma": "Figma",
@@ -487,6 +535,37 @@ def normalize_education(raw: Optional[str], description_hint: Optional[str] = No
     return None
 
 
+MAX_SKILLS_PER_JOB = 10
+AMBIGUOUS_PROSE_SKILL_ALIASES = {"go", "next", "rest", "express", "js", "ts", "py"}
+SLASH_PRESERVED_SKILL_RE = re.compile(
+    r"^(?:ci/cd|ui/ux(?:\s+design)?|seo/sem|qa\s*/\s*testing)$",
+    re.IGNORECASE,
+)
+
+
+def _extract_skills_from_text(text: Optional[str]) -> List[str]:
+    if not text or not isinstance(text, str) or not text.strip():
+        return []
+    padded = f" {text.lower()} "
+    best_index_by_skill: Dict[str, int] = {}
+
+    for alias, display_name in SKILL_CANONICAL_DISPLAY.items():
+        if len(alias) < 2 or alias in AMBIGUOUS_PROSE_SKILL_ALIASES:
+            continue
+        pattern = rf"(^|[\s,./()\-:;'\"\[\]]){re.escape(alias)}($|[\s,./()\-:;'\"\[\]])"
+        match = re.search(pattern, padded)
+        if match:
+            idx = match.start()
+            prev = best_index_by_skill.get(display_name)
+            if prev is None or idx < prev:
+                best_index_by_skill[display_name] = idx
+
+    return [
+        display_name
+        for display_name, _ in sorted(best_index_by_skill.items(), key=lambda kv: kv[1])
+    ]
+
+
 def normalize_skills(
     raw_skills: Optional[Iterable[Any]],
     title_hint: Optional[str] = None,
@@ -496,31 +575,39 @@ def normalize_skills(
     result: List[str] = []
 
     def _add(item: str) -> None:
+        if len(result) >= MAX_SKILLS_PER_JOB:
+            return
         cleaned = clean_whitespace(item, max_len=80)
         if not cleaned:
             return
         key = cleaned.lower()
         canonical = SKILL_CANONICAL_DISPLAY.get(key, cleaned)
         canonical_key = canonical.lower()
-        if canonical_key not in seen_lower and len(result) < 100:
+        if canonical_key not in seen_lower and len(result) < MAX_SKILLS_PER_JOB:
             seen_lower.add(canonical_key)
             result.append(canonical[:80])
 
     if raw_skills:
         for item in raw_skills:
             if isinstance(item, str):
-                for sub in re.split(r"[,;/|]", item):
-                    _add(sub)
+                trimmed = item.strip()
+                if (
+                    trimmed.lower() in SKILL_CANONICAL_DISPLAY
+                    or SLASH_PRESERVED_SKILL_RE.match(trimmed)
+                ):
+                    _add(trimmed)
+                else:
+                    for sub in re.split(r"[,;/|]", item):
+                        _add(sub)
 
-    # Jika daftar skill dari sumber masih kosong, ekstrak secara konservatif dari judul & deskripsi
-    if not result:
-        combined_text = f" {title_hint or ''} {description_hint or ''} ".lower()
-        for alias, display_name in SKILL_CANONICAL_DISPLAY.items():
-            if len(alias) < 2:
-                continue
-            pattern = rf"(^|[\s,./()\-]){re.escape(alias)}($|[\s,./()\-])"
-            if re.search(pattern, combined_text):
-                _add(display_name)
+    # Selalu ekstrak dari judul lalu deskripsi hingga batas maksimal 10 skill
+    if len(result) < MAX_SKILLS_PER_JOB and title_hint:
+        for skill in _extract_skills_from_text(title_hint):
+            _add(skill)
+
+    if len(result) < MAX_SKILLS_PER_JOB and description_hint:
+        for skill in _extract_skills_from_text(description_hint):
+            _add(skill)
 
     return result
 

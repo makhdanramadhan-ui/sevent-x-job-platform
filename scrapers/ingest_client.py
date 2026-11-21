@@ -208,6 +208,13 @@ class SupabaseIngestClient:
         )
         return rows if isinstance(rows, list) else []
 
+    def fetch_jobs_for_detail_backfill(self, limit: int = 200) -> List[Dict[str, Any]]:
+        safe_limit = max(1, min(limit, 500))
+        rows = self._rest_get_json(
+            f"jobs?select=id,title,company,company_logo_url,level,education,description,skills,job_sources(source_name,source_job_id,source_url,published_at)&order=last_fetched_at.desc.nullslast&limit={safe_limit}"
+        )
+        return rows if isinstance(rows, list) else []
+
 
 def execute_ingest_pipeline(
     source_results: List[SourceFetchResult],

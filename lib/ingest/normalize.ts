@@ -24,9 +24,22 @@ const SKILL_CANONICAL_DISPLAY: Record<string, string> = {
   py: 'Python',
   python: 'Python',
   python3: 'Python',
+  java: 'Java',
+  php: 'PHP',
+  'c#': 'C#',
+  csharp: 'C#',
+  '.net': '.NET',
+  dotnet: '.NET',
+  'c++': 'C++',
+  cpp: 'C++',
+  kotlin: 'Kotlin',
+  swift: 'Swift',
   react: 'React',
   reactjs: 'React',
   'react.js': 'React',
+  'react native': 'React Native',
+  angular: 'Angular',
+  angularjs: 'Angular',
   next: 'Next.js',
   nextjs: 'Next.js',
   'next.js': 'Next.js',
@@ -36,6 +49,17 @@ const SKILL_CANONICAL_DISPLAY: Record<string, string> = {
   node: 'Node.js',
   nodejs: 'Node.js',
   'node.js': 'Node.js',
+  express: 'Express.js',
+  expressjs: 'Express.js',
+  'express.js': 'Express.js',
+  nestjs: 'NestJS',
+  'nest.js': 'NestJS',
+  laravel: 'Laravel',
+  'spring boot': 'Spring Boot',
+  springboot: 'Spring Boot',
+  django: 'Django',
+  fastapi: 'FastAPI',
+  flutter: 'Flutter',
   golang: 'Go',
   go: 'Go',
   postgres: 'PostgreSQL',
@@ -44,6 +68,10 @@ const SKILL_CANONICAL_DISPLAY: Record<string, string> = {
   mysql: 'MySQL',
   mongodb: 'MongoDB',
   redis: 'Redis',
+  nosql: 'NoSQL',
+  elasticsearch: 'Elasticsearch',
+  kafka: 'Apache Kafka',
+  'apache kafka': 'Apache Kafka',
   tailwind: 'Tailwind CSS',
   tailwindcss: 'Tailwind CSS',
   'tailwind css': 'Tailwind CSS',
@@ -56,12 +84,32 @@ const SKILL_CANONICAL_DISPLAY: Record<string, string> = {
   kubernetes: 'Kubernetes',
   aws: 'AWS',
   gcp: 'GCP',
+  azure: 'Azure',
+  'microsoft azure': 'Azure',
+  linux: 'Linux',
+  terraform: 'Terraform',
+  'ci/cd': 'CI/CD',
+  cicd: 'CI/CD',
   sql: 'SQL',
   git: 'Git',
   rest: 'REST API',
   'rest api': 'REST API',
+  'rest apis': 'REST API',
   'restful api': 'REST API',
+  'restful apis': 'REST API',
   graphql: 'GraphQL',
+  'power bi': 'Power BI',
+  powerbi: 'Power BI',
+  tableau: 'Tableau',
+  'machine learning': 'Machine Learning',
+  'data analysis': 'Data Analysis',
+  'data analytics': 'Data Analysis',
+  'analisis data': 'Data Analysis',
+  qa: 'QA / Testing',
+  'quality assurance': 'QA / Testing',
+  'software testing': 'QA / Testing',
+  'manual testing': 'QA / Testing',
+  'automation testing': 'QA / Testing',
   'ui/ux': 'UI/UX Design',
   'ui/ux design': 'UI/UX Design',
   figma: 'Figma',
@@ -309,6 +357,38 @@ export function normalizeEducation(
   return null;
 }
 
+const MAX_SKILLS_PER_JOB = 10;
+const AMBIGUOUS_PROSE_SKILL_ALIASES = new Set(['go', 'next', 'rest', 'express', 'js', 'ts', 'py']);
+const SLASH_PRESERVED_SKILL_RE =
+  /^(?:ci\/cd|ui\/ux(?:\s+design)?|seo\/sem|qa\s*\/\s*testing)$/i;
+
+function extractSkillsFromText(text: string | null | undefined): string[] {
+  if (!text || !text.trim()) return [];
+  const padded = ` ${text.toLowerCase()} `;
+  const bestIndexBySkill = new Map<string, number>();
+
+  for (const [alias, displayName] of Object.entries(SKILL_CANONICAL_DISPLAY)) {
+    if (alias.length < 2 || AMBIGUOUS_PROSE_SKILL_ALIASES.has(alias)) continue;
+    const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(
+      `(^|[\\s,./()\\-:;'"[\\]])${escaped}($|[\\s,./()\\-:;'"[\\]])`,
+      'i',
+    );
+    const match = pattern.exec(padded);
+    if (match) {
+      const idx = match.index;
+      const prev = bestIndexBySkill.get(displayName);
+      if (prev === undefined || idx < prev) {
+        bestIndexBySkill.set(displayName, idx);
+      }
+    }
+  }
+
+  return Array.from(bestIndexBySkill.entries())
+    .sort((a, b) => a[1] - b[1])
+    .map(([displayName]) => displayName);
+}
+
 export function normalizeSkills(
   rawSkills: unknown,
   titleHint?: string | null,
@@ -318,12 +398,13 @@ export function normalizeSkills(
   const result: string[] = [];
 
   const add = (item: string) => {
+    if (result.length >= MAX_SKILLS_PER_JOB) return;
     const cleaned = cleanWhitespace(item, 80);
     if (!cleaned) return;
     const key = cleaned.toLowerCase();
     const canonical = SKILL_CANONICAL_DISPLAY[key] ?? cleaned;
     const canonicalKey = canonical.toLowerCase();
-    if (!seenLower.has(canonicalKey) && result.length < 100) {
+    if (!seenLower.has(canonicalKey) && result.length < MAX_SKILLS_PER_JOB) {
       seenLower.add(canonicalKey);
       result.push(canonical.slice(0, 80));
     }
@@ -332,18 +413,28 @@ export function normalizeSkills(
   if (Array.isArray(rawSkills)) {
     for (const item of rawSkills) {
       if (typeof item === 'string') {
-        for (const sub of item.split(/[,;/|]/)) add(sub);
+        const trimmed = item.trim();
+        if (
+          SKILL_CANONICAL_DISPLAY[trimmed.toLowerCase()] ||
+          SLASH_PRESERVED_SKILL_RE.test(trimmed)
+        ) {
+          add(trimmed);
+        } else {
+          for (const sub of item.split(/[,;/|]/)) add(sub);
+        }
       }
     }
   }
 
-  if (result.length === 0) {
-    const combinedText = ` ${titleHint ?? ''} ${descriptionHint ?? ''} `.toLowerCase();
-    for (const [alias, displayName] of Object.entries(SKILL_CANONICAL_DISPLAY)) {
-      if (alias.length < 2) continue;
-      const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const pattern = new RegExp(`(^|[\\s,./()\\-])${escaped}($|[\\s,./()\\-])`, 'i');
-      if (pattern.test(combinedText)) add(displayName);
+  if (result.length < MAX_SKILLS_PER_JOB && titleHint) {
+    for (const skill of extractSkillsFromText(titleHint)) {
+      add(skill);
+    }
+  }
+
+  if (result.length < MAX_SKILLS_PER_JOB && descriptionHint) {
+    for (const skill of extractSkillsFromText(descriptionHint)) {
+      add(skill);
     }
   }
 
