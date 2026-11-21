@@ -126,26 +126,65 @@ function buildJobsQueryString(
   return params.toString();
 }
 
-function readHiddenJobIds(): Set<string> {
-  if (typeof window === 'undefined') return new Set();
+type HiddenJobRecord = {
+  id: string;
+  title: string;
+  company: string;
+  location?: string | null;
+  hidden_at: string;
+};
+
+function readHiddenJobs(): HiddenJobRecord[] {
+  if (typeof window === 'undefined') return [];
   try {
     const raw = window.localStorage.getItem(HIDDEN_JOBS_STORAGE_KEY);
-    if (!raw) return new Set();
+    if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return new Set();
-    return new Set(parsed.filter((item): item is string => typeof item === 'string' && item.length > 0));
+    if (!Array.isArray(parsed)) return [];
+    const seen = new Set<string>();
+    const records: HiddenJobRecord[] = [];
+    for (const item of parsed) {
+      if (typeof item === 'string' && item.length > 0) {
+        if (!seen.has(item)) {
+          seen.add(item);
+          records.push({
+            id: item,
+            title: 'Lowongan disembunyikan',
+            company: '',
+            location: null,
+            hidden_at: '',
+          });
+        }
+      } else if (item && typeof item === 'object') {
+        const rec = item as Record<string, unknown>;
+        if (typeof rec.id === 'string' && rec.id.length > 0 && !seen.has(rec.id)) {
+          seen.add(rec.id);
+          records.push({
+            id: rec.id,
+            title:
+              typeof rec.title === 'string' && rec.title.trim()
+                ? rec.title.trim()
+                : 'Lowongan disembunyikan',
+            company: typeof rec.company === 'string' ? rec.company.trim() : '',
+            location: typeof rec.location === 'string' ? rec.location.trim() : null,
+            hidden_at: typeof rec.hidden_at === 'string' ? rec.hidden_at : '',
+          });
+        }
+      }
+    }
+    return records;
   } catch {
-    return new Set();
+    return [];
   }
 }
 
-function persistHiddenJobIds(ids: Set<string>): void {
+function persistHiddenJobs(records: HiddenJobRecord[]): void {
   if (typeof window === 'undefined') return;
   try {
-    if (ids.size === 0) {
+    if (records.length === 0) {
       window.localStorage.removeItem(HIDDEN_JOBS_STORAGE_KEY);
     } else {
-      window.localStorage.setItem(HIDDEN_JOBS_STORAGE_KEY, JSON.stringify(Array.from(ids)));
+      window.localStorage.setItem(HIDDEN_JOBS_STORAGE_KEY, JSON.stringify(records));
     }
   } catch {
     // Abaikan error kuota/private mode localStorage
@@ -263,7 +302,9 @@ function JobsFeedInner() {
 
   const [bookmarks, setBookmarks] = useState<BookmarkRecord[]>([]);
   const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  const [hiddenJobs, setHiddenJobs] = useState<HiddenJobRecord[]>([]);
+  const [hiddenModalOpen, setHiddenModalOpen] = useState(false);
+  const [selectedRestoreIds, setSelectedRestoreIds] = useState<Set<string>>(new Set());
   const [actionNotice, setActionNotice] = useState<{
     type: 'success' | 'error';
     text: string;
@@ -272,13 +313,13 @@ function JobsFeedInner() {
 
   const pillsRef = useRef<HTMLDivElement | null>(null);
 
-  // Fitur #4 & #5: Muat filter awal dari URL query string & hiddenIds dari localStorage
+  // Fitur #4 & #5: Muat filter awal dari URL query string & hiddenJobs dari localStorage
   useEffect(() => {
     const initial = parseQueryStateFromSearch(window.location.search);
     setFilters(initial.filters);
     setAppliedFilters(initial.filters);
     setPage(initial.page);
-    setHiddenIds(readHiddenJobIds());
+    setHiddenJobs(readHiddenJobs());
     setUrlHydrated(true);
 
     const handlePopState = () => {
@@ -302,6 +343,23 @@ function JobsFeedInner() {
     }
   }, [appliedFilters, page, urlHydrated]);
 
+  const hiddenIds = useMemo(() => new Set(hiddenJobs.map((item) => item.id)), [hiddenJobs]);
+
+  const resolvedHiddenJobs = useMemo(() => {
+    const itemsById = new Map((data?.items ?? []).map((item) => [item.id, item]));
+    return hiddenJobs.map((record) => {
+      if (record.title !== 'Lowongan disembunyikan') return record;
+      const live = itemsById.get(record.id);
+      if (!live) return record;
+      return {
+        ...record,
+        title: live.title,
+        company: live.company,
+        location: live.location ?? record.location ?? null,
+      };
+    });
+  }, [hiddenJobs, data]);
+
   const bookmarkedIds = useMemo(
     () => new Set(bookmarks.map((b) => b.job_id)),
     [bookmarks],
@@ -317,6 +375,7 @@ function JobsFeedInner() {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         setOpenPill(null);
+        setHiddenModalOpen(false);
       }
     }
     document.addEventListener('mousedown', handleOutsideClick);
@@ -423,23 +482,75 @@ function JobsFeedInner() {
     setPage(1);
   }
 
-  function handleHideJob(jobId: string) {
-    setHiddenIds((prev) => {
-      const next = new Set(prev);
-      next.add(jobId);
-      persistHiddenJobIds(next);
+  function openHiddenJobsModal() {
+    setSelectedRestoreIds(new Set());
+    setHiddenModalOpen(true);
+  }
+
+  function handleHideJob(job: Job) {
+    const newRecord: HiddenJobRecord = {
+      id: job.id,
+      title: job.title,
+      company: job.company,
+      location: job.location ?? null,
+      hidden_at: new Date().toISOString(),
+    };
+    setHiddenJobs((prev) => {
+      const next = [newRecord, ...prev.filter((item) => item.id !== job.id)];
+      persistHiddenJobs(next);
       return next;
     });
     setActionNotice({
       type: 'success',
-      text: 'Lowongan disembunyikan dari daftar. Kamu dapat memulihkannya kapan saja lewat tombol di atas daftar.',
+      text: `Lowongan "${job.title}" disembunyikan. Kamu dapat memilih dan memulihkannya lewat tombol Kelola di atas daftar.`,
     });
   }
 
-  function handleRestoreHiddenJobs() {
-    const empty = new Set<string>();
-    persistHiddenJobIds(empty);
-    setHiddenIds(empty);
+  function handleToggleSelectRestore(jobId: string) {
+    setSelectedRestoreIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(jobId)) {
+        next.delete(jobId);
+      } else {
+        next.add(jobId);
+      }
+      return next;
+    });
+  }
+
+  function handleRestoreSpecificJobs(idsToRestore: Iterable<string>) {
+    const restoreSet = new Set(idsToRestore);
+    if (restoreSet.size === 0) return;
+
+    const restoredItems = resolvedHiddenJobs.filter((item) => restoreSet.has(item.id));
+    if (restoredItems.length === 0) return;
+
+    const remaining = hiddenJobs.filter((item) => !restoreSet.has(item.id));
+    persistHiddenJobs(remaining);
+    setHiddenJobs(remaining);
+    setSelectedRestoreIds((prev) => {
+      const next = new Set(prev);
+      for (const id of restoreSet) next.delete(id);
+      return next;
+    });
+    if (remaining.length === 0) {
+      setHiddenModalOpen(false);
+    }
+
+    const message =
+      restoredItems.length === 1
+        ? restoredItems[0].title !== 'Lowongan disembunyikan'
+          ? `Lowongan "${restoredItems[0].title}" ditampilkan kembali.`
+          : '1 lowongan yang disembunyikan telah ditampilkan kembali.'
+        : `${restoredItems.length} lowongan yang dipilih telah ditampilkan kembali.`;
+    setActionNotice({ type: 'success', text: message });
+  }
+
+  function handleRestoreAllHiddenJobs() {
+    persistHiddenJobs([]);
+    setHiddenJobs([]);
+    setSelectedRestoreIds(new Set());
+    setHiddenModalOpen(false);
     setActionNotice({
       type: 'success',
       text: 'Seluruh lowongan yang disembunyikan telah ditampilkan kembali.',
@@ -742,16 +853,16 @@ function JobsFeedInner() {
               ) : (
                 'Memuat lowongan...'
               )}
-              {hiddenIds.size > 0 ? (
+              {hiddenJobs.length > 0 ? (
                 <>
                   {' · '}
                   <button
                     type="button"
                     className="job-action-ghost"
                     style={{ display: 'inline-flex', height: 'auto', padding: '2px 6px' }}
-                    onClick={handleRestoreHiddenJobs}
+                    onClick={openHiddenJobsModal}
                   >
-                    Tampilkan {hiddenIds.size} yang disembunyikan
+                    {hiddenJobs.length} disembunyikan · Kelola
                   </button>
                 </>
               ) : null}
@@ -824,8 +935,8 @@ function JobsFeedInner() {
                     Reset Semua Filter
                   </Button>
                 ) : hiddenIds.size > 0 ? (
-                  <Button variant="outline" size="sm" onClick={() => setHiddenIds(new Set())}>
-                    Tampilkan Kembali
+                  <Button variant="outline" size="sm" onClick={openHiddenJobsModal}>
+                    Kelola Lowongan Disembunyikan
                   </Button>
                 ) : (
                   <Link href="/profile" className="btn btn-primary btn-sm">
@@ -935,7 +1046,7 @@ function JobsFeedInner() {
                         <button
                           type="button"
                           className="job-action-ghost"
-                          onClick={() => handleHideJob(job.id)}
+                          onClick={() => handleHideJob(job)}
                           aria-label={`Sembunyikan lowongan ${job.title}`}
                         >
                           <svg
@@ -1066,6 +1177,195 @@ function JobsFeedInner() {
           )}
         </aside>
       </div>
+
+      {hiddenModalOpen && hiddenJobs.length > 0 ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="hidden-jobs-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setHiddenModalOpen(false);
+          }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 60,
+            backgroundColor: 'rgba(15, 23, 42, 0.48)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <div
+            className="ledger-card"
+            style={{
+              width: '100%',
+              maxWidth: 560,
+              maxHeight: '85vh',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 16,
+              backgroundColor: 'var(--bg-surface, #ffffff)',
+              boxShadow: '0 20px 50px rgba(15, 23, 42, 0.22)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                paddingBottom: 12,
+                borderBottom: '1px solid var(--border-subtle)',
+              }}
+            >
+              <div>
+                <h2
+                  id="hidden-jobs-modal-title"
+                  style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--ink-primary)' }}
+                >
+                  Lowongan yang Disembunyikan ({hiddenJobs.length})
+                </h2>
+                <p style={{ margin: '4px 0 0', fontSize: '0.84rem', color: 'var(--ink-secondary)' }}>
+                  Pilih satu atau beberapa lowongan untuk ditampilkan kembali di daftar.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="job-action-ghost"
+                onClick={() => setHiddenModalOpen(false)}
+                aria-label="Tutup modal lowongan disembunyikan"
+                style={{ width: 32, height: 32, padding: 0, justifyContent: 'center' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div
+              style={{
+                maxHeight: '55vh',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+                paddingRight: 4,
+              }}
+            >
+              {resolvedHiddenJobs.map((item) => {
+                const checked = selectedRestoreIds.has(item.id);
+                const subtitle = [item.company, item.location].filter(Boolean).join(' · ');
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                      padding: '10px 12px',
+                      borderRadius: 'var(--radius-sm, 10px)',
+                      border: '1px solid var(--border-subtle)',
+                      backgroundColor: checked ? 'var(--bg-subtle, #f8fafc)' : 'transparent',
+                    }}
+                  >
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 10,
+                        minWidth: 0,
+                        flex: 1,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => handleToggleSelectRestore(item.id)}
+                        style={{ marginTop: 4, flexShrink: 0 }}
+                        aria-label={`Pilih ${item.title} untuk dipulihkan`}
+                      />
+                      <span style={{ minWidth: 0, flex: 1 }}>
+                        <Link
+                          href={`/jobs/${item.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            display: 'block',
+                            fontWeight: 600,
+                            fontSize: '0.94rem',
+                            color: 'var(--ink-primary)',
+                            textDecoration: 'none',
+                            wordBreak: 'break-word',
+                          }}
+                        >
+                          {item.title}
+                        </Link>
+                        {subtitle ? (
+                          <span
+                            style={{
+                              display: 'block',
+                              fontSize: '0.82rem',
+                              color: 'var(--ink-secondary)',
+                              marginTop: 2,
+                            }}
+                          >
+                            {subtitle}
+                          </span>
+                        ) : null}
+                      </span>
+                    </label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRestoreSpecificJobs([item.id])}
+                    >
+                      Pulihkan
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 10,
+                paddingTop: 12,
+                borderTop: '1px solid var(--border-subtle)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={selectedRestoreIds.size === 0}
+                  onClick={() => handleRestoreSpecificJobs(selectedRestoreIds)}
+                >
+                  Pulihkan yang Dipilih ({selectedRestoreIds.size})
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRestoreAllHiddenJobs}
+                >
+                  Pulihkan Semua
+                </Button>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setHiddenModalOpen(false)}
+              >
+                Tutup
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
