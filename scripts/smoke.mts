@@ -328,6 +328,53 @@ async function main(): Promise<void> {
     400,
     'unknown_field',
   );
+  await expectError(
+    'POST /api/auth/forgot-password field asing',
+    call('POST', '/api/auth/forgot-password', {
+      body: { email: 'uji@example.com', extra: 1 },
+    }),
+    400,
+    'unknown_field',
+  );
+  await expectError(
+    'POST /api/auth/forgot-password email salah',
+    call('POST', '/api/auth/forgot-password', { body: { email: 'bukan-email' } }),
+    400,
+    'validation_error',
+  );
+  await expectError(
+    'POST /api/auth/forgot-password origin asing',
+    call('POST', '/api/auth/forgot-password', {
+      body: { email: 'uji@example.com' },
+      headers: { origin: 'https://evil.example' },
+    }),
+    403,
+    'csrf_rejected',
+  );
+  await expectError(
+    'POST /api/auth/reset-password kode bukan 6 digit',
+    call('POST', '/api/auth/reset-password', {
+      body: { email: 'uji@example.com', code: '12a45', password: 'Password1' },
+    }),
+    400,
+    'validation_error',
+  );
+  await expectError(
+    'POST /api/auth/reset-password password lemah',
+    call('POST', '/api/auth/reset-password', {
+      body: { email: 'uji@example.com', code: '123456', password: 'abcdefgh' },
+    }),
+    400,
+    'weak_password',
+  );
+  await expectError(
+    'POST /api/auth/signup password tanpa kapital',
+    call('POST', '/api/auth/signup', {
+      body: { email: 'uji@example.com', password: 'abcdefgh' },
+    }),
+    400,
+    'weak_password',
+  );
 
   const loginStatus = hasSupabase ? 401 : 503;
   const loginCode = hasSupabase ? 'invalid_credentials' : 'auth_not_configured';

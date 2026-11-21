@@ -5,6 +5,7 @@ import { buildVerificationEmail } from '@/lib/email/verification';
 import { ApiError, asObject, ok, readJson, rejectUnknownKeys, run } from '@/lib/http';
 import { assertOriginAllowed } from '@/lib/auth';
 import { clientIp, enforceRateLimits } from '@/lib/rate-limit';
+import { validatePassword } from '@/lib/password-policy';
 import { createAdminClient } from '@/lib/supabase';
 import { emailValue, optionalText, passwordValue } from '@/lib/validation';
 
@@ -29,6 +30,12 @@ export async function POST(req: NextRequest) {
     rejectUnknownKeys(body, ['email', 'password', 'full_name'], 'body');
     const email = emailValue(body.email);
     const password = passwordValue(body.password);
+    const policy = validatePassword(password);
+    if (!policy.ok) {
+      throw new ApiError(400, 'weak_password', 'Password belum memenuhi kebijakan.', {
+        failures: policy.failures,
+      });
+    }
     const fullName = optionalText(body.full_name, 'full_name', 1, 120);
     assertOriginAllowed(req);
 
