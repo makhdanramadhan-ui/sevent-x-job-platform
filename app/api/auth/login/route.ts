@@ -47,6 +47,12 @@ export async function POST(req: NextRequest) {
       if (error?.status === 429) {
         throw new ApiError(429, 'rate_limited', 'Terlalu banyak percobaan. Coba lagi dalam 15 menit.');
       }
+      const msg = (error?.message || '').toLowerCase();
+      if (msg.includes('email not confirmed')) {
+        const bodyOut = { error: { code: 'email_not_confirmed', message: 'Email belum diverifikasi.' } };
+        const res = NextResponse.json(bodyOut, { status: 403 });
+        return res;
+      }
       throw new ApiError(401, 'invalid_credentials', 'Email atau password salah.');
     }
 

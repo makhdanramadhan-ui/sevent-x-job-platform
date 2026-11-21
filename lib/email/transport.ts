@@ -49,7 +49,13 @@ export function resolveSiteUrl(
   return 'https://rakitkarier.vercel.app';
 }
 
-export async function sendMatchEmail(config: SmtpConfig, message: SendMailOptions): Promise<void> {
+export type SendEmailResult = {
+  messageId: string;
+  accepted: string[];
+  rejected: string[];
+};
+
+export async function sendMatchEmail(config: SmtpConfig, message: SendMailOptions): Promise<SendEmailResult> {
   const transport = nodemailer.createTransport({
     host: config.host,
     port: config.port,
@@ -58,7 +64,10 @@ export async function sendMatchEmail(config: SmtpConfig, message: SendMailOption
   });
 
   try {
-    await transport.sendMail({ from: config.from, ...message });
+    const info = await transport.sendMail({ from: config.from, ...message });
+    const accepted = Array.isArray(info.accepted) ? info.accepted.map(String) : [];
+    const rejected = Array.isArray(info.rejected) ? info.rejected.map(String) : [];
+    return { messageId: info.messageId ?? '', accepted, rejected };
   } finally {
     transport.close();
   }

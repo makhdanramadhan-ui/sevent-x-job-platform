@@ -110,7 +110,9 @@ export async function GET(req: NextRequest) {
           if (error) throwDb(error);
           return data.user.email ?? null;
         },
-        send: (message) => sendMatchEmail(smtpConfig, message),
+        send: async (message) => {
+          await sendMatchEmail(smtpConfig, message);
+        },
         recordSent: async (rows) => {
           if (rows.length === 0) return;
           const { error } = await admin

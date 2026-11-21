@@ -102,11 +102,19 @@ export async function POST(req: NextRequest) {
     const confirmUrl = `${siteUrl}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}&type=${encodeURIComponent(verificationType)}`;
 
     try {
-      await sendMatchEmail(smtpConfig, {
+      const payload = buildVerificationEmail({ email, confirmUrl });
+      const sendResult = await sendMatchEmail(smtpConfig, {
         to: email,
-        subject: buildVerificationEmail({ email, confirmUrl }).subject,
-        html: buildVerificationEmail({ email, confirmUrl }).html,
-        text: buildVerificationEmail({ email, confirmUrl }).text,
+        subject: payload.subject,
+        html: payload.html,
+        text: payload.text,
+      });
+      const toDomain = email.includes('@') ? email.split('@')[1] : 'unknown';
+      console.log('[resend-verification] verification email sent', {
+        toDomain,
+        messageId: sendResult.messageId || null,
+        accepted: sendResult.accepted,
+        rejected: sendResult.rejected,
       });
     } catch (err) {
       console.error('[resend-verification] send failed', err);

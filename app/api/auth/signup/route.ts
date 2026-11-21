@@ -108,11 +108,18 @@ export async function POST(req: NextRequest) {
     });
 
     try {
-      await sendMatchEmail(smtpConfig, {
+      const sendResult = await sendMatchEmail(smtpConfig, {
         to: email,
         subject: emailPayload.subject,
         html: emailPayload.html,
         text: emailPayload.text,
+      });
+      const toDomain = email.includes('@') ? email.split('@')[1] : 'unknown';
+      console.log('[signup] verification email sent', {
+        toDomain,
+        messageId: sendResult.messageId || null,
+        accepted: sendResult.accepted,
+        rejected: sendResult.rejected,
       });
     } catch (err) {
       console.error('[signup] email send failed', err);

@@ -55,7 +55,7 @@ export function assertOriginAllowed(req: NextRequest): void {
   }
 }
 
-function isEmailProviderUser(user: User): boolean {
+export function isEmailProviderUser(user: User): boolean {
   const provider = (user.app_metadata as { provider?: string } | undefined)?.provider;
   if (provider === 'email') return true;
   const providers = (user.app_metadata as { providers?: string[] } | undefined)?.providers;
@@ -63,7 +63,7 @@ function isEmailProviderUser(user: User): boolean {
   return false;
 }
 
-function assertEmailConfirmed(user: User): void {
+export function assertEmailConfirmed(user: User): void {
   if (!user.email_confirmed_at && isEmailProviderUser(user)) {
     throw new ApiError(401, 'email_not_confirmed', 'Email belum diverifikasi.');
   }
