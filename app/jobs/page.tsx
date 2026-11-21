@@ -290,11 +290,15 @@ function formatRelativeTimeId(dateIso: string | null | undefined): string {
 
 function JobsFeedInner() {
   const router = useRouter();
-  const [urlHydrated, setUrlHydrated] = useState(false);
-  const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
-  const [appliedFilters, setAppliedFilters] = useState<FilterState>(INITIAL_FILTERS);
+  const [initialUrlState] = useState(() =>
+    typeof window !== 'undefined'
+      ? parseQueryStateFromSearch(window.location.search)
+      : { filters: INITIAL_FILTERS, page: 1 },
+  );
+  const [filters, setFilters] = useState<FilterState>(initialUrlState.filters);
+  const [appliedFilters, setAppliedFilters] = useState<FilterState>(initialUrlState.filters);
   const [openPill, setOpenPill] = useState<PillKey | null>(null);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(initialUrlState.page);
   const limit = 12;
 
   const [data, setData] = useState<JobsApiResponse | null>(null);
@@ -303,7 +307,9 @@ function JobsFeedInner() {
 
   const [bookmarks, setBookmarks] = useState<BookmarkRecord[]>([]);
   const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [hiddenJobs, setHiddenJobs] = useState<HiddenJobRecord[]>([]);
+  const [hiddenJobs, setHiddenJobs] = useState<HiddenJobRecord[]>(() =>
+    typeof window !== 'undefined' ? readHiddenJobs() : [],
+  );
   const [hiddenModalOpen, setHiddenModalOpen] = useState(false);
   const [selectedRestoreIds, setSelectedRestoreIds] = useState<Set<string>>(new Set());
   const [actionNotice, setActionNotice] = useState<{
@@ -313,16 +319,10 @@ function JobsFeedInner() {
   const [pendingPolled, setPendingPolled] = useState(false);
 
   const pillsRef = useRef<HTMLDivElement | null>(null);
+  const bookmarksLoadedRef = useRef(false);
 
-  // Fitur #4 & #5: Muat filter awal dari URL query string & hiddenJobs dari localStorage
+  // Fitur #4: Dengarkan navigasi back/forward browser untuk menyinkronkan filter & halaman
   useEffect(() => {
-    const initial = parseQueryStateFromSearch(window.location.search);
-    setFilters(initial.filters);
-    setAppliedFilters(initial.filters);
-    setPage(initial.page);
-    setHiddenJobs(readHiddenJobs());
-    setUrlHydrated(true);
-
     const handlePopState = () => {
       const next = parseQueryStateFromSearch(window.location.search);
       setFilters(next.filters);
@@ -335,14 +335,13 @@ function JobsFeedInner() {
 
   // Fitur #4: Sinkronkan filter aktif & halaman ke URL browser tanpa reload halaman
   useEffect(() => {
-    if (!urlHydrated) return;
     const qs = buildJobsQueryString(appliedFilters, page);
     const nextUrl = qs ? `/jobs?${qs}` : '/jobs';
     const currentUrl = `${window.location.pathname}${window.location.search}`;
     if (nextUrl !== currentUrl) {
       window.history.replaceState(null, '', nextUrl);
     }
-  }, [appliedFilters, page, urlHydrated]);
+  }, [appliedFilters, page]);
 
   const hiddenIds = useMemo(() => new Set(hiddenJobs.map((item) => item.id)), [hiddenJobs]);
 
@@ -424,16 +423,16 @@ function JobsFeedInner() {
       setError(res.error);
     }
     setLoading(false);
-  }, [appliedFilters, page]);
+
+    if (!bookmarksLoadedRef.current) {
+      bookmarksLoadedRef.current = true;
+      void loadBookmarks();
+    }
+  }, [appliedFilters, loadBookmarks, page]);
 
   useEffect(() => {
-    loadBookmarks();
-  }, [loadBookmarks]);
-
-  useEffect(() => {
-    if (!urlHydrated) return;
-    loadJobs();
-  }, [loadJobs, urlHydrated]);
+    void loadJobs();
+  }, [loadJobs]);
 
   const hasActiveFilters = Boolean(
     appliedFilters.q ||
