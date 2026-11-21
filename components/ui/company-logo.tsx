@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { proxiedLogoSrc } from '@/lib/logo-proxy';
 
 const MONOGRAM_TONES = [
   { color: 'var(--p-action)', background: 'var(--p-accent-soft)', border: 'rgba(26, 75, 224, 0.24)' },
@@ -81,7 +82,7 @@ export function CompanyLogo({
     >
       {canRenderLogo ? (
         <img
-          src={logoUrl}
+          src={proxiedLogoSrc(logoUrl)}
           alt=""
           width={size}
           height={size}

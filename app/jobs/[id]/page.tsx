@@ -18,6 +18,7 @@ import { Badge, Button, JobStatusBadge } from '@/components/ui/forms';
 import type { BookmarkRecord, JobDetail } from '@/lib/contracts';
 import { type DescriptionBlock, parseJobDescriptionBlocks } from '@/lib/job-description';
 import { displaySourceName } from '@/lib/job-source';
+import { proxiedLogoSrc } from '@/lib/logo-proxy';
 
 function BackToFeedLink() {
   return (
@@ -94,7 +95,7 @@ function SourceSiteLogo({ host }: { host: string | null }) {
       {faviconUrl && !failed ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={faviconUrl}
+          src={proxiedLogoSrc(faviconUrl)}
           alt=""
           width={20}
           height={20}
@@ -320,7 +321,7 @@ function DetailCompanyLogo({
     >
       {canRenderLogo ? (
         <img
-          src={logoUrl}
+          src={proxiedLogoSrc(logoUrl)}
           alt=""
           width={68}
           height={68}

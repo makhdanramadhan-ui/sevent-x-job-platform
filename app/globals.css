@@ -157,6 +157,13 @@ h4 {
   letter-spacing: var(--display-tracking);
 }
 
+/* Ukuran eksplisit agar <h1> di dalam article/aside/nav/section tidak bergantung
+   pada aturan bawaan browser yang akan dihapus Chrome. :where() = spesifisitas 0,
+   jadi class seperti .page-title tetap menang. */
+:where(article, aside, nav, section) h1 {
+  font-size: 2em;
+}
+
 .font-editorial {
   font-family: var(--font-display);
   font-weight: var(--display-weight);
