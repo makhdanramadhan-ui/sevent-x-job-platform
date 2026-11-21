@@ -1,33 +1,11 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/components/ui/api-client';
 import { ButtonText } from '@/components/ui/button-text';
 import type { DescriptionBlock } from '@/lib/job-description';
 import { proxiedLogoSrc } from '@/lib/logo-proxy';
-
-const LazyGuestModal = dynamic(() => import('./job-detail-guest-fallback'), {
-  ssr: false,
-});
-
-export function JobDetailCookieGate() {
-  const [isGuest, setIsGuest] = useState(false);
-
-  useEffect(() => {
-    const hasCookie = document.cookie.split(';').some((entry) => {
-      const name = entry.trim().split('=')[0] ?? '';
-      return name.startsWith('sb-') && name.includes('auth-token');
-    });
-    if (!hasCookie) {
-      setIsGuest(true);
-    }
-  }, []);
-
-  if (!isGuest) return null;
-  return <LazyGuestModal />;
-}
 
 function getCompanyInitials(company: string): string {
   const words = company
