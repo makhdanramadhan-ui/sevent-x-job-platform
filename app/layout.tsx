@@ -31,6 +31,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <meta name="page-type" content="software" />
         <meta name="site-kind" content="software" />
         <meta name="theme-color" content="#ffffff" />
+        <link rel="preconnect" href="https://lh3.googleusercontent.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://lh3.googleusercontent.com" />
       </head>
       <body>
         <div className="app-shell">
