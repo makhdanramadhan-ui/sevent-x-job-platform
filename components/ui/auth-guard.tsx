@@ -2,7 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from 'react';
+import {
+  type FormEvent,
+  type ReactNode,
+  startTransition,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 import { apiFetch } from './api-client';
 import { LoadingState, NoticeBanner } from './feedback';
 import { Button, FormField, PasswordInput, TextInput } from './forms';
@@ -55,8 +62,12 @@ export function AuthGuard({
     }
     setLoading(true);
     const data = await fetchSessionIfCookie(forceRefresh);
-    setSession(data);
-    setLoading(false);
+    window.requestAnimationFrame(() => {
+      startTransition(() => {
+        setSession(data);
+        setLoading(false);
+      });
+    });
   }, []);
 
   useEffect(() => {

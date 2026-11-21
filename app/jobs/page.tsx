@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   type FormEvent,
   type MouseEvent as ReactMouseEvent,
+  startTransition,
   useCallback,
   useEffect,
   useMemo,
@@ -300,8 +301,10 @@ function JobsFeedInner() {
   const [openPill, setOpenPill] = useState<PillKey | null>(null);
   const [page, setPage] = useState(initialUrlState.page);
   const limit = 12;
+  const initialRenderBatch = 3;
 
   const [data, setData] = useState<JobsApiResponse | null>(null);
+  const [renderedCount, setRenderedCount] = useState(initialRenderBatch);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiCallError | null>(null);
 
@@ -418,6 +421,7 @@ function JobsFeedInner() {
 
     const res = await apiFetch<JobsApiResponse>(`/api/jobs?${params.toString()}`);
     if (res.ok) {
+      setRenderedCount(initialRenderBatch);
       setData(res.data);
     } else {
       setError(res.error);
@@ -426,7 +430,9 @@ function JobsFeedInner() {
 
     if (!bookmarksLoadedRef.current) {
       bookmarksLoadedRef.current = true;
-      void loadBookmarks();
+      window.setTimeout(() => {
+        void loadBookmarks();
+      }, 120);
     }
   }, [appliedFilters, loadBookmarks, page]);
 
@@ -611,6 +617,22 @@ function JobsFeedInner() {
   const visibleJobs = useMemo(
     () => (data?.items ?? []).filter((job) => !hiddenIds.has(job.id)),
     [data, hiddenIds],
+  );
+
+  // Pecah render kartu lowongan menjadi 2 frame agar tidak membentuk 1 long task (>50 ms) pada TBT Mobile
+  useEffect(() => {
+    if (loading || !data || renderedCount >= visibleJobs.length) return;
+    const rafId = window.requestAnimationFrame(() => {
+      startTransition(() => {
+        setRenderedCount(visibleJobs.length);
+      });
+    });
+    return () => window.cancelAnimationFrame(rafId);
+  }, [data, loading, renderedCount, visibleJobs.length]);
+
+  const renderedJobs = useMemo(
+    () => visibleJobs.slice(0, renderedCount),
+    [renderedCount, visibleJobs],
   );
 
   const pillDefs: Array<{
@@ -947,7 +969,7 @@ function JobsFeedInner() {
             />
           ) : (
             <div className="jobs-list">
-              {visibleJobs.map((job) => {
+              {renderedJobs.map((job) => {
                 const isSaved = bookmarkedIds.has(job.id);
                 return (
                   <article

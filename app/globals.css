@@ -3558,6 +3558,12 @@ h4 {
   transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
+/* Tunda kalkulasi Style & Layout untuk kartu di bawah lipatan layar awal (menurunkan TBT Mobile). */
+.job-feed-card:nth-child(n + 4) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 230px;
+}
+
 .job-feed-card:hover {
   border-color: rgba(26, 75, 224, 0.34);
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
