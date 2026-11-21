@@ -1,6 +1,3 @@
-'use client';
-
-import { motion, useReducedMotion } from 'motion/react';
 import Image from 'next/image';
 import type { ReactNode } from 'react';
 
@@ -12,7 +9,7 @@ export type PageBannerProps = {
   subtitle: ReactNode;
   actions?: ReactNode;
   imageSrc: string;
-  imageAlt: string;
+  imageAlt?: string;
   tone?: PageBannerTone;
 };
 
@@ -22,25 +19,18 @@ export function PageBanner({
   subtitle,
   actions,
   imageSrc,
-  imageAlt,
   tone = 'mist',
 }: PageBannerProps) {
-  const prefersReducedMotion = useReducedMotion();
-
   return (
-    <motion.section
-      className={`page-banner page-banner--${tone}`}
-      initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-    >
+    <section className={`page-banner page-banner--${tone}`}>
       <div className="page-banner__media" aria-hidden="true">
         <Image
           src={imageSrc}
-          alt={imageAlt}
+          alt=""
           fill
           priority
-          sizes="(max-width: 768px) 100vw, 1280px"
+          fetchPriority="high"
+          sizes="(max-width: 640px) 92vw, (max-width: 1248px) 96vw, 1200px"
           className="page-banner__img"
         />
         <div className="page-banner__scrim" />
@@ -55,6 +45,6 @@ export function PageBanner({
 
         {actions ? <div className="page-banner__actions">{actions}</div> : null}
       </div>
-    </motion.section>
+    </section>
   );
 }

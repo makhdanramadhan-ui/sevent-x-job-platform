@@ -3,19 +3,11 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type FormEvent, useState } from 'react';
-import {
-  type ApiCallError,
-  apiFetch,
-  AuthDivider,
-  Button,
-  ErrorState,
-  FormField,
-  GoogleAuthButton,
-  notifyAuthChanged,
-  PasswordInput,
-  SITE_NAME,
-  TextInput,
-} from '@/components/ui';
+import { type ApiCallError, apiFetch, SITE_NAME } from '@/components/ui/api-client';
+import { ErrorState } from '@/components/ui/feedback';
+import { Button, FormField, PasswordInput, TextInput } from '@/components/ui/forms';
+import { AuthDivider, GoogleAuthButton } from '@/components/ui/google-button';
+import { notifyAuthChanged } from '@/components/ui/navigation';
 
 export default function SignupPage() {
   const router = useRouter();

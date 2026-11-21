@@ -5,22 +5,17 @@ import { useRouter } from 'next/navigation';
 import { type MouseEvent as ReactMouseEvent, useCallback, useEffect, useRef, useState } from 'react';
 import {
   type ApiCallError,
-  AuthGuard,
   apiFetch,
-  Badge,
-  Button,
   EMPLOYMENT_TYPE_LABELS,
-  EmptyState,
-  ErrorState,
   EXPERIENCE_LEVEL_LABELS,
   formatDateId,
   formatDateTimeId,
-  JobStatusBadge,
-  LoadingState,
-  NoticeBanner,
-  PageBanner,
   WORK_MODE_LABELS,
-} from '@/components/ui';
+} from '@/components/ui/api-client';
+import { AuthGuard } from '@/components/ui/auth-guard';
+import { EmptyState, ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
+import { Badge, Button, JobStatusBadge } from '@/components/ui/forms';
+import { PageBanner } from '@/components/ui/page-banner';
 import type { BookmarkRecord } from '@/lib/contracts';
 
 function formatRelativeId(value?: string | null): string {
@@ -97,13 +92,19 @@ function MoreMenu({ busy, onRemove }: { busy: boolean; onRemove: () => void }) {
   );
 }
 
-function BookmarksInner() {
+function BookmarksInner({ onCountChange }: { onCountChange: (count: number) => void }) {
   const router = useRouter();
   const [items, setItems] = useState<BookmarkRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiCallError | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    if (!loading && !error) {
+      onCountChange(items.length);
+    }
+  }, [items.length, loading, error, onCountChange]);
 
   function handleCardClick(event: ReactMouseEvent<HTMLElement>, jobId: string) {
     const target = event.target as HTMLElement | null;
@@ -151,36 +152,7 @@ function BookmarksInner() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <PageBanner
-        kicker="Daftar Pilihan"
-        title={
-          <span className="page-banner__title-row">
-            <span>Lowongan Tersimpan</span>
-            <span
-              className="page-banner__count"
-              aria-label={`${items.length} lowongan tersimpan`}
-            >
-              {items.length} tersimpan
-            </span>
-          </span>
-        }
-        subtitle="Daftar lowongan yang kamu simpan untuk ditinjau kembali sebelum melamar di situs resmi perusahaan."
-        tone="sage"
-        imageSrc="/images/banner-bookmarks.jpg"
-        imageAlt="Ilustrasi lowongan tersimpan"
-        actions={
-          <>
-            <Link href="/jobs" className="btn btn-primary btn-sm">
-              Cari Lowongan Lainnya
-            </Link>
-            <Link href="/recommendations" className="btn btn-outline btn-sm">
-              Lihat Rekomendasi
-            </Link>
-          </>
-        }
-      />
-
+    <>
       {notice ? (
         <NoticeBanner variant={notice.type} onDismiss={() => setNotice(null)}>
           {notice.text}
@@ -192,6 +164,7 @@ function BookmarksInner() {
           title="Memuat lowongan tersimpan..."
           description="Mohon tunggu sebentar."
           lines={4}
+          reserved
         />
       ) : error ? (
         <ErrorState
@@ -300,7 +273,11 @@ function BookmarksInner() {
                 </div>
 
                 <div className="bookmark-card-actions">
-                  <Link href={`/jobs/${job.id}`} className="btn btn-primary btn-sm">
+                  <Link
+                    href={`/jobs/${job.id}`}
+                    aria-label={`Detail dan sumber asli untuk ${job.title} di ${job.company}`}
+                    className="btn btn-primary btn-sm"
+                  >
                     Detail &amp; Sumber Asli
                   </Link>
                   <span className="job-timestamp">
@@ -312,14 +289,50 @@ function BookmarksInner() {
           })}
         </div>
       )}
-    </div>
+    </>
   );
 }
 
 export default function BookmarksPage() {
+  const [savedCount, setSavedCount] = useState<number | null>(null);
+
   return (
-    <AuthGuard title="Masuk untuk Melihat Lowongan Tersimpan">
-      {() => <BookmarksInner />}
-    </AuthGuard>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <PageBanner
+        kicker="Daftar Pilihan"
+        title={
+          <span className="page-banner__title-row">
+            <span>Lowongan Tersimpan</span>
+            <span
+              className="page-banner__count"
+              aria-label={
+                savedCount === null
+                  ? 'Memuat jumlah lowongan tersimpan'
+                  : `${savedCount} lowongan tersimpan`
+              }
+            >
+              {savedCount === null ? 'Memuat...' : `${savedCount} tersimpan`}
+            </span>
+          </span>
+        }
+        subtitle="Daftar lowongan yang kamu simpan untuk ditinjau kembali sebelum melamar di situs resmi perusahaan."
+        tone="sage"
+        imageSrc="/images/banner-bookmarks.jpg"
+        actions={
+          <>
+            <Link href="/jobs" className="btn btn-primary btn-sm">
+              Cari Lowongan Lainnya
+            </Link>
+            <Link href="/recommendations" className="btn btn-outline btn-sm">
+              Lihat Rekomendasi
+            </Link>
+          </>
+        }
+      />
+
+      <AuthGuard title="Masuk untuk Melihat Lowongan Tersimpan">
+        {() => <BookmarksInner onCountChange={setSavedCount} />}
+      </AuthGuard>
+    </div>
   );
 }

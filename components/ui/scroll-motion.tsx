@@ -35,7 +35,9 @@ export function ScrollProgressBar() {
       }
     };
 
-    update();
+    if ((window.scrollY || document.documentElement.scrollTop) > 0) {
+      rafId = window.requestAnimationFrame(update);
+    }
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll, { passive: true });
     return () => {
@@ -75,13 +77,6 @@ export function ScrollReveal({
 
     const node = ref.current;
     if (!node || typeof IntersectionObserver === 'undefined') {
-      setVisible(true);
-      return;
-    }
-
-    // Immediate check if already in viewport
-    const rect = node.getBoundingClientRect();
-    if (rect.top < window.innerHeight * 0.96) {
       setVisible(true);
       return;
     }
@@ -157,7 +152,7 @@ export function ScrollWordHighlight({
       }
     };
 
-    compute();
+    rafId = window.requestAnimationFrame(compute);
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll, { passive: true });
     return () => {
@@ -230,7 +225,7 @@ export function ScrollStepsProgress({
       }
     };
 
-    compute();
+    rafId = window.requestAnimationFrame(compute);
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll, { passive: true });
     return () => {

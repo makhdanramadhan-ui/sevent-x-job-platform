@@ -7,19 +7,27 @@ import { apiFetch } from './api-client';
 import { LoadingState, NoticeBanner } from './feedback';
 import { Button, FormField, PasswordInput, TextInput } from './forms';
 import { AuthDivider, GoogleAuthButton } from './google-button';
-import { hasAuthSessionCookie, notifyAuthChanged, type SessionInfo } from './navigation';
+import {
+  fetchSessionIfCookie,
+  hasAuthSessionCookie,
+  notifyAuthChanged,
+  type SessionInfo,
+} from './navigation';
 
 export function AuthGuard({
   title = 'Masuk untuk Melanjutkan',
+  headingAs = 'h2',
   children,
 }: {
   title?: string;
+  headingAs?: 'h1' | 'h2';
   children: (session: SessionInfo) => ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const ModalHeading = headingAs;
 
   // Popup modal form state
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
@@ -34,19 +42,15 @@ export function AuthGuard({
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const verify = useCallback(async () => {
+  const verify = useCallback(async (forceRefresh = false) => {
     if (!hasAuthSessionCookie()) {
       setSession(null);
       setLoading(false);
       return;
     }
     setLoading(true);
-    const res = await apiFetch<SessionInfo>('/api/auth/me');
-    if (res.ok) {
-      setSession(res.data);
-    } else {
-      setSession(null);
-    }
+    const data = await fetchSessionIfCookie(forceRefresh);
+    setSession(data);
     setLoading(false);
   }, []);
 
@@ -97,7 +101,7 @@ export function AuthGuard({
       }
 
       notifyAuthChanged();
-      await verify();
+      await verify(true);
       setSubmitting(false);
       router.refresh();
       return;
@@ -130,7 +134,7 @@ export function AuthGuard({
     }
 
     notifyAuthChanged();
-    await verify();
+    await verify(true);
     setSubmitting(false);
     router.refresh();
   }
@@ -141,6 +145,7 @@ export function AuthGuard({
         title="Memuat halaman..."
         description="Mohon tunggu sebentar."
         lines={3}
+        reserved
       />
     );
   }
@@ -179,13 +184,13 @@ export function AuthGuard({
           <div className="auth-modal-dialog">
             <div className="auth-modal-header">
               <div>
-                <h1
+                <ModalHeading
                   id="auth-modal-title"
                   className="font-editorial"
                   style={{ fontSize: '1.4rem', margin: 0 }}
                 >
                   {title}
-                </h1>
+                </ModalHeading>
               </div>
 
               <Link
