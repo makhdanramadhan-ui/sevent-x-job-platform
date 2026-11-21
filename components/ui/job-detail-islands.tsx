@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { apiFetch } from '@/components/ui/api-client';
 import { ButtonText } from '@/components/ui/button-text';
-import { NoticeBanner } from '@/components/ui/feedback';
 import { proxiedLogoSrc } from '@/lib/logo-proxy';
 
 function getCompanyInitials(company: string): string {
@@ -26,7 +25,7 @@ function isUsableLogoUrl(url?: string | null): url is string {
   if (!url) return false;
   const trimmed = url.trim();
   if (!/^https?:\/\//i.test(trimmed)) return false;
-  return !/static\.licdn\.com|ghost|spacer/i.test(trimmed);
+  return !/static\.licdn\.com|google\.com\/s2\/favicons|ghost|spacer/i.test(trimmed);
 }
 
 export function DetailCompanyLogo({
@@ -36,8 +35,10 @@ export function DetailCompanyLogo({
   company: string;
   logoUrl?: string | null;
 }) {
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const canRenderLogo = isUsableLogoUrl(logoUrl) && failedUrl !== logoUrl;
+  const isLoaded = canRenderLogo && loadedUrl === logoUrl;
 
   return (
     <div
@@ -45,6 +46,7 @@ export function DetailCompanyLogo({
       aria-hidden="true"
       title={company}
       style={{
+        position: 'relative',
         width: 'clamp(52px, 8vw, 68px)',
         height: 'clamp(52px, 8vw, 68px)',
         borderRadius: 14,
@@ -53,6 +55,7 @@ export function DetailCompanyLogo({
         flexShrink: 0,
       }}
     >
+      <span>{getCompanyInitials(company)}</span>
       {canRenderLogo ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -65,26 +68,24 @@ export function DetailCompanyLogo({
           onError={() => setFailedUrl(logoUrl ?? null)}
           onLoad={(e) => {
             const { naturalWidth, naturalHeight } = e.currentTarget;
-            if (
-              naturalWidth === 0 ||
-              (logoUrl?.includes('google.com/s2/favicons') &&
-                naturalWidth <= 16 &&
-                naturalHeight <= 16)
-            ) {
+            if (naturalWidth === 0 || (naturalWidth <= 16 && naturalHeight <= 16)) {
               setFailedUrl(logoUrl ?? null);
+              return;
             }
+            setLoadedUrl(logoUrl ?? null);
           }}
           style={{
+            position: 'absolute',
+            inset: 0,
             width: '100%',
             height: '100%',
             objectFit: 'contain',
             padding: 6,
             backgroundColor: '#ffffff',
+            opacity: isLoaded ? 1 : 0,
           }}
         />
-      ) : (
-        getCompanyInitials(company)
-      )}
+      ) : null}
     </div>
   );
 }
@@ -252,9 +253,14 @@ export function JobDetailTopActions({
       </div>
 
       {notice ? (
-        <NoticeBanner variant={notice.type} onDismiss={() => setNotice(null)}>
+        <div
+          role="status"
+          aria-live="polite"
+          className={`state-panel ${notice.type === 'error' ? 'state-panel-error' : ''}`}
+          style={{ padding: '12px 16px', margin: 0, fontSize: '0.9rem' }}
+        >
           {notice.text}
-        </NoticeBanner>
+        </div>
       ) : null}
     </>
   );
