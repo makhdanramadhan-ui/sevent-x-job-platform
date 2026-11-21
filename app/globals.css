@@ -1501,8 +1501,6 @@ h4 {
 
   .job-detail-sidebar {
     position: static;
-    content-visibility: auto;
-    contain-intrinsic-size: auto 480px;
   }
 }
 

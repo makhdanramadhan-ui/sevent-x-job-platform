@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { apiFetch } from '@/components/ui/api-client';
 import { ButtonText } from '@/components/ui/button-text';
+import type { DescriptionBlock } from '@/lib/job-description';
 import { proxiedLogoSrc } from '@/lib/logo-proxy';
 
 function getCompanyInitials(company: string): string {
@@ -352,5 +353,89 @@ export function CopySourceUrlButton({ sourceUrl }: { sourceUrl: string }) {
         )}
       </span>
     </button>
+  );
+}
+
+export function DeferredDescriptionBlocks({
+  blocks,
+  startIndex,
+  estimatedHeight,
+}: {
+  blocks: DescriptionBlock[];
+  startIndex: number;
+  estimatedHeight: number;
+}) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    let done = false;
+    const reveal = () => {
+      if (done) return;
+      done = true;
+      setMounted(true);
+    };
+
+    const timer = window.setTimeout(reveal, 2800);
+    window.addEventListener('scroll', reveal, { passive: true, once: true });
+    window.addEventListener('pointerdown', reveal, { passive: true, once: true });
+    window.addEventListener('touchstart', reveal, { passive: true, once: true });
+    window.addEventListener('keydown', reveal, { passive: true, once: true });
+
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('scroll', reveal);
+      window.removeEventListener('pointerdown', reveal);
+      window.removeEventListener('touchstart', reveal);
+      window.removeEventListener('keydown', reveal);
+    };
+  }, []);
+
+  if (!mounted) {
+    return <div style={{ minHeight: estimatedHeight }} aria-hidden="true" />;
+  }
+
+  return (
+    <>
+      {blocks.map((block, offset) => {
+        const index = startIndex + offset;
+        const isLast = offset === blocks.length - 1;
+        if (block.type === 'heading') {
+          return (
+            <h3 key={`${index}-${block.text}`} className="job-desc-heading">
+              {block.text}
+            </h3>
+          );
+        }
+        if (block.type === 'list') {
+          return (
+            <ul
+              key={`list-${index}`}
+              className="job-desc-list"
+              style={{ marginBottom: isLast ? 0 : 14 }}
+            >
+              {block.items.map((item, itemIdx) => (
+                <li
+                  key={`item-${index}-${itemIdx}`}
+                  style={{
+                    marginBottom: itemIdx === block.items.length - 1 ? 0 : 6,
+                  }}
+                >
+                  {item}
+                </li>
+              ))}
+            </ul>
+          );
+        }
+        return (
+          <p
+            key={`para-${index}`}
+            className="job-desc-para"
+            style={{ marginBottom: isLast ? 0 : 14 }}
+          >
+            {block.text}
+          </p>
+        );
+      })}
+    </>
   );
 }

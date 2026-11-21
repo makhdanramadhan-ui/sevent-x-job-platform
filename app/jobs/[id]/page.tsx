@@ -12,6 +12,7 @@ import { ButtonText } from '@/components/ui/button-text';
 import { JobDetailAuthSection } from '@/components/ui/job-detail-auth-section';
 import {
   CopySourceUrlButton,
+  DeferredDescriptionBlocks,
   DetailCompanyLogo,
   JobDetailTopActions,
   SourceSiteLogo,
@@ -232,17 +233,7 @@ async function getServerJobDetail(jobId: string): Promise<{
 
   try {
     const supabase = await createCookieClient(env);
-    const [authRes, jobRes] = await Promise.all([
-      supabase.auth.getUser(),
-      supabase
-        .from('jobs')
-        .select('*, job_sources(*)')
-        .eq('id', jobId)
-        .order('fetched_at', { referencedTable: 'job_sources', ascending: false })
-        .maybeSingle(),
-    ]);
-
-    const { data: authData, error: authErr } = authRes;
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
     if (authErr || !authData.user) {
       return { authenticated: false, job: null, isBookmarked: false };
     }
@@ -250,16 +241,24 @@ async function getServerJobDetail(jobId: string): Promise<{
       return { authenticated: false, job: null, isBookmarked: false };
     }
 
+    const [jobRes, bmRes] = await Promise.all([
+      supabase
+        .from('jobs')
+        .select('*, job_sources(*)')
+        .eq('id', jobId)
+        .order('fetched_at', { referencedTable: 'job_sources', ascending: false })
+        .maybeSingle(),
+      supabase
+        .from('bookmarks')
+        .select('job_id')
+        .eq('user_id', authData.user.id)
+        .eq('job_id', jobId)
+        .maybeSingle(),
+    ]);
+
     if (jobRes.error || !jobRes.data) {
       return { authenticated: true, job: null, isBookmarked: false };
     }
-
-    const bmRes = await supabase
-      .from('bookmarks')
-      .select('job_id')
-      .eq('user_id', authData.user.id)
-      .eq('job_id', jobId)
-      .maybeSingle();
 
     return {
       authenticated: true,
@@ -291,6 +290,13 @@ export default async function JobDetailPage({
   const descriptionBlocks = job.description
     ? enhanceDescriptionBlocks(parseJobDescriptionBlocks(job.description))
     : [];
+  const initialBlocks = descriptionBlocks.slice(0, 4);
+  const deferredBlocks = descriptionBlocks.slice(4);
+  const deferredEstimatedHeight = deferredBlocks.reduce((acc, block) => {
+    if (block.type === 'heading') return acc + 52;
+    if (block.type === 'list') return acc + block.items.length * 32 + 16;
+    return acc + Math.max(56, Math.ceil(block.text.length / 55) * 26);
+  }, 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -446,8 +452,9 @@ export default async function JobDetailPage({
           </h2>
           {descriptionBlocks.length > 0 ? (
             <div className="job-desc-content">
-              {descriptionBlocks.map((block, index) => {
-                const isLast = index === descriptionBlocks.length - 1;
+              {initialBlocks.map((block, index) => {
+                const isLast =
+                  deferredBlocks.length === 0 && index === initialBlocks.length - 1;
                 if (block.type === 'heading') {
                   return (
                     <h3
@@ -488,6 +495,13 @@ export default async function JobDetailPage({
                   </p>
                 );
               })}
+              {deferredBlocks.length > 0 ? (
+                <DeferredDescriptionBlocks
+                  blocks={deferredBlocks}
+                  startIndex={initialBlocks.length}
+                  estimatedHeight={deferredEstimatedHeight}
+                />
+              ) : null}
             </div>
           ) : (
             <p style={{ margin: 0, color: 'var(--ink-secondary)', fontSize: '0.92rem' }}>

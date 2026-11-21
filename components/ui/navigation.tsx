@@ -83,7 +83,10 @@ export function useAuthSession() {
   }, []);
 
   useEffect(() => {
-    void loadSession();
+    const timer = window.setTimeout(() => {
+      void loadSession();
+    }, 120);
+    return () => window.clearTimeout(timer);
   }, [pathname, loadSession]);
 
   useEffect(() => {
