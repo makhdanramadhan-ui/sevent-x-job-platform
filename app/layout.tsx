@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { DM_Mono, Instrument_Sans } from 'next/font/google';
+import { Instrument_Sans } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { SITE_NAME } from '@/components/ui/api-client';
 import { SiteFooter, SiteHeader } from '@/components/ui/navigation';
@@ -10,13 +10,6 @@ const instrumentSans = Instrument_Sans({
   weight: ['400', '500', '600', '700'],
   display: 'swap',
   variable: '--font-instrument-sans',
-});
-
-const dmMono = DM_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  display: 'swap',
-  variable: '--font-dm-mono',
 });
 
 export const metadata: Metadata = {
@@ -32,7 +25,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       data-type="software"
       data-radius="soft"
       data-buttons="solid"
-      className={`${instrumentSans.variable} ${dmMono.variable}`}
+      className={instrumentSans.variable}
     >
       <head>
         <meta name="page-type" content="software" />

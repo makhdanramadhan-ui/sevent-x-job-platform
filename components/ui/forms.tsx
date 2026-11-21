@@ -10,6 +10,7 @@ import type {
 import { useState } from 'react';
 import type { JobStatus } from '@/lib/contracts';
 import { JOB_STATUS_LABELS } from './api-client';
+import { ButtonText } from './button-text';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost';
 export type ButtonSize = 'sm' | 'md' | 'lg';
@@ -40,7 +41,7 @@ export function Button({
       {...rest}
     >
       {loading ? <span aria-hidden="true">⟳</span> : null}
-      <span>{children}</span>
+      <ButtonText>{children}</ButtonText>
     </button>
   );
 }

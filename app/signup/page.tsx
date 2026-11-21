@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { type FormEvent, useState } from 'react';
 import { type ApiCallError, apiFetch, SITE_NAME } from '@/components/ui/api-client';
+import { ButtonText } from '@/components/ui/button-text';
 import { ErrorState, NoticeBanner } from '@/components/ui/feedback';
 import { Button, FormField, PasswordInput, TextInput } from '@/components/ui/forms';
 import { AuthDivider, GoogleAuthButton } from '@/components/ui/google-button';
@@ -125,7 +126,7 @@ export default function SignupPage() {
           >
             <span style={{ color: 'var(--ink-secondary)' }}>Sudah verifikasi email?</span>
             <Link href="/login" className="btn btn-outline btn-sm">
-              Masuk ke Akun
+              <ButtonText>Masuk ke Akun</ButtonText>
             </Link>
           </div>
         </div>
@@ -235,7 +236,7 @@ export default function SignupPage() {
         >
           <span style={{ color: 'var(--ink-secondary)' }}>Sudah punya akun {SITE_NAME}?</span>
           <Link href="/login" className="btn btn-outline btn-sm">
-            Masuk di Sini
+            <ButtonText>Masuk di Sini</ButtonText>
           </Link>
         </div>
       </div>

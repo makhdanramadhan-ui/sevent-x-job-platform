@@ -13,6 +13,7 @@ import {
   WORK_MODE_LABELS,
 } from '@/components/ui/api-client';
 import { AuthGuard } from '@/components/ui/auth-guard';
+import { ButtonText } from '@/components/ui/button-text';
 import { EmptyState, ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
 import { Badge, Button, JobStatusBadge } from '@/components/ui/forms';
 import type { BookmarkRecord, JobDetail } from '@/lib/contracts';
@@ -844,7 +845,7 @@ function JobDetailInner() {
                             className="btn btn-primary"
                             style={{ width: '100%' }}
                           >
-                            Buka &amp; Lamar di {sourceLabel}
+                            <ButtonText>Buka &amp; Lamar di {sourceLabel}</ButtonText>
                           </a>
                         </>
                       ) : (
@@ -882,7 +883,7 @@ function JobDetailInner() {
               Sesuaikan ringkasan pengalaman dan keahlianmu dengan kualifikasi posisi ini agar lamaran lebih menonjol.
             </p>
             <Link href="/cv" prefetch={false} className="btn btn-outline btn-sm" style={{ width: '100%' }}>
-              Buka Studio CV
+              <ButtonText>Buka Studio CV</ButtonText>
             </Link>
           </section>
         </aside>

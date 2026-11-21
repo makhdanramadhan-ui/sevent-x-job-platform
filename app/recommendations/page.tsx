@@ -19,6 +19,7 @@ import {
   WORK_MODE_LABELS,
 } from '@/components/ui/api-client';
 import { AuthGuard } from '@/components/ui/auth-guard';
+import { ButtonText } from '@/components/ui/button-text';
 import { EmptyState, ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
 import { Button, JobStatusBadge } from '@/components/ui/forms';
 import { PageBanner } from '@/components/ui/page-banner';
@@ -302,7 +303,7 @@ function RecommendationsInner() {
           description="Isi bidang/posisi, keahlian, negara, dan lokasi kerja preferensi di profil agar kami dapat menampilkan rekomendasi lowongan yang sesuai."
           action={
             <Link href="/profile" className="btn btn-primary btn-sm">
-              Lengkapi Profil
+              <ButtonText>Lengkapi Profil</ButtonText>
             </Link>
           }
         />
@@ -317,7 +318,7 @@ function RecommendationsInner() {
                 </p>
               </div>
               <Link href="/profile" className="btn btn-outline btn-sm">
-                Perbarui Profil
+                <ButtonText>Perbarui Profil</ButtonText>
               </Link>
             </div>
             <div className="rec-stats-grid">
@@ -410,7 +411,7 @@ function RecommendationsInner() {
               action={
                 <>
                   <Link href="/jobs" className="btn btn-primary btn-sm">
-                    Cari Lowongan Sekarang
+                    <ButtonText>Cari Lowongan Sekarang</ButtonText>
                   </Link>
                   <Button variant="outline" size="sm" onClick={loadRecommendations}>
                     Muat Ulang
@@ -605,7 +606,7 @@ function RecommendationsInner() {
                       </Button>
                     ) : (
                       <Link href="/jobs" className="btn btn-primary btn-sm">
-                        Lihat Semua Lowongan di Feed
+                        <ButtonText>Lihat Semua Lowongan di Feed</ButtonText>
                       </Link>
                     )
                   }
@@ -630,8 +631,11 @@ function RecommendationsInner() {
                     </p>
                     {totalPages > 1 ? (
                       <span
-                        className="font-mono"
-                        style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}
+                        style={{
+                          fontSize: '0.84rem',
+                          color: 'var(--text-muted)',
+                          fontVariantNumeric: 'tabular-nums',
+                        }}
                       >
                         Halaman <strong>{currentPage}</strong> dari <strong>{totalPages}</strong>
                       </span>
@@ -721,7 +725,7 @@ function RecommendationsInner() {
                                 aria-label={`Detail dan sumber asli untuk ${job.title} di ${job.company}`}
                                 className="btn btn-primary btn-sm"
                               >
-                                Detail &amp; Sumber Asli
+                                <ButtonText>Detail &amp; Sumber Asli</ButtonText>
                               </a>
                             ) : (
                               <Link
@@ -729,7 +733,7 @@ function RecommendationsInner() {
                                 aria-label={`Detail dan sumber asli untuk ${job.title} di ${job.company}`}
                                 className="btn btn-primary btn-sm"
                               >
-                                Detail &amp; Sumber Asli
+                                <ButtonText>Detail &amp; Sumber Asli</ButtonText>
                               </Link>
                             )}
                           </div>
@@ -898,8 +902,9 @@ function RecommendationsInner() {
                       >
                         Sebelumnya
                       </Button>
-                      <span className="font-mono" style={{ fontSize: '0.82rem' }}>
-                        Halaman <strong>{currentPage}</strong> dari <strong>{totalPages}</strong>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--p-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                        Halaman <strong style={{ color: 'var(--p-ink)', fontWeight: 600 }}>{currentPage}</strong> dari{' '}
+                        <strong style={{ color: 'var(--p-ink)', fontWeight: 600 }}>{totalPages}</strong>
                       </span>
                       <Button
                         variant="outline"
@@ -929,14 +934,14 @@ export default function RecommendationsPage() {
         title="Rekomendasi Lowongan Untukmu"
         subtitle="Lihat peluang kerja yang paling sesuai dengan keahlian, pengalaman, dan preferensi profilmu, beserta persyaratan yang masih perlu kamu lengkapi."
         tone="mist"
-        imageSrc="/images/banner-recommendations.jpg"
+        imageSrc="/images/banner-recommendations-vector.svg"
         actions={
           <>
             <Link href="/profile" className="btn btn-outline btn-sm">
-              Ubah Profil &amp; Preferensi
+              <ButtonText>Ubah Profil &amp; Preferensi</ButtonText>
             </Link>
             <Link href="/jobs" className="btn btn-secondary btn-sm">
-              Cari Semua Lowongan
+              <ButtonText>Cari Semua Lowongan</ButtonText>
             </Link>
           </>
         }

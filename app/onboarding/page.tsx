@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { type ApiCallError, apiFetch } from '@/components/ui/api-client';
 import { AuthGuard } from '@/components/ui/auth-guard';
+import { ButtonText } from '@/components/ui/button-text';
 import { ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
 import { notifyAuthChanged } from '@/components/ui/navigation';
 import { PageBanner } from '@/components/ui/page-banner';
@@ -61,13 +62,13 @@ function OnboardingInner() {
           </p>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <Link href="/jobs" className="btn btn-primary btn-sm">
-              Cari Lowongan
+              <ButtonText>Cari Lowongan</ButtonText>
             </Link>
             <Link href="/recommendations" className="btn btn-secondary btn-sm">
-              Lihat Rekomendasi
+              <ButtonText>Lihat Rekomendasi</ButtonText>
             </Link>
             <Link href="/profile" className="btn btn-outline btn-sm">
-              Buka Profil Lengkap
+              <ButtonText>Buka Profil Lengkap</ButtonText>
             </Link>
           </div>
         </NoticeBanner>
@@ -111,10 +112,10 @@ export default function OnboardingPage() {
         title="Lengkapi Profil & Preferensi Kerjamu"
         subtitle="Isi informasi dasar, keahlian, dan kriteria pekerjaan yang kamu cari agar kami dapat memberikan rekomendasi lowongan yang sesuai serta memudahkan penyusunan CV-mu."
         tone="sand"
-        imageSrc="/images/banner-profile.jpg"
+        imageSrc="/images/banner-profile-vector.svg"
         actions={
           <Link href="/jobs" className="btn btn-outline btn-sm">
-            Lihat Lowongan
+            <ButtonText>Lihat Lowongan</ButtonText>
           </Link>
         }
       />

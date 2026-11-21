@@ -13,6 +13,7 @@ import {
   WORK_MODE_LABELS,
 } from '@/components/ui/api-client';
 import { AuthGuard } from '@/components/ui/auth-guard';
+import { ButtonText } from '@/components/ui/button-text';
 import { EmptyState, ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
 import { Badge, Button, JobStatusBadge } from '@/components/ui/forms';
 import { PageBanner } from '@/components/ui/page-banner';
@@ -179,7 +180,7 @@ function BookmarksInner({ onCountChange }: { onCountChange: (count: number) => v
           description="Simpan lowongan yang menarik perhatianmu saat mencari lowongan agar lebih mudah dibandingkan dan dilamar nanti."
           action={
             <Link href="/jobs" className="btn btn-primary btn-sm">
-              Cari Lowongan Sekarang
+              <ButtonText>Cari Lowongan Sekarang</ButtonText>
             </Link>
           }
         />
@@ -278,7 +279,7 @@ function BookmarksInner({ onCountChange }: { onCountChange: (count: number) => v
                     aria-label={`Detail dan sumber asli untuk ${job.title} di ${job.company}`}
                     className="btn btn-primary btn-sm"
                   >
-                    Detail &amp; Sumber Asli
+                    <ButtonText>Detail &amp; Sumber Asli</ButtonText>
                   </Link>
                   <span className="job-timestamp">
                     Diambil {formatRelativeId(job.last_fetched_at)}
@@ -317,14 +318,14 @@ export default function BookmarksPage() {
         }
         subtitle="Daftar lowongan yang kamu simpan untuk ditinjau kembali sebelum melamar di situs resmi perusahaan."
         tone="sage"
-        imageSrc="/images/banner-bookmarks.jpg"
+        imageSrc="/images/banner-bookmarks-vector.svg"
         actions={
           <>
             <Link href="/jobs" className="btn btn-primary btn-sm">
-              Cari Lowongan Lainnya
+              <ButtonText>Cari Lowongan Lainnya</ButtonText>
             </Link>
             <Link href="/recommendations" className="btn btn-outline btn-sm">
-              Lihat Rekomendasi
+              <ButtonText>Lihat Rekomendasi</ButtonText>
             </Link>
           </>
         }
