@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { SITE_NAME } from '@/components/ui/api-client';
+import { ButtonText } from '@/components/ui/button-text';
 import {
   LandingBentoCard1Panel,
   LandingBentoCard2Panel,
@@ -10,6 +11,7 @@ import {
   LandingPreviewStage,
   LandingWorkflowSteps,
 } from '@/components/ui/home-landing-client';
+import { HomeHeroAuthCta } from '@/components/ui/home-hero-auth-cta';
 import { ScrollReveal, ScrollWordHighlight } from '@/components/ui/scroll-motion';
 
 export default function HomePage() {
@@ -30,11 +32,9 @@ export default function HomePage() {
               </p>
               <div className="tk-hero__actions">
                 <Link href="/jobs" className="btn btn-primary btn-lg">
-                  Cari Lowongan
+                  <ButtonText>Cari Lowongan</ButtonText>
                 </Link>
-                <Link href="/signup" className="btn btn-outline btn-lg">
-                  Daftar Akun
-                </Link>
+                <HomeHeroAuthCta />
               </div>
 
               <LandingHeroStats />
@@ -42,10 +42,10 @@ export default function HomePage() {
 
             <div className="tk-hero__visual">
               <Image
-                src="/images/hero-3d-seeker.jpg"
-                alt="Ilustrasi 3D pencari kerja Indonesia menyiapkan lamaran dan CV dengan laptop"
-                width={1200}
-                height={896}
+                src="/images/hero-seeker.jpg"
+                alt="Profesional muda tersenyum bekerja menyiapkan lamaran kerja di laptop dalam ruang kerja yang cerah"
+                width={960}
+                height={640}
                 priority
                 fetchPriority="high"
                 sizes="(max-width: 480px) 360px, (max-width: 960px) 640px, 480px"
@@ -133,7 +133,7 @@ export default function HomePage() {
                   lowongan dan buka langsung halaman karier resminya.
                 </p>
                 <Link href="/jobs" className="btn btn-outline btn-lg">
-                  Lihat semua lowongan
+                  <ButtonText>Lihat semua lowongan</ButtonText>
                 </Link>
                 <span className="tk-companies-footnote">
                   Nama dan merek perusahaan adalah milik masing-masing pemegang hak.
@@ -193,10 +193,10 @@ export default function HomePage() {
                 </div>
                 <div className="tk-feature-panel tk-feature-panel--photo">
                   <Image
-                    src="/images/cv-3d-workspace.jpg"
-                    alt="Ilustrasi 3D dokumen CV, tas kerja, pena biru, dan kaca pembesar di meja kerja"
-                    width={1376}
-                    height={768}
+                    src="/images/cv-workspace.jpg"
+                    alt="Tangan mengetik di laptop dengan buku catatan dan kacamata di atas meja kerja yang rapi"
+                    width={1200}
+                    height={802}
                     loading="lazy"
                     sizes="(max-width: 960px) 92vw, 560px"
                   />

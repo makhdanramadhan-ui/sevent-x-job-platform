@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { DM_Mono, Instrument_Sans } from 'next/font/google';
+import { Instrument_Sans } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { SITE_NAME } from '@/components/ui/api-client';
 import { SiteFooter, SiteHeader } from '@/components/ui/navigation';
@@ -12,15 +12,8 @@ const instrumentSans = Instrument_Sans({
   variable: '--font-instrument-sans',
 });
 
-const dmMono = DM_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  display: 'swap',
-  variable: '--font-dm-mono',
-});
-
 export const metadata: Metadata = {
-  title: `${SITE_NAME} — Cari Lowongan Kerja & Cek Kecocokan Profil`,
+  title: `${SITE_NAME} - Cari Lowongan Kerja & Cek Kecocokan Profil`,
   description:
     'Cari lowongan kerja lintas bidang di Indonesia, lihat kecocokan kualifikasi profilmu secara transparan, siapkan CV, lalu lamar langsung di situs resmi perusahaan.',
 };
@@ -32,12 +25,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       data-type="software"
       data-radius="soft"
       data-buttons="solid"
-      className={`${instrumentSans.variable} ${dmMono.variable}`}
+      className={instrumentSans.variable}
     >
       <head>
         <meta name="page-type" content="software" />
         <meta name="site-kind" content="software" />
         <meta name="theme-color" content="#ffffff" />
+        <link rel="preconnect" href="https://lh3.googleusercontent.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://lh3.googleusercontent.com" />
       </head>
       <body>
         <div className="app-shell">

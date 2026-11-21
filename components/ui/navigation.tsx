@@ -5,6 +5,7 @@ import { BrandMark } from './brand-mark';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch, SITE_NAME } from './api-client';
+import { ButtonText } from './button-text';
 import { ScrollProgressBar } from './scroll-motion';
 
 export type SessionInfo = {
@@ -59,6 +60,37 @@ export function notifyAuthChanged(): void {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('seventx:auth-changed'));
   }
+}
+
+export function useAuthSession() {
+  const pathname = usePathname();
+  const [session, setSession] = useState<SessionInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadSession = useCallback(async () => {
+    if (!hasAuthSessionCookie()) {
+      setSession(null);
+      setLoading(false);
+      return;
+    }
+    const nextSession = await fetchSessionIfCookie();
+    setSession(nextSession);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void loadSession();
+  }, [pathname, loadSession]);
+
+  useEffect(() => {
+    const handler = () => {
+      void loadSession();
+    };
+    window.addEventListener('seventx:auth-changed', handler);
+    return () => window.removeEventListener('seventx:auth-changed', handler);
+  }, [loadSession]);
+
+  return { session, loading };
 }
 
 const NAV_ITEMS = [
@@ -204,32 +236,12 @@ export function SiteHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [session, setSession] = useState<SessionInfo | null>(null);
-  const [checking, setChecking] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-
-  const loadSession = useCallback(async () => {
-    const nextSession = await fetchSessionIfCookie();
-    setSession(nextSession);
-    setChecking(false);
-  }, []);
-
-  useEffect(() => {
-    loadSession();
-  }, [pathname, loadSession]);
-
-  useEffect(() => {
-    const handler = () => {
-      loadSession();
-    };
-    window.addEventListener('seventx:auth-changed', handler);
-    return () => window.removeEventListener('seventx:auth-changed', handler);
-  }, [loadSession]);
+  const { session, loading } = useAuthSession();
 
   async function executeLogout() {
     setLoggingOut(true);
     await apiFetch('/api/auth/logout', { method: 'POST' });
-    setSession(null);
     setLoggingOut(false);
     setMenuOpen(false);
     notifyAuthChanged();
@@ -338,8 +350,8 @@ export function SiteHeader() {
                   : 'nav-auth-area-guest'
               }`}
             >
-              {checking ? (
-                <span style={{ fontSize: '0.875rem', color: 'var(--p-muted)' }}>Memuat...</span>
+              {loading ? (
+                <span className="nav-auth-placeholder" aria-hidden="true" />
               ) : session ? (
                 <>
                   <div className="nav-desktop-avatar">
@@ -353,10 +365,10 @@ export function SiteHeader() {
                   {!session.has_profile ? (
                     <Link
                       href="/onboarding"
-                      className="nav-onboarding-link"
+                      className="btn btn-primary nav-onboarding-link"
                       onClick={() => setMenuOpen(false)}
                     >
-                      Lengkapi profil
+                      <ButtonText>Lengkapi Profil</ButtonText>
                     </Link>
                   ) : null}
                 </>
@@ -374,7 +386,7 @@ export function SiteHeader() {
                     className="btn btn-primary nav-auth-btn"
                     onClick={() => setMenuOpen(false)}
                   >
-                    Daftar Akun
+                    <ButtonText>Daftar Akun</ButtonText>
                   </Link>
                 </>
               )}
@@ -388,25 +400,8 @@ export function SiteHeader() {
 }
 
 export function SiteFooter() {
-  const pathname = usePathname();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  const checkSession = useCallback(async () => {
-    const nextSession = await fetchSessionIfCookie();
-    setIsLoggedIn(Boolean(nextSession));
-  }, []);
-
-  useEffect(() => {
-    checkSession();
-  }, [pathname, checkSession]);
-
-  useEffect(() => {
-    const handler = () => {
-      checkSession();
-    };
-    window.addEventListener('seventx:auth-changed', handler);
-    return () => window.removeEventListener('seventx:auth-changed', handler);
-  }, [checkSession]);
+  const { session, loading } = useAuthSession();
+  const isLoggedIn = session !== null;
 
   return (
     <footer className="site-footer">
@@ -424,11 +419,13 @@ export function SiteFooter() {
               perusahaan.
             </p>
             <div className="footer-cta-row">
-              {!isLoggedIn ? (
+              {loading ? (
+                <span className="btn btn-primary btn-sm auth-cta-placeholder" aria-hidden="true" />
+              ) : session ? null : (
                 <Link href="/signup" className="btn btn-primary btn-sm">
-                  Daftar Akun
+                  <ButtonText>Daftar Akun</ButtonText>
                 </Link>
-              ) : null}
+              )}
               <Link
                 href="/jobs"
                 className={isLoggedIn ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm'}
@@ -442,7 +439,7 @@ export function SiteFooter() {
                       }
                 }
               >
-                Cari Lowongan
+                <ButtonText>Cari Lowongan</ButtonText>
               </Link>
             </div>
           </div>
@@ -476,7 +473,12 @@ export function SiteFooter() {
               <li>
                 <Link href="/onboarding">Lengkapi Onboarding</Link>
               </li>
-              {!isLoggedIn ? (
+              {loading ? (
+                <>
+                  <li><span className="auth-link-placeholder" aria-hidden="true" /></li>
+                  <li><span className="auth-link-placeholder" aria-hidden="true" /></li>
+                </>
+              ) : session ? null : (
                 <>
                   <li>
                     <Link href="/login">Masuk Akun</Link>
@@ -485,7 +487,7 @@ export function SiteFooter() {
                     <Link href="/signup">Daftar Akun Baru</Link>
                   </li>
                 </>
-              ) : null}
+              )}
             </ul>
           </div>
 

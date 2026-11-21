@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
     });
 
     const emailOtp = linkData?.properties?.email_otp;
-    if (linkError || !emailOtp || !/^\d{6}$/.test(emailOtp)) {
+    if (linkError || !emailOtp || !/^\d{8}$/.test(emailOtp)) {
       console.error('[forgot-password] generateLink failed', {
         hasError: Boolean(linkError),
         message: linkError?.message,

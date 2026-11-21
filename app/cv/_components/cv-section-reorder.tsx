@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Badge } from '@/components/ui';
+import { Badge, Button } from '@/components/ui/forms';
 import {
   CV_PRESETS,
   type CvPresetId,
@@ -9,21 +9,30 @@ import {
   getPresetDefinition,
   getSectionsForPreset,
 } from '../_lib/presets';
-import { type CvContent, type CvSectionId, SECTION_LABELS } from '../_lib/types';
+import {
+  type CvContent,
+  type CvCustomSection,
+  type CvSectionId,
+  DEFAULT_SECTION_ORDER,
+  getCustomSectionKey,
+  getSectionDisplayTitle,
+  isCustomSectionId,
+} from '../_lib/types';
 
 export function CvSectionReorder({
   content,
   onChange,
   templateVersion,
   onPresetChange,
+  onSelectSection,
 }: {
   content: CvContent;
   onChange: (updated: CvContent) => void;
   templateVersion?: string | null;
   onPresetChange?: (nextPreset: CvPresetId) => void;
+  onSelectSection?: (section: CvSectionId) => void;
 }) {
-  const { language = 'en', section_order, hidden_sections } = content;
-  const labels = SECTION_LABELS[language] || SECTION_LABELS.en;
+  const { section_order, hidden_sections } = content;
 
   const currentPresetId = detectActivePreset(templateVersion, section_order);
   const activePresetDef = getPresetDefinition(currentPresetId);
@@ -32,12 +41,24 @@ export function CvSectionReorder({
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
+  // State untuk Tambah, Ubah Nama, dan Hapus Bagian
+  const [addPanelOpen, setAddPanelOpen] = useState(false);
+  const [newSectionTitle, setNewSectionTitle] = useState('');
+  const [editingSecId, setEditingSecId] = useState<CvSectionId | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
+  const [confirmDeleteSecId, setConfirmDeleteSecId] = useState<CvSectionId | null>(null);
+
+  const removedBuiltins = DEFAULT_SECTION_ORDER.filter(
+    (id) => id !== 'profile' && !section_order.includes(id),
+  );
+
   function applyPreset(presetId: CvPresetId) {
     if (presetId === 'v1-[#custom]') {
       if (onPresetChange) onPresetChange('v1-[#custom]');
       return;
     }
-    const newOrder = getSectionsForPreset(presetId);
+    const existingCustomIds = section_order.filter(isCustomSectionId);
+    const newOrder: CvSectionId[] = [...getSectionsForPreset(presetId), ...existingCustomIds];
     onChange({
       ...content,
       section_order: newOrder,
@@ -66,7 +87,123 @@ export function CvSectionReorder({
     }
   }
 
-  // Handler Drag & Drop
+  function startRename(secId: CvSectionId) {
+    setConfirmDeleteSecId(null);
+    setEditingSecId(secId);
+    setEditingTitle(getSectionDisplayTitle(content, secId));
+  }
+
+  function cancelRename() {
+    setEditingSecId(null);
+    setEditingTitle('');
+  }
+
+  function commitRename(secId: CvSectionId) {
+    const trimmed = editingTitle.trim().slice(0, 80);
+
+    if (isCustomSectionId(secId)) {
+      if (trimmed) {
+        const key = getCustomSectionKey(secId);
+        const nextCustomSections = (content.custom_sections ?? []).map((item) =>
+          item.id === key ? { ...item, title: trimmed } : item,
+        );
+        onChange({
+          ...content,
+          custom_sections: nextCustomSections,
+        });
+      }
+    } else {
+      const nextTitles = { ...(content.section_titles ?? {}) };
+      if (trimmed) {
+        nextTitles[secId] = trimmed;
+      } else {
+        delete nextTitles[secId];
+      }
+      onChange({
+        ...content,
+        section_titles: nextTitles,
+      });
+    }
+
+    setEditingSecId(null);
+    setEditingTitle('');
+  }
+
+  function handleAddCustomSection() {
+    const trimmed = newSectionTitle.trim().slice(0, 80);
+    if (!trimmed) return;
+
+    const customKey = `sec-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    const newSecId: CvSectionId = `custom:${customKey}`;
+    const newItem: CvCustomSection = {
+      id: customKey,
+      title: trimmed,
+      content: '',
+    };
+
+    onChange({
+      ...content,
+      custom_sections: [...(content.custom_sections ?? []), newItem],
+      section_order: [...section_order, newSecId],
+    });
+    if (onPresetChange) {
+      onPresetChange('v1-[#custom]');
+    }
+    if (onSelectSection) {
+      onSelectSection(newSecId);
+    }
+
+    setNewSectionTitle('');
+    setAddPanelOpen(false);
+  }
+
+  function handleRestoreBuiltin(secId: CvSectionId) {
+    if (section_order.includes(secId)) return;
+    onChange({
+      ...content,
+      section_order: [...section_order, secId],
+      hidden_sections: hidden_sections.filter((id) => id !== secId),
+    });
+    if (onPresetChange) {
+      onPresetChange('v1-[#custom]');
+    }
+    if (onSelectSection) {
+      onSelectSection(secId);
+    }
+  }
+
+  function removeSection(secId: CvSectionId) {
+    if (secId === 'profile' || section_order.length <= 1) return;
+
+    const nextOrder = section_order.filter((id) => id !== secId);
+    const nextHidden = hidden_sections.filter((id) => id !== secId);
+    const nextTitles = { ...(content.section_titles ?? {}) };
+    delete nextTitles[secId];
+
+    let nextCustomSections = content.custom_sections ?? [];
+    if (isCustomSectionId(secId)) {
+      const key = getCustomSectionKey(secId);
+      nextCustomSections = nextCustomSections.filter((item) => item.id !== key);
+    }
+
+    onChange({
+      ...content,
+      section_order: nextOrder,
+      hidden_sections: nextHidden,
+      custom_sections: nextCustomSections,
+      section_titles: nextTitles,
+    });
+    if (onPresetChange) {
+      onPresetChange('v1-[#custom]');
+    }
+
+    setConfirmDeleteSecId(null);
+    if (editingSecId === secId) {
+      setEditingSecId(null);
+      setEditingTitle('');
+    }
+  }
+
   function handleDragStart(index: number, e: React.DragEvent) {
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
@@ -116,23 +253,16 @@ export function CvSectionReorder({
   }
 
   return (
-    <div className="surface-card">
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          flexWrap: 'wrap',
-          gap: 10,
-          marginBottom: 8,
-        }}
-      >
+    <div className="ledger-card">
+      <div className="cv-section-header" style={{ alignItems: 'flex-start', marginBottom: 8 }}>
         <div>
-          <h3 style={{ fontSize: '1.15rem', margin: '0 0 4px 0', fontWeight: 700 }}>
+          <h3 className="cv-section-heading" style={{ marginBottom: 4 }}>
             Tata Letak &amp; Urutan Bagian CV (ATS Flow)
           </h3>
-          <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--ink-secondary)' }}>
-            Pilih preset instan atau <strong>tarik dan lepas (Drag &amp; Drop)</strong> kotak bagian untuk mengatur urutan CV Anda.
+          <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--ink-secondary)' }}>
+            Pilih preset instan, ubah nama, tambah, hapus, atau{' '}
+            <strong>tarik dan lepas (Drag &amp; Drop)</strong> kotak bagian untuk mengatur urutan CV
+            Anda.
           </p>
         </div>
         <Badge variant={currentPresetId === 'v1-[#custom]' ? 'neutral' : 'open'}>
@@ -141,16 +271,7 @@ export function CvSectionReorder({
       </div>
 
       {/* Preset Selector Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 10,
-          margin: '14px 0 16px 0',
-        }}
-        role="group"
-        aria-label="Pilihan Preset Jenis CV"
-      >
+      <div className="cv-preset-grid" role="group" aria-label="Pilihan Preset Jenis CV">
         {CV_PRESETS.map((preset) => {
           const isSelected = currentPresetId === preset.id;
           return (
@@ -158,188 +279,365 @@ export function CvSectionReorder({
               key={preset.id}
               type="button"
               onClick={() => applyPreset(preset.id)}
-              style={{
-                textAlign: 'left',
-                padding: '10px 12px',
-                borderRadius: 'var(--radius-md, 10px)',
-                border: isSelected
-                  ? '2px solid var(--p-primary, #b8381e)'
-                  : '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
-                background: isSelected ? 'var(--p-primary-soft, #fdf2f0)' : '#ffffff',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
+              className={`cv-preset-card${isSelected ? ' cv-preset-card--active' : ''}`}
             >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: 4,
-                }}
-              >
-                <strong
-                  style={{
-                    fontSize: '0.88rem',
-                    color: isSelected ? 'var(--p-primary, #b8381e)' : 'inherit',
-                  }}
-                >
-                  {preset.name}
-                </strong>
-                {isSelected ? (
-                  <span style={{ fontSize: '0.75rem', color: 'var(--p-primary, #b8381e)' }}>
-                    ● Aktif
-                  </span>
-                ) : null}
+              <div className="cv-preset-card__top">
+                <strong className="cv-preset-card__name">{preset.name}</strong>
+                {isSelected ? <Badge variant="accent">Aktif</Badge> : null}
               </div>
-              <p
-                style={{
-                  margin: '0 0 6px 0',
-                  fontSize: '0.78rem',
-                  color: 'var(--ink-secondary)',
-                  lineHeight: 1.35,
-                }}
-              >
-                {preset.description}
-              </p>
-              <span
-                style={{
-                  fontSize: '0.72rem',
-                  color: 'var(--ink-muted)',
-                  fontStyle: 'italic',
-                  display: 'block',
-                }}
-              >
-                Cocok untuk: {preset.recommendedFor}
-              </span>
+              <p className="cv-preset-card__desc">{preset.description}</p>
+              <span className="cv-preset-card__for">Cocok untuk: {preset.recommendedFor}</span>
             </button>
           );
         })}
       </div>
 
-      {/* Drag & Drop Reorderable Section List */}
-      <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink-secondary)' }}>
-          Urutan Bagian ({section_order.length} Bagian — Drag kotak untuk memindahkan):
+      {/* Toolbar Urutan Bagian + Tambah Bagian */}
+      <div className="cv-reorder-toolbar">
+        <span className="cv-reorder-toolbar__title">
+          Urutan Bagian ({section_order.length} Bagian — seret kotak untuk memindahkan):
         </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setAddPanelOpen((prev) => !prev);
+            setConfirmDeleteSecId(null);
+          }}
+        >
+          {addPanelOpen ? 'Tutup' : '+ Tambah Bagian'}
+        </Button>
       </div>
 
-      <ul
-        style={{
-          listStyle: 'none',
-          padding: 0,
-          margin: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-        }}
-        aria-label="Daftar urutan bagian CV yang dapat digeser"
-      >
+      {addPanelOpen ? (
+        <div className="cv-add-section-panel">
+          <label htmlFor="cv-new-section-title" className="cv-add-section-label">
+            Nama Bagian Baru
+          </label>
+          <form
+            className="cv-add-section-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleAddCustomSection();
+            }}
+          >
+            <input
+              id="cv-new-section-title"
+              type="text"
+              className="input-control"
+              maxLength={80}
+              placeholder="Contoh: Bahasa, Publikasi, atau Pengalaman Relawan"
+              value={newSectionTitle}
+              onChange={(e) => setNewSectionTitle(e.target.value)}
+            />
+            <Button type="submit" variant="primary" size="sm" disabled={!newSectionTitle.trim()}>
+              Tambahkan
+            </Button>
+          </form>
+
+          {removedBuiltins.length > 0 ? (
+            <div className="cv-restore-group">
+              <span className="cv-restore-label">Atau tambahkan kembali bagian bawaan:</span>
+              <div className="cv-restore-chips">
+                {removedBuiltins.map((secId) => (
+                  <Button
+                    key={secId}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRestoreBuiltin(secId)}
+                  >
+                    + {getSectionDisplayTitle(content, secId)}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      <ul className="cv-reorder-list" aria-label="Daftar urutan bagian CV yang dapat digeser">
         {section_order.map((secId, index) => {
           const isHidden = hidden_sections.includes(secId);
-          const label = labels[secId] || secId;
+          const label = getSectionDisplayTitle(content, secId);
           const isBeingDragged = draggedIndex === index;
           const isOver = dragOverIndex === index && !isBeingDragged;
+          const isEditing = editingSecId === secId;
+          const isConfirmingDelete = confirmDeleteSecId === secId;
+          const canDelete = secId !== 'profile' && section_order.length > 1;
+
+          const itemClass = [
+            'cv-reorder-item',
+            isHidden ? 'cv-reorder-item--hidden' : '',
+            isBeingDragged ? 'cv-reorder-item--dragging' : '',
+            isOver ? 'cv-reorder-item--over' : '',
+            isEditing ? 'cv-reorder-item--editing' : '',
+          ]
+            .filter(Boolean)
+            .join(' ');
 
           return (
             <li
               key={secId}
-              draggable
-              onDragStart={(e) => handleDragStart(index, e)}
+              draggable={!isEditing && !isConfirmingDelete}
+              onDragStart={(e) => {
+                if (isEditing || isConfirmingDelete) return;
+                handleDragStart(index, e);
+              }}
               onDragOver={(e) => handleDragOver(e, index)}
               onDrop={(e) => handleDrop(index, e)}
               onDragEnd={handleDragEnd}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '9px 12px',
-                background: isBeingDragged
-                  ? '#f3f4f6'
-                  : isOver
-                    ? '#eff6ff'
-                    : isHidden
-                      ? 'var(--p-surface, #f4f4f4)'
-                      : '#ffffff',
-                border: isOver
-                  ? '2px dashed var(--p-primary, #b8381e)'
-                  : isBeingDragged
-                    ? '1.5px dashed #9ca3af'
-                    : '1px solid var(--border-subtle, rgba(0,0,0,0.1))',
-                borderRadius: 'var(--radius-sm, 8px)',
-                opacity: isBeingDragged ? 0.45 : isHidden ? 0.6 : 1,
-                gap: 12,
-                cursor: 'grab',
-                userSelect: 'none',
-                transition: 'background 0.15s ease, border 0.15s ease',
-              }}
+              className={itemClass}
             >
-              {/* Drag Handle & Label */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span
-                  title="Geser / Drag untuk mengubah urutan"
-                  style={{
-                    fontSize: '1.1rem',
-                    color: 'var(--ink-muted)',
-                    cursor: 'grab',
-                    padding: '2px 4px',
-                    lineHeight: 1,
-                    letterSpacing: -1,
-                  }}
-                >
-                  ⠿
-                </span>
-                <span
-                  className="font-mono"
-                  style={{ fontSize: '0.78rem', color: 'var(--ink-muted)' }}
-                >
-                  #{index + 1}
-                </span>
-                <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{label}</span>
-                {isHidden ? (
-                  <Badge variant="neutral">Disembunyikan</Badge>
-                ) : (
-                  <Badge variant="open">Tampil</Badge>
-                )}
-              </div>
+              {isEditing ? (
+                <div className="cv-reorder-edit-row">
+                  <div className="cv-reorder-meta" style={{ flex: '1 1 200px' }}>
+                    <span className="cv-reorder-handle" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <circle cx="9" cy="5" r="1.6" />
+                        <circle cx="15" cy="5" r="1.6" />
+                        <circle cx="9" cy="12" r="1.6" />
+                        <circle cx="15" cy="12" r="1.6" />
+                        <circle cx="9" cy="19" r="1.6" />
+                        <circle cx="15" cy="19" r="1.6" />
+                      </svg>
+                    </span>
+                    <span className="cv-reorder-index">#{index + 1}</span>
+                    <input
+                      type="text"
+                      className="input-control cv-reorder-rename-input"
+                      maxLength={80}
+                      autoFocus
+                      value={editingTitle}
+                      aria-label={`Ubah nama bagian ${label}`}
+                      placeholder={
+                        isCustomSectionId(secId)
+                          ? 'Nama bagian tambahan'
+                          : 'Kosongkan untuk nama bawaan'
+                      }
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          commitRename(secId);
+                        } else if (e.key === 'Escape') {
+                          e.preventDefault();
+                          cancelRename();
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="cv-reorder-edit-actions">
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        commitRename(secId);
+                      }}
+                    >
+                      Simpan
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        cancelRename();
+                      }}
+                    >
+                      Batal
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="cv-reorder-head">
+                    <div className="cv-reorder-meta">
+                      <span
+                        className="cv-reorder-handle"
+                        title="Seret untuk mengubah urutan"
+                        aria-hidden="true"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <circle cx="9" cy="5" r="1.6" />
+                          <circle cx="15" cy="5" r="1.6" />
+                          <circle cx="9" cy="12" r="1.6" />
+                          <circle cx="15" cy="12" r="1.6" />
+                          <circle cx="9" cy="19" r="1.6" />
+                          <circle cx="15" cy="19" r="1.6" />
+                        </svg>
+                      </span>
+                      <span className="cv-reorder-index">#{index + 1}</span>
+                      <span className="cv-reorder-label" title={label}>
+                        {label}
+                      </span>
+                    </div>
 
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleVisibility(secId);
-                  }}
-                  aria-label={isHidden ? `Tampilkan ${label}` : `Sembunyikan ${label}`}
-                  title={isHidden ? 'Tampilkan bagian' : 'Sembunyikan bagian'}
-                  style={{
-                    background: 'none',
-                    border: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
-                    borderRadius: 'var(--radius-sm, 6px)',
-                    padding: '5px 7px',
-                    cursor: 'pointer',
-                    color: isHidden ? 'var(--ink-muted)' : 'var(--ink-secondary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    lineHeight: 1,
-                  }}
-                >
-                  {isHidden ? (
-                    /* Mata tercoret — bagian disembunyikan */
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                      <line x1="1" y1="1" x2="23" y2="23"/>
-                    </svg>
-                  ) : (
-                    /* Mata terbuka — bagian tampil */
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                      <circle cx="12" cy="12" r="3"/>
-                    </svg>
-                  )}
-                </button>
-              </div>
+                    <div className="cv-reorder-status">
+                      {isHidden ? (
+                        <Badge variant="neutral">Tersembunyi</Badge>
+                      ) : (
+                        <Badge variant="open">Tampil</Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="cv-reorder-actions">
+                    {isConfirmingDelete ? (
+                      <div className="cv-reorder-confirm">
+                        <span className="cv-reorder-confirm__text">Hapus bagian ini?</span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="cv-reorder-confirm-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmDeleteSecId(null);
+                          }}
+                        >
+                          Batal
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="cv-reorder-confirm-btn cv-reorder-confirm-delete"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeSection(secId);
+                          }}
+                        >
+                          Hapus
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="cv-reorder-moves">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="cv-reorder-move-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startRename(secId);
+                            }}
+                            aria-label={`Ubah nama ${label}`}
+                            title="Ubah nama bagian"
+                          >
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.1"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                            </svg>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="cv-reorder-move-btn cv-reorder-delete-btn"
+                            disabled={!canDelete}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingSecId(null);
+                              setConfirmDeleteSecId(secId);
+                            }}
+                            aria-label={
+                              canDelete
+                                ? `Hapus bagian ${label}`
+                                : `${label} tidak dapat dihapus`
+                            }
+                            title={
+                              canDelete
+                                ? 'Hapus bagian'
+                                : 'Identitas & Kontak tidak dapat dihapus (gunakan Sembunyikan)'
+                            }
+                          >
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.1"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
+                          </Button>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="cv-reorder-move-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleVisibility(secId);
+                          }}
+                          aria-label={isHidden ? `Tampilkan ${label}` : `Sembunyikan ${label}`}
+                          title={isHidden ? 'Tampilkan bagian' : 'Sembunyikan bagian'}
+                          style={{
+                            color: isHidden ? 'var(--ink-muted)' : 'inherit',
+                          }}
+                        >
+                          {isHidden ? (
+                            /* Mata tercoret — bagian disembunyikan */
+                            <svg
+                              width="15"
+                              height="15"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.1"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                              <line x1="1" y1="1" x2="23" y2="23"/>
+                            </svg>
+                          ) : (
+                            /* Mata terbuka — bagian tampil */
+                            <svg
+                              width="15"
+                              height="15"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.1"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                              <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                          )}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
             </li>
           );
         })}

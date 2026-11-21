@@ -37,27 +37,27 @@ assert.deepEqual(FORGOT_PASSWORD_STATUS, { status: 'code_sent_if_exists' });
 console.log('PASS forgot: generic response { status: "code_sent_if_exists" } for both branches');
 
 // --- Reset email template required lines ---
-const mail = buildForgotPasswordEmail({ email: 'user@example.com', code: '123456' });
+const mail = buildForgotPasswordEmail({ email: 'user@example.com', code: '12345678' });
 assert.match(mail.subject, /RakitKarier/i);
-assert.match(mail.html, /123456/);
-assert.match(mail.html, /berlaku maks 1 jam/i);
+assert.match(mail.html, /12345678/);
+assert.match(mail.html, /kode 8 digit/i);
 assert.match(mail.html, /abaikan jika tidak meminta/i);
 assert.match(mail.html, /Spam/i);
-assert.match(mail.text, /123456/);
-assert.match(mail.text, /abaikan jika tidak meminta/i);
+assert.match(mail.text, /12345678/);
+assert.match(mail.text, /kode 8 digit/i);
 assert.match(mail.text, /Spam/i);
 assert.match(mail.html, /font-size:36px/, 'code must be rendered big');
 console.log('PASS forgot email: big code, 1 hour note, ignore line, spam hint');
 
 // --- Code-format validation ---
-assert.equal(parseResetCode('123456'), '123456');
-assert.equal(parseResetCode('000000'), '000000');
-for (const bad of ['12345', '1234567', 'abcdef', '12 456', '12345a', '']) {
+assert.equal(parseResetCode('12345678'), '12345678');
+assert.equal(parseResetCode('00000000'), '00000000');
+for (const bad of ['1234567', '123456789', 'abcdefgh', '12 45 678', '1234567a', '']) {
   const err = expectApiError(() => parseResetCode(bad));
   assert.equal(err.status, 400);
   assert.equal(err.code, 'validation_error');
 }
-console.log('PASS reset: code must match ^\\d{6}$ (bad formats rejected)');
+console.log('PASS reset: code must match ^\\d{8}$ (bad formats rejected)');
 
 // --- New-password parsing (byte bound, distinct from policy) ---
 assert.equal(parseNewPassword('Password1'), 'Password1');

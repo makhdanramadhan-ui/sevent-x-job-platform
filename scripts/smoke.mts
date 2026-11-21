@@ -352,9 +352,9 @@ async function main(): Promise<void> {
     'csrf_rejected',
   );
   await expectError(
-    'POST /api/auth/reset-password kode bukan 6 digit',
+    'POST /api/auth/reset-password kode bukan 8 digit',
     call('POST', '/api/auth/reset-password', {
-      body: { email: 'uji@example.com', code: '12a45', password: 'Password1' },
+      body: { email: 'uji@example.com', code: '12a45678', password: 'Password1' },
     }),
     400,
     'validation_error',
@@ -362,7 +362,7 @@ async function main(): Promise<void> {
   await expectError(
     'POST /api/auth/reset-password password lemah',
     call('POST', '/api/auth/reset-password', {
-      body: { email: 'uji@example.com', code: '123456', password: 'abcdefgh' },
+      body: { email: 'uji@example.com', code: '12345678', password: 'abcdefgh' },
     }),
     400,
     'weak_password',

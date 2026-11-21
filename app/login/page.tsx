@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { type FormEvent, Suspense, useState } from 'react';
 import { type ApiCallError, apiFetch, SITE_NAME } from '@/components/ui/api-client';
+import { ButtonText } from '@/components/ui/button-text';
 import { ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
 import { Button, FormField, PasswordInput, TextInput } from '@/components/ui/forms';
 import { AuthDivider, GoogleAuthButton } from '@/components/ui/google-button';
@@ -159,7 +160,6 @@ function LoginFormContent() {
           <FormField
             id="login-password"
             label="Password"
-            hint="Minimal 8 karakter"
             error={fieldErrors.password}
           >
             <PasswordInput
@@ -212,7 +212,7 @@ function LoginFormContent() {
         >
           <span style={{ color: 'var(--ink-secondary)' }}>Belum memiliki akun {SITE_NAME}?</span>
           <Link href="/signup" className="btn btn-outline btn-sm">
-            Daftar Akun Baru
+            <ButtonText>Daftar Akun Baru</ButtonText>
           </Link>
         </div>
       </div>

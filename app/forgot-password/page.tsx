@@ -81,8 +81,8 @@ function ForgotPasswordContent() {
     setRateLimited(false);
     const errors: { code?: string; password?: string; confirmPassword?: string } = {};
 
-    if (!/^\d{6}$/.test(code)) {
-      errors.code = 'Masukkan kode 6 digit.';
+    if (!/^\d{8}$/.test(code)) {
+      errors.code = 'Masukkan kode 8 digit.';
     }
     const validation = validatePassword(password);
     if (!validation.ok) {
@@ -155,7 +155,7 @@ function ForgotPasswordContent() {
         </h1>
         <p style={{ margin: '0 0 20px', fontSize: '0.9rem', color: 'var(--ink-secondary)' }}>
           {step === 1
-            ? 'Masukkan email akunmu. Jika email terdaftar, kami akan mengirim kode 6 digit untuk mengatur ulang password.'
+            ? 'Masukkan email akunmu. Jika email terdaftar, kami akan mengirim kode 8 digit untuk mengatur ulang password.'
             : 'Masukkan kode dari email, lalu buat password baru yang memenuhi syarat.'}
         </p>
 
@@ -200,18 +200,18 @@ function ForgotPasswordContent() {
             </NoticeBanner>
 
             <form onSubmit={handleResetSubmit} className="form-stack" noValidate>
-              <FormField id="forgot-code" label="Kode 6 Digit" error={fieldErrors.code}>
+              <FormField id="forgot-code" label="Kode 8 Digit" error={fieldErrors.code}>
                 <TextInput
                   id="forgot-code"
                   type="text"
                   inputMode="numeric"
                   autoComplete="one-time-code"
-                  maxLength={6}
-                  placeholder="000000"
+                  maxLength={8}
+                  placeholder="00000000"
                   value={code}
                   hasError={Boolean(fieldErrors.code)}
                   onChange={(e) => {
-                    const next = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    const next = e.target.value.replace(/\D/g, '').slice(0, 8);
                     setCode(next);
                     if (fieldErrors.code) {
                       setFieldErrors((prev) => ({ ...prev, code: undefined }));
@@ -219,7 +219,7 @@ function ForgotPasswordContent() {
                   }}
                   onPaste={(e) => {
                     const text = e.clipboardData.getData('text');
-                    const digits = text.replace(/\D/g, '').slice(0, 6);
+                    const digits = text.replace(/\D/g, '').slice(0, 8);
                     if (digits) {
                       e.preventDefault();
                       setCode(digits);

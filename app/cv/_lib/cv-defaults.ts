@@ -8,9 +8,14 @@ import type {
   ProfileRecord,
 } from '@/lib/contracts';
 import type { ProfileInput } from '@/lib/profile';
+import { isValidCvPhotoUrl } from './photo-helpers';
 import {
   type CvContent,
+  type CvCustomSection,
+  type CvSectionId,
   DEFAULT_SECTION_ORDER,
+  isBuiltinSectionId,
+  isCustomSectionId,
 } from './types';
 
 export function getSampleAtsCvContent(): CvContent {
@@ -25,6 +30,7 @@ export function getSampleAtsCvContent(): CvContent {
       email: 'budi.santoso@example.com',
       phone: '081234567890',
       location: 'Jakarta, Indonesia',
+      photo_url: null,
       links: [
         { label: 'linkedin.com/in/budisantoso', url: 'https://linkedin.com' },
         { label: 'github.com/budisantoso', url: 'https://github.com' },
@@ -100,6 +106,7 @@ export function getSampleAtsCvContent(): CvContent {
       },
     ],
     custom_sections: [],
+    section_titles: {},
     section_order: [...DEFAULT_SECTION_ORDER],
     hidden_sections: [],
   };
@@ -119,6 +126,7 @@ export function createDefaultCvContent(
       email: userEmail ?? '',
       phone: profile?.phone ?? '',
       location: profile?.location ?? '',
+      photo_url: null,
       links: Array.isArray(profile?.links)
         ? (profile.links as ProfileLink[]).map((l: ProfileLink) => ({ label: l.label, url: l.url }))
         : [],
@@ -172,6 +180,7 @@ export function createDefaultCvContent(
         }))
       : [],
     custom_sections: [],
+    section_titles: {},
     section_order: [...DEFAULT_SECTION_ORDER],
     hidden_sections: [],
   };
@@ -191,6 +200,7 @@ export function normalizeCvContent(raw: unknown, userEmail?: string): CvContent 
     email: typeof profileRaw.email === 'string' ? profileRaw.email : (userEmail ?? ''),
     phone: typeof profileRaw.phone === 'string' ? profileRaw.phone : '',
     location: typeof profileRaw.location === 'string' ? profileRaw.location : '',
+    photo_url: isValidCvPhotoUrl(profileRaw.photo_url) ? profileRaw.photo_url : null,
     links: Array.isArray(profileRaw.links)
       ? profileRaw.links
           .filter((l): l is { label: string; url: string } => Boolean(l && typeof l === 'object'))
@@ -198,17 +208,44 @@ export function normalizeCvContent(raw: unknown, userEmail?: string): CvContent 
       : [],
   };
 
+  const custom_sections: CvCustomSection[] = Array.isArray(obj.custom_sections)
+    ? obj.custom_sections.reduce<CvCustomSection[]>((acc, item) => {
+        if (!item || typeof item !== 'object') return acc;
+        const rec = item as Record<string, unknown>;
+        if (typeof rec.id !== 'string' || !rec.id.trim()) return acc;
+        acc.push({
+          id: rec.id.trim(),
+          title: typeof rec.title === 'string' ? rec.title : '',
+          content: typeof rec.content === 'string' ? rec.content : '',
+        });
+        return acc;
+      }, [])
+    : [];
+
+  const validCustomIds = new Set(custom_sections.map((c) => `custom:${c.id}`));
+  const isValidSectionEntry = (s: unknown): s is CvSectionId =>
+    typeof s === 'string' &&
+    (isBuiltinSectionId(s) || (isCustomSectionId(s) && validCustomIds.has(s)));
+
   const sectionOrderRaw = Array.isArray(obj.section_order) ? obj.section_order : DEFAULT_SECTION_ORDER;
-  const filteredOrder = sectionOrderRaw.filter(
-    (s): s is CvContent['section_order'][number] => typeof s === 'string',
-  );
+  const filteredOrder = sectionOrderRaw.filter(isValidSectionEntry);
   // Deduplikasi urutan bagian agar tidak ada bagian yang muncul ganda
   const section_order = Array.from(new Set(filteredOrder));
 
   const hiddenSectionsRaw = Array.isArray(obj.hidden_sections) ? obj.hidden_sections : [];
-  const hidden_sections = Array.from(
-    new Set(hiddenSectionsRaw.filter((s): s is CvContent['hidden_sections'][number] => typeof s === 'string')),
-  );
+  const hidden_sections = Array.from(new Set(hiddenSectionsRaw.filter(isValidSectionEntry)));
+
+  const section_titles: Record<string, string> = {};
+  if (obj.section_titles && typeof obj.section_titles === 'object' && !Array.isArray(obj.section_titles)) {
+    for (const [key, val] of Object.entries(obj.section_titles as Record<string, unknown>)) {
+      if (typeof val === 'string') {
+        const trimmed = val.trim().slice(0, 80);
+        if (trimmed) {
+          section_titles[key] = trimmed;
+        }
+      }
+    }
+  }
 
   return {
     version: 'v1',
@@ -227,9 +264,8 @@ export function normalizeCvContent(raw: unknown, userEmail?: string): CvContent 
       ? (obj.skills.filter((s): s is string => typeof s === 'string') as string[])
       : [],
     projects: Array.isArray(obj.projects) ? (obj.projects as CvContent['projects']) : [],
-    custom_sections: Array.isArray(obj.custom_sections)
-      ? (obj.custom_sections as CvContent['custom_sections'])
-      : [],
+    custom_sections,
+    section_titles,
     section_order: section_order.length > 0 ? section_order : [...DEFAULT_SECTION_ORDER],
     hidden_sections,
     raw_unmapped: Array.isArray(obj.raw_unmapped)

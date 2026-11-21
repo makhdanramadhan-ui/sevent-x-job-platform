@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ApiCallError } from './api-client';
+import { ButtonText } from './button-text';
 import { Button } from './forms';
 
 export function LoadingState({
@@ -121,16 +122,16 @@ export function ErrorState({
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
           {isEmailNotConfirmed ? (
             <Link href={verifyHref} className="btn btn-primary btn-sm">
-              Verifikasi / Kirim Ulang
+              <ButtonText>Verifikasi / Kirim Ulang</ButtonText>
             </Link>
           ) : null}
           {isSession ? (
             <>
               <Link href={loginHref} className="btn btn-primary btn-sm">
-                Masuk ke Akun
+                <ButtonText>Masuk ke Akun</ButtonText>
               </Link>
               <Link href="/signup" className="btn btn-outline btn-sm">
-                Daftar Akun Baru
+                <ButtonText>Daftar Akun Baru</ButtonText>
               </Link>
             </>
           ) : null}
@@ -271,7 +272,7 @@ export function NoticePopup({
             className="btn btn-primary btn-sm"
             onClick={onDismiss}
           >
-            {confirmLabel}
+            <ButtonText>{confirmLabel}</ButtonText>
           </button>
         </div>
       </div>

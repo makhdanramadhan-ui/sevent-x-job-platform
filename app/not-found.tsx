@@ -1,14 +1,16 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { ButtonText } from '@/components/ui/button-text';
 
 export default function NotFound() {
   return (
     <section className="not-found-page" aria-labelledby="not-found-title">
       <Image
-        src="/images/not-found-3d.jpg"
-        alt="Ilustrasi 3D orang kebingungan"
-        width={320}
-        height={320}
+        src="/images/not-found-vector.svg"
+        alt="Ilustrasi vektor seseorang memegang peta mencari halaman yang tidak ditemukan"
+        width={300}
+        height={240}
+        unoptimized
         priority
         className="not-found-image"
       />
@@ -21,10 +23,10 @@ export default function NotFound() {
       </p>
       <div className="not-found-actions">
         <Link href="/" className="btn btn-primary">
-          Kembali ke Beranda
+          <ButtonText>Kembali ke Beranda</ButtonText>
         </Link>
         <Link href="/jobs" className="btn btn-outline">
-          Cari Lowongan
+          <ButtonText>Cari Lowongan</ButtonText>
         </Link>
       </div>
     </section>

@@ -11,8 +11,10 @@ import {
   WORK_MODE_LABELS,
 } from '@/components/ui/api-client';
 import { CompanyLogo } from '@/components/ui/company-logo';
+import { ButtonText } from '@/components/ui/button-text';
 import { Badge, JobStatusBadge } from '@/components/ui/forms';
 import { ScrollStepsProgress } from '@/components/ui/scroll-motion';
+import { useAuthSession } from './navigation';
 import type { EmploymentType, ExperienceLevel, JobStatus, WorkMode } from '@/lib/contracts';
 import { displaySourceName } from '@/lib/job-source';
 
@@ -136,6 +138,7 @@ const WORKFLOW_STEPS = [
 
 type LandingPreviewContextValue = {
   preview: LandingPreviewPayload;
+  authLoading: boolean;
   loading: boolean;
   jobs: LandingJob[];
   selectedJob: LandingJob | null;
@@ -146,6 +149,7 @@ type LandingPreviewContextValue = {
   ctaLabel: string;
   emptyText: string;
   emptyActionLabel: string;
+  emptyActionHref: string;
   sourceTime: string;
   matchedItems: string[];
   missingItems: string[];
@@ -163,8 +167,9 @@ function useLandingPreview(): LandingPreviewContextValue {
 
 export function LandingPreviewProvider({ children }: { children: ReactNode }) {
   const [preview, setPreview] = useState<LandingPreviewPayload>(EMPTY_PREVIEW);
-  const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { session, loading: authLoading } = useAuthSession();
 
   useEffect(() => {
     let active = true;
@@ -198,16 +203,32 @@ export function LandingPreviewProvider({ children }: { children: ReactNode }) {
     : preview.auth_state === 'ready'
       ? `${preview.count}${preview.count_capped ? '+' : ''} rekomendasi`
       : 'Belum ada rekomendasi';
-  const ctaHref = preview.auth_state === 'guest' ? '/login' : '/profile';
+  const ctaHref =
+    authLoading || !session ? '/login' : session.has_profile ? '/profile' : '/onboarding';
+  const emptyActionHref =
+    authLoading || !session
+      ? '/login'
+      : session.has_profile
+        ? '/recommendations'
+        : '/onboarding';
   const ctaLabel =
-    preview.auth_state === 'guest'
+    authLoading || !session
       ? 'Masuk untuk melihat kecocokan'
       : 'Lengkapi bidang & keahlian di profil untuk melihat kecocokan';
-  const emptyText =
-    preview.auth_state === 'guest'
-      ? 'Masuk dan lengkapi bidang & keahlian untuk melihat lowongan yang sesuai profilmu'
-      : 'Lengkapi bidang & keahlian di profil untuk melihat lowongan yang sesuai';
-  const emptyActionLabel = preview.auth_state === 'guest' ? 'Masuk' : 'Lengkapi Profil';
+  const emptyText = authLoading
+    ? 'Memuat data lowongan...'
+    : session
+      ? session.has_profile
+        ? 'Belum ada rekomendasi yang bisa ditampilkan saat ini.'
+        : 'Lengkapi bidang & keahlian di profil untuk melihat lowongan yang sesuai'
+      : 'Masuk dan lengkapi bidang & keahlian untuk melihat lowongan yang sesuai profilmu';
+  const emptyActionLabel = authLoading
+    ? ''
+    : session
+      ? session.has_profile
+        ? 'Lihat Rekomendasi'
+        : 'Lengkapi Profil'
+      : 'Masuk';
   const sourceTime = selectedJob
     ? formatRelativeId(
         selectedJob.source_published_at ??
@@ -236,6 +257,7 @@ export function LandingPreviewProvider({ children }: { children: ReactNode }) {
   return (
     <LandingPreviewContext.Provider
       value={{
+        authLoading,
         preview,
         loading,
         jobs,
@@ -247,6 +269,7 @@ export function LandingPreviewProvider({ children }: { children: ReactNode }) {
         ctaLabel,
         emptyText,
         emptyActionLabel,
+        emptyActionHref,
         sourceTime,
         matchedItems,
         missingItems,
@@ -282,6 +305,7 @@ export function LandingHeroStats() {
 
 export function LandingPreviewStage() {
   const {
+    authLoading,
     preview,
     loading,
     jobs,
@@ -292,6 +316,7 @@ export function LandingPreviewStage() {
     ctaLabel,
     emptyText,
     emptyActionLabel,
+    emptyActionHref,
     sourceTime,
     matchedItems,
     missingItems,
@@ -313,18 +338,16 @@ export function LandingPreviewStage() {
         </div>
 
         <div className="tk-app-body">
-          {loading || preview.auth_state !== 'ready' ? (
+          {loading || authLoading || preview.auth_state !== 'ready' ? (
             <div className="tk-app-empty-state" role="status">
-              <strong>{loading ? 'Memuat data lowongan...' : emptyText}</strong>
-              <Link
-                href={ctaHref}
-                className="btn btn-primary btn-sm"
-                style={loading ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
-                aria-hidden={loading || undefined}
-                tabIndex={loading ? -1 : undefined}
-              >
-                {emptyActionLabel}
-              </Link>
+              <strong>{loading || authLoading ? 'Memuat data lowongan...' : emptyText}</strong>
+              {loading || authLoading ? (
+                <span className="btn btn-primary btn-sm auth-cta-placeholder" aria-hidden="true" />
+              ) : (
+                <Link href={emptyActionHref} className="btn btn-primary btn-sm">
+                  <ButtonText>{emptyActionLabel}</ButtonText>
+                </Link>
+              )}
             </div>
           ) : (
             <>
@@ -412,7 +435,7 @@ export function LandingPreviewStage() {
                       terbaru.
                     </p>
                     <Link href="/jobs" className="btn btn-primary btn-sm">
-                      Lihat halaman Lowongan
+                      <ButtonText>Lihat halaman Lowongan</ButtonText>
                     </Link>
                   </div>
                 ) : (
@@ -550,17 +573,21 @@ export function LandingPreviewStage() {
                           Isi profil untuk melihat syarat yang cocok dan yang masih perlu kamu
                           lengkapi sebelum melamar.
                         </p>
-                        <Link
-                          href={ctaHref}
-                          style={{
-                            color: 'var(--p-action)',
-                            fontSize: '0.84rem',
-                            fontWeight: 600,
-                            textDecoration: 'none',
-                          }}
-                        >
-                          Lengkapi Profil
-                        </Link>
+                        {authLoading ? (
+                          <span className="auth-link-placeholder" aria-hidden="true" />
+                        ) : (
+                          <Link
+                            href={ctaHref}
+                            style={{
+                              color: 'var(--p-action)',
+                              fontSize: '0.84rem',
+                              fontWeight: 600,
+                              textDecoration: 'none',
+                            }}
+                          >
+                            Lengkapi Profil
+                          </Link>
+                        )}
                       </div>
                     )}
 
