@@ -7,7 +7,7 @@ import { apiFetch } from './api-client';
 import { LoadingState, NoticeBanner } from './feedback';
 import { Button, FormField, PasswordInput, TextInput } from './forms';
 import { AuthDivider, GoogleAuthButton } from './google-button';
-import { notifyAuthChanged, type SessionInfo } from './navigation';
+import { hasAuthSessionCookie, notifyAuthChanged, type SessionInfo } from './navigation';
 
 export function AuthGuard({
   title = 'Masuk untuk Melanjutkan',
@@ -35,6 +35,11 @@ export function AuthGuard({
   const [submitting, setSubmitting] = useState(false);
 
   const verify = useCallback(async () => {
+    if (!hasAuthSessionCookie()) {
+      setSession(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const res = await apiFetch<SessionInfo>('/api/auth/me');
     if (res.ok) {

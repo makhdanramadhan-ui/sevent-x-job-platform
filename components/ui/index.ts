@@ -57,6 +57,7 @@ export {
 export { SkillComboboxInput, type SkillComboboxInputProps } from './skill-combobox';
 export {
   getInitials,
+  hasAuthSessionCookie,
   notifyAuthChanged,
   type SessionInfo,
   SiteFooter,

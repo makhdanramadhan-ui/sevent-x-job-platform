@@ -5,7 +5,6 @@ import { BrandMark } from './brand-mark';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch, SITE_NAME } from './api-client';
-import { Button } from './forms';
 import { ScrollProgressBar } from './scroll-motion';
 
 export type SessionInfo = {
@@ -20,7 +19,32 @@ export type SessionInfo = {
   has_profile: boolean;
 };
 
+let inflightSessionPromise: Promise<SessionInfo | null> | null = null;
+
+export function hasAuthSessionCookie(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.cookie.split(';').some((entry) => {
+    const name = entry.trim().split('=')[0] ?? '';
+    return name.startsWith('sb-') && name.includes('auth-token');
+  });
+}
+
+async function fetchSessionIfCookie(): Promise<SessionInfo | null> {
+  if (!hasAuthSessionCookie()) {
+    return null;
+  }
+  if (!inflightSessionPromise) {
+    inflightSessionPromise = apiFetch<SessionInfo>('/api/auth/me')
+      .then((res) => (res.ok ? res.data : null))
+      .finally(() => {
+        inflightSessionPromise = null;
+      });
+  }
+  return inflightSessionPromise;
+}
+
 export function notifyAuthChanged(): void {
+  inflightSessionPromise = null;
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('seventx:auth-changed'));
   }
@@ -167,16 +191,12 @@ export function SiteHeader() {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [session, setSession] = useState<SessionInfo | null>(null);
-  const [checking, setChecking] = useState(true);
+  const [checking, setChecking] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
   const loadSession = useCallback(async () => {
-    const res = await apiFetch<SessionInfo>('/api/auth/me');
-    if (res.ok) {
-      setSession(res.data);
-    } else {
-      setSession(null);
-    }
+    const nextSession = await fetchSessionIfCookie();
+    setSession(nextSession);
     setChecking(false);
   }, []);
 
@@ -192,7 +212,7 @@ export function SiteHeader() {
     return () => window.removeEventListener('seventx:auth-changed', handler);
   }, [loadSession]);
 
-  async function handleLogout() {
+  async function executeLogout() {
     setLoggingOut(true);
     await apiFetch('/api/auth/logout', { method: 'POST' });
     setSession(null);
@@ -201,6 +221,21 @@ export function SiteHeader() {
     notifyAuthChanged();
     router.push('/login');
     router.refresh();
+  }
+
+  async function handleLogout() {
+    const guardEvent = new CustomEvent<{ proceed: () => void }>('seventx:before-logout', {
+      cancelable: true,
+      detail: {
+        proceed: () => {
+          void executeLogout();
+        },
+      },
+    });
+    if (!window.dispatchEvent(guardEvent)) {
+      return;
+    }
+    await executeLogout();
   }
 
   return (
@@ -342,8 +377,8 @@ export function SiteFooter() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const checkSession = useCallback(async () => {
-    const res = await apiFetch<SessionInfo>('/api/auth/me');
-    setIsLoggedIn(res.ok);
+    const nextSession = await fetchSessionIfCookie();
+    setIsLoggedIn(Boolean(nextSession));
   }, []);
 
   useEffect(() => {
@@ -399,7 +434,7 @@ export function SiteFooter() {
 
           {/* Column 2: Fitur */}
           <div>
-            <h3 className="footer-col-title">Fitur</h3>
+            <h2 className="footer-col-title">Fitur</h2>
             <ul className="footer-col-list">
               <li>
                 <Link href="/jobs">Cari Lowongan</Link>
@@ -418,7 +453,7 @@ export function SiteFooter() {
 
           {/* Column 3: Akun */}
           <div>
-            <h3 className="footer-col-title">Akun</h3>
+            <h2 className="footer-col-title">Akun</h2>
             <ul className="footer-col-list">
               <li>
                 <Link href="/profile">Profil &amp; Preferensi</Link>
@@ -441,7 +476,7 @@ export function SiteFooter() {
 
           {/* Column 4: Informasi Pelamaran */}
           <div>
-            <h3 className="footer-col-title">Panduan Melamar</h3>
+            <h2 className="footer-col-title">Panduan Melamar</h2>
             <p className="footer-col-note">
               Tombol melamar mengarahkan kamu langsung ke portal resmi perusahaan tanpa auto-submit.
               Periksa selalu ketentuan di sumber asli dan waspadai segala bentuk pungutan biaya.

@@ -1,7 +1,8 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import type { FormEvent } from 'react';
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   EMPLOYMENT_TYPES,
   EXPERIENCE_LEVELS,
@@ -45,23 +46,99 @@ const EXPERIENCE_LEVEL_OPTIONS = EXPERIENCE_LEVELS.filter((l) => l !== 'unknown'
   label: EXPERIENCE_LEVEL_LABELS[value],
 }));
 
+type PendingLeaveAction =
+  | { type: 'internal'; href: string }
+  | { type: 'external'; href: string }
+  | { type: 'back' }
+  | { type: 'logout'; proceed: () => void };
+
+function normalizeOpt(val: string | null | undefined): string | null {
+  if (val === undefined || val === null) return null;
+  return val.length > 0 ? val : null;
+}
+
+function serializeDraftForCompare(input: ProfileInput): string {
+  return JSON.stringify({
+    full_name: normalizeOpt(input.full_name),
+    headline: normalizeOpt(input.headline),
+    phone: normalizeOpt(input.phone),
+    location: normalizeOpt(input.location),
+    links: input.links.map((item) => ({
+      label: item.label ?? '',
+      url: item.url ?? '',
+    })),
+    skills: input.skills,
+    education: input.education.map((item) => ({
+      institution: item.institution ?? '',
+      degree: normalizeOpt(item.degree),
+      field: normalizeOpt(item.field),
+      start_date: normalizeOpt(item.start_date),
+      end_date: normalizeOpt(item.end_date),
+      description: normalizeOpt(item.description),
+    })),
+    experiences: input.experiences.map((item) => ({
+      company: item.company ?? '',
+      title: item.title ?? '',
+      location: normalizeOpt(item.location),
+      start_date: normalizeOpt(item.start_date),
+      end_date: normalizeOpt(item.end_date),
+      current: Boolean(item.current),
+      description: normalizeOpt(item.description),
+    })),
+    projects: input.projects.map((item) => ({
+      name: item.name ?? '',
+      url: normalizeOpt(item.url),
+      start_date: normalizeOpt(item.start_date),
+      end_date: normalizeOpt(item.end_date),
+      description: normalizeOpt(item.description),
+    })),
+    organizations: input.organizations.map((item) => ({
+      name: item.name ?? '',
+      role: normalizeOpt(item.role),
+      start_date: normalizeOpt(item.start_date),
+      end_date: normalizeOpt(item.end_date),
+      description: normalizeOpt(item.description),
+    })),
+    achievements: input.achievements.map((item) => ({
+      title: item.title ?? '',
+      issuer: normalizeOpt(item.issuer),
+      date: normalizeOpt(item.date),
+      description: normalizeOpt(item.description),
+    })),
+    preferences: {
+      country: input.preferences.country ?? '',
+      email_match_alerts: input.preferences.email_match_alerts !== false,
+      positions: input.preferences.positions,
+      locations: input.preferences.locations,
+      levels: input.preferences.levels,
+      work_modes: input.preferences.work_modes,
+      employment_types: input.preferences.employment_types,
+    },
+  });
+}
+
 export function ProfileEditorForm({
   initialRecord,
   mode = 'full',
   submitLabel = 'Simpan Profil',
+  warnOnUnsavedChanges = false,
   onSaved,
 }: {
   initialRecord: ProfileRecord | null;
   mode?: 'onboarding' | 'full';
   submitLabel?: string;
+  warnOnUnsavedChanges?: boolean;
   onSaved?: (saved: ProfileRecord) => void;
 }) {
+  const router = useRouter();
+  const [baseline, setBaseline] = useState<ProfileInput>(() => recordToProfileInput(initialRecord));
   const [draft, setDraft] = useState<ProfileInput>(() => recordToProfileInput(initialRecord));
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState<ApiCallError | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
   const [countryNotice, setCountryNotice] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingLeaveAction | null>(null);
   const [cvExtraOpen, setCvExtraOpen] = useState(
     () =>
       draft.experiences.length > 0 ||
@@ -69,8 +146,172 @@ export function ProfileEditorForm({
       draft.achievements.length > 0,
   );
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const baselineSerialized = useMemo(() => serializeDraftForCompare(baseline), [baseline]);
+  const isDirty = useMemo(
+    () => serializeDraftForCompare(draft) !== baselineSerialized,
+    [draft, baselineSerialized],
+  );
+
+  const isDirtyRef = useRef(isDirty);
+  isDirtyRef.current = isDirty;
+  const savingRef = useRef(saving);
+  savingRef.current = saving;
+  const bypassGuardRef = useRef(false);
+  const hasSentinelRef = useRef(false);
+
+  const executePendingAction = useCallback(
+    (action: PendingLeaveAction) => {
+      bypassGuardRef.current = true;
+      setPendingAction(null);
+
+      if (action.type === 'internal') {
+        if (hasSentinelRef.current) {
+          hasSentinelRef.current = false;
+          router.replace(action.href);
+        } else {
+          router.push(action.href);
+        }
+        return;
+      }
+      if (action.type === 'external') {
+        window.location.assign(action.href);
+        return;
+      }
+      if (action.type === 'back') {
+        hasSentinelRef.current = false;
+        window.history.go(-2);
+        return;
+      }
+      hasSentinelRef.current = false;
+      action.proceed();
+    },
+    [router],
+  );
+
+  useEffect(() => {
+    if (!warnOnUnsavedChanges) return;
+    if (isDirty && !hasSentinelRef.current && !bypassGuardRef.current) {
+      window.history.pushState(
+        { ...(window.history.state ?? {}), __rakitkarierProfileGuard: true },
+        '',
+        window.location.href,
+      );
+      hasSentinelRef.current = true;
+    }
+  }, [warnOnUnsavedChanges, isDirty]);
+
+  useEffect(() => {
+    if (!warnOnUnsavedChanges) return;
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      if (!isDirtyRef.current || bypassGuardRef.current) return;
+      event.preventDefault();
+      event.returnValue = '';
+    }
+
+    function handlePopState() {
+      if (bypassGuardRef.current) return;
+      if (isDirtyRef.current) {
+        window.history.pushState(
+          { ...(window.history.state ?? {}), __rakitkarierProfileGuard: true },
+          '',
+          window.location.href,
+        );
+        hasSentinelRef.current = true;
+        setPendingAction({ type: 'back' });
+        return;
+      }
+      if (hasSentinelRef.current) {
+        hasSentinelRef.current = false;
+        bypassGuardRef.current = true;
+        window.history.back();
+      }
+    }
+
+    function handleDocumentClick(event: MouseEvent) {
+      if (!isDirtyRef.current || bypassGuardRef.current) return;
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+      const anchor = target?.closest('a[href]') as HTMLAnchorElement | null;
+      if (!anchor) return;
+      if (anchor.target === '_blank' || anchor.hasAttribute('download')) return;
+
+      const rawHref = anchor.getAttribute('href');
+      if (!rawHref || rawHref.startsWith('#')) return;
+
+      let url: URL;
+      try {
+        url = new URL(anchor.href, window.location.href);
+      } catch {
+        return;
+      }
+
+      if (
+        url.origin === window.location.origin &&
+        url.pathname === window.location.pathname &&
+        url.search === window.location.search
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (url.origin === window.location.origin) {
+        setPendingAction({
+          type: 'internal',
+          href: `${url.pathname}${url.search}${url.hash}`,
+        });
+      } else {
+        setPendingAction({ type: 'external', href: url.href });
+      }
+    }
+
+    function handleBeforeLogout(event: Event) {
+      if (!isDirtyRef.current || bypassGuardRef.current) return;
+      const customEvent = event as CustomEvent<{ proceed?: () => void }>;
+      const proceed = customEvent.detail?.proceed;
+      if (!proceed) return;
+      event.preventDefault();
+      setPendingAction({ type: 'logout', proceed });
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    document.addEventListener('click', handleDocumentClick, true);
+    window.addEventListener('seventx:before-logout', handleBeforeLogout);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+      document.removeEventListener('click', handleDocumentClick, true);
+      window.removeEventListener('seventx:before-logout', handleBeforeLogout);
+    };
+  }, [warnOnUnsavedChanges]);
+
+  useEffect(() => {
+    if (!pendingAction) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !savingRef.current) {
+        setPendingAction(null);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [pendingAction]);
+
+  async function submitProfile(): Promise<boolean> {
     setClientError(null);
     setApiError(null);
     setSuccessMsg(null);
@@ -78,11 +319,11 @@ export function ProfileEditorForm({
     const payload = sanitizeProfilePayload(draft);
     if (!payload.preferences.country) {
       setClientError('Negara wajib dipilih.');
-      return;
+      return false;
     }
     if (payload.preferences.locations.length < 1) {
       setClientError('Pilih minimal satu lokasi kerja preferensi.');
-      return;
+      return false;
     }
 
     // Client-side validation for URLs and dates before sending to server
@@ -92,11 +333,11 @@ export function ProfileEditorForm({
         const parsed = new URL(link.url);
         if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
           setClientError(`Tautan #${i + 1} (${link.label}) harus diawali http:// atau https://.`);
-          return;
+          return false;
         }
       } catch {
         setClientError(`URL pada Tautan #${i + 1} (${link.label}) tidak valid.`);
-        return;
+        return false;
       }
     }
 
@@ -107,11 +348,11 @@ export function ProfileEditorForm({
           const parsed = new URL(proj.url);
           if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
             setClientError(`URL Proyek #${i + 1} (${proj.name}) harus diawali http:// atau https://.`);
-            return;
+            return false;
           }
         } catch {
           setClientError(`URL Proyek #${i + 1} (${proj.name}) tidak valid.`);
-          return;
+          return false;
         }
       }
     }
@@ -125,18 +366,47 @@ export function ProfileEditorForm({
 
     if (!res.ok) {
       setApiError(res.error);
-      return;
+      return false;
     }
 
-    setDraft(recordToProfileInput(res.data));
+    const savedInput = recordToProfileInput(res.data);
+    setDraft(savedInput);
+    setBaseline(savedInput);
     setSuccessMsg('Profil dan preferensi berhasil disimpan ke basis data.');
     if (onSaved) {
       onSaved(res.data);
     }
+    return true;
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    await submitProfile();
+  }
+
+  async function handleSaveAndLeave() {
+    if (!pendingAction) return;
+    const action = pendingAction;
+    const saved = await submitProfile();
+    if (saved) {
+      executePendingAction(action);
+    } else {
+      setPendingAction(null);
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function handleDiscardAndLeave() {
+    if (!pendingAction) return;
+    const action = pendingAction;
+    setDraft(baseline);
+    setClientError(null);
+    setApiError(null);
+    executePendingAction(action);
   }
 
   return (
-    <form onSubmit={handleSubmit} className="form-stack" noValidate>
+    <form ref={formRef} onSubmit={handleSubmit} className="form-stack" noValidate>
       {clientError ? (
         <NoticeBanner variant="error" title="Periksa Kembali Isian Formulir" onDismiss={() => setClientError(null)}>
           {clientError}
@@ -1023,11 +1293,106 @@ export function ProfileEditorForm({
         </div>
       </section>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, alignItems: 'center' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: 12,
+          alignItems: 'center',
+          flexWrap: 'wrap',
+        }}
+      >
+        {warnOnUnsavedChanges && isDirty ? (
+          <span className="unsaved-dirty-pill" role="status">
+            Ada perubahan belum disimpan
+          </span>
+        ) : null}
         <Button type="submit" variant="primary" size="lg" loading={saving}>
           {submitLabel}
         </Button>
       </div>
+
+      {pendingAction ? (
+        <div
+          className="auth-modal-overlay"
+          role="presentation"
+          onClick={() => {
+            if (!saving) setPendingAction(null);
+          }}
+        >
+          <div
+            className="unsaved-modal-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="unsaved-profile-title"
+            aria-describedby="unsaved-profile-desc"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="unsaved-modal-head">
+              <div className="unsaved-modal-title-wrap">
+                <span className="unsaved-modal-icon" aria-hidden="true">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.1"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                </span>
+                <h2
+                  id="unsaved-profile-title"
+                  className="font-editorial"
+                  style={{ fontSize: '1.25rem', margin: 0 }}
+                >
+                  Perubahan Profil Belum Disimpan
+                </h2>
+              </div>
+              <button
+                type="button"
+                className="auth-modal-close"
+                aria-label="Tutup peringatan dan tetap di halaman"
+                disabled={saving}
+                onClick={() => setPendingAction(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <p id="unsaved-profile-desc" className="unsaved-modal-desc">
+              Kamu telah mengubah atau menghapus data profil yang belum disimpan. Simpan perubahan
+              terlebih dahulu sebelum keluar atau berpindah halaman?
+            </p>
+
+            <div className="unsaved-modal-actions">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                disabled={saving}
+                onClick={handleDiscardAndLeave}
+              >
+                Buang Perubahan
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                loading={saving}
+                onClick={handleSaveAndLeave}
+              >
+                Simpan Perubahan
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </form>
   );
 }

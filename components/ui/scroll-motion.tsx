@@ -179,8 +179,8 @@ export function ScrollWordHighlight({
           return (
             <span
               key={`${word}-${idx}`}
-              className={`tk-word-moment__word ${isLit ? 'tk-word-moment__word--lit' : ''} ${
-                isLit && isAccent ? 'tk-word-moment__word--accent' : ''
+              className={`tk-word-moment__word ${isAccent ? 'tk-word-moment__word--accent' : ''} ${
+                isLit ? 'tk-word-moment__word--lit' : ''
               }`.trim()}
             >
               {word}{' '}

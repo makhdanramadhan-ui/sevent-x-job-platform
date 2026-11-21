@@ -569,6 +569,7 @@ function ProfileInner({ session: initialSession }: { session: SessionInfo }) {
             initialRecord={profile}
             mode="full"
             submitLabel="Simpan Perubahan Profil"
+            warnOnUnsavedChanges
             onSaved={(saved) => {
               setProfile(saved);
               notifyAuthChanged();

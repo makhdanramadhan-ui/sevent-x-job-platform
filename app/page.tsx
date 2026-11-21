@@ -1,21 +1,23 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
   apiFetch,
-  Badge,
   EMPLOYMENT_TYPE_LABELS,
   formatDateId,
   JOB_STATUS_LABELS,
-  JobStatusBadge,
+  SITE_NAME,
+  WORK_MODE_LABELS,
+} from '@/components/ui/api-client';
+import { CompanyLogo } from '@/components/ui/company-logo';
+import { Badge, JobStatusBadge } from '@/components/ui/forms';
+import {
   ScrollReveal,
   ScrollStepsProgress,
   ScrollWordHighlight,
-  SITE_NAME,
-  WORK_MODE_LABELS,
-} from '@/components/ui';
-import { CompanyLogo } from '@/components/ui/company-logo';
+} from '@/components/ui/scroll-motion';
 import type { EmploymentType, ExperienceLevel, JobStatus, WorkMode } from '@/lib/contracts';
 import { displaySourceName } from '@/lib/job-source';
 
@@ -247,15 +249,19 @@ export default function HomePage() {
           </div>
 
           <div className="tk-hero__visual">
-            <img
+            <Image
               src="/images/hero-3d-seeker.jpg"
               alt="Ilustrasi 3D pencari kerja Indonesia menyiapkan lamaran dan CV dengan laptop"
+              width={1200}
+              height={896}
+              priority
+              fetchPriority="high"
+              sizes="(max-width: 960px) 100vw, 480px"
             />
           </div>
         </div>
 
-        <ScrollReveal delayMs={100}>
-          <div className="tk-hero__stage" aria-label={`Pratinjau antarmuka ${SITE_NAME}`}>
+        <div className="tk-hero__stage">
           <div className="tk-app-window">
             <div className="tk-app-bar">
               <div className="tk-app-dots" aria-hidden="true">
@@ -273,11 +279,15 @@ export default function HomePage() {
               {loading || preview.auth_state !== 'ready' ? (
                 <div className="tk-app-empty-state" role="status">
                   <strong>{loading ? 'Memuat data lowongan...' : emptyText}</strong>
-                  {loading ? null : (
-                    <Link href={ctaHref} className="btn btn-primary btn-sm">
-                      {emptyActionLabel}
-                    </Link>
-                  )}
+                  <Link
+                    href={ctaHref}
+                    className="btn btn-primary btn-sm"
+                    style={loading ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
+                    aria-hidden={loading || undefined}
+                    tabIndex={loading ? -1 : undefined}
+                  >
+                    {emptyActionLabel}
+                  </Link>
                 </div>
               ) : (
                 <>
@@ -626,7 +636,6 @@ export default function HomePage() {
 
           <div className="tk-hero__fade" aria-hidden="true" />
         </div>
-        </ScrollReveal>
       </section>
 
       {/* SCROLL MOMENT: Word-Highlight Statement (tasteskill) */}
@@ -641,7 +650,11 @@ export default function HomePage() {
       <ScrollReveal>
         <section className="tk-companies-section" aria-labelledby="heading-companies">
           <div className="tk-companies-split">
-            <div className="tk-companies-grid" aria-label="Contoh perusahaan terkemuka di Indonesia">
+            <div
+              className="tk-companies-grid"
+              role="group"
+              aria-label="Contoh perusahaan terkemuka di Indonesia"
+            >
               <Link href="/jobs" className="tk-company-tile">
                 <span className="tk-company-wordmark" style={{ color: '#003D79' }}>
                   mandiri
@@ -654,13 +667,13 @@ export default function HomePage() {
 
               <Link href="/jobs" className="tk-company-tile">
                 <span className="tk-company-wordmark" style={{ color: '#111111', fontSize: '1.1rem' }}>
-                  Telkom <span style={{ color: '#E1251B' }}>Indonesia</span>
+                  Telkom <span style={{ color: '#CC1F16' }}>Indonesia</span>
                 </span>
                 <span className="tk-company-sector">Telekomunikasi</span>
               </Link>
 
               <Link href="/jobs" className="tk-company-tile">
-                <span className="tk-company-wordmark" style={{ color: '#00AA13', fontSize: '1.45rem' }}>
+                <span className="tk-company-wordmark" style={{ color: '#00880F', fontSize: '1.45rem' }}>
                   goto
                 </span>
                 <span className="tk-company-sector">Teknologi Digital</span>
@@ -925,9 +938,13 @@ export default function HomePage() {
               </p>
             </div>
             <div className="tk-feature-panel tk-feature-panel--photo">
-              <img
+              <Image
                 src="/images/cv-3d-workspace.jpg"
                 alt="Ilustrasi 3D dokumen CV, tas kerja, pena biru, dan kaca pembesar di meja kerja"
+                width={1376}
+                height={768}
+                loading="lazy"
+                sizes="(max-width: 960px) 100vw, 560px"
               />
             </div>
           </article>
