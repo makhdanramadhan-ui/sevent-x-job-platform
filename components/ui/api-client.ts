@@ -24,6 +24,7 @@ export type ApiCallError = {
   details?: Record<string, unknown>;
   kind:
     | 'session_expired'
+    | 'email_not_confirmed'
     | 'forbidden_or_csrf'
     | 'invalid_reference'
     | 'not_found'
@@ -38,6 +39,9 @@ export type ApiResult<T> =
   | { ok: false; error: ApiCallError };
 
 function classifyError(status: number, code: string): ApiCallError['kind'] {
+  if (code === 'email_not_confirmed') {
+    return 'email_not_confirmed';
+  }
   if (status === 401 || code === 'unauthorized' || code === 'invalid_credentials') {
     return 'session_expired';
   }

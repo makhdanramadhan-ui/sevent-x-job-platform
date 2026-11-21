@@ -35,6 +35,7 @@ function isAcceptedAvatarType(type: string): boolean {
 }
 
 function classifyAvatarError(status: number, code: string): ApiCallError['kind'] {
+  if (code === 'email_not_confirmed') return 'email_not_confirmed';
   if (status === 401 || code === 'unauthorized') return 'session_expired';
   if (status === 403 || code === 'csrf_rejected' || code === 'forbidden') {
     return 'forbidden_or_csrf';

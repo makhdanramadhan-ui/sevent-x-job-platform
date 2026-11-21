@@ -85,30 +85,45 @@ export function ErrorState({
   onRetry?: () => void;
   loginRedirectPath?: string;
 }) {
+  const isEmailNotConfirmed = error.kind === 'email_not_confirmed';
   const isSession = error.kind === 'session_expired';
   const isCsrfOrForbidden = error.kind === 'forbidden_or_csrf';
   const isInvalidRef = error.kind === 'invalid_reference';
 
   const heading =
     title ??
-    (isSession
-      ? 'Sesi Kamu Telah Berakhir'
-      : isCsrfOrForbidden
-        ? 'Akses Tidak Dapat Dilanjutkan'
-        : isInvalidRef
-          ? 'Data Tidak Ditemukan'
-          : 'Belum Dapat Memproses Permintaan');
+    (isEmailNotConfirmed
+      ? 'Email Belum Diverifikasi'
+      : isSession
+        ? 'Sesi Kamu Telah Berakhir'
+        : isCsrfOrForbidden
+          ? 'Akses Tidak Dapat Dilanjutkan'
+          : isInvalidRef
+            ? 'Data Tidak Ditemukan'
+            : 'Belum Dapat Memproses Permintaan');
 
   const loginHref = loginRedirectPath
     ? `/login?next=${encodeURIComponent(loginRedirectPath)}`
     : '/login';
+  const verifyHref = loginRedirectPath
+    ? `/login?verify=invalid&next=${encodeURIComponent(loginRedirectPath)}`
+    : '/login?verify=invalid';
 
   return (
     <div className="state-panel state-panel-error" role="alert">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <h2 style={{ fontSize: '1.25rem', margin: 0 }}>{heading}</h2>
-        <p style={{ margin: 0, fontSize: '0.9375rem', color: 'var(--p-ink)' }}>{error.message}</p>
+        <p style={{ margin: 0, fontSize: '0.9375rem', color: 'var(--p-ink)' }}>
+          {isEmailNotConfirmed
+            ? 'Email akunmu belum diverifikasi. Buka email verifikasi atau kirim ulang tautannya dari halaman masuk.'
+            : error.message}
+        </p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
+          {isEmailNotConfirmed ? (
+            <Link href={verifyHref} className="btn btn-primary btn-sm">
+              Verifikasi / Kirim Ulang
+            </Link>
+          ) : null}
           {isSession ? (
             <>
               <Link href={loginHref} className="btn btn-primary btn-sm">

@@ -13,6 +13,7 @@ import {
   notifyAuthChanged,
   type SessionInfo,
 } from './navigation';
+import { ResendVerificationButton } from './resend-verification';
 
 export function AuthGuard({
   title = 'Masuk untuk Melanjutkan',
@@ -41,6 +42,8 @@ export function AuthGuard({
   }>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
+  const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
 
   const verify = useCallback(async (forceRefresh = false) => {
     if (!hasAuthSessionCookie()) {
@@ -62,6 +65,7 @@ export function AuthGuard({
     e.preventDefault();
     setFieldErrors({});
     setFormError(null);
+    setEmailNotConfirmed(false);
 
     const trimmedEmail = email.trim();
     const trimmedName = fullName.trim();
@@ -96,6 +100,10 @@ export function AuthGuard({
 
       if (!res.ok) {
         setSubmitting(false);
+        if (res.error.status === 403 && res.error.code === 'email_not_confirmed') {
+          setEmailNotConfirmed(true);
+          return;
+        }
         setFormError(res.error.message);
         return;
       }
@@ -108,12 +116,6 @@ export function AuthGuard({
     }
 
     // Signup tab
-    if (trimmedName.length > 120) {
-      setSubmitting(false);
-      setFormError('Nama lengkap maksimal 120 karakter.');
-      return;
-    }
-
     const body: { email: string; password: string; full_name?: string } = {
       email: trimmedEmail,
       password,
@@ -122,21 +124,31 @@ export function AuthGuard({
       body.full_name = trimmedName;
     }
 
-    const res = await apiFetch<{ user: { id: string; email: string } }>('/api/auth/signup', {
+    const res = await apiFetch<{
+      status?: string;
+      email?: string;
+      user?: { id: string; email: string };
+    }>('/api/auth/signup', {
       method: 'POST',
       body,
     });
 
+    setSubmitting(false);
+
     if (!res.ok) {
-      setSubmitting(false);
       setFormError(res.error.message);
       return;
     }
 
-    notifyAuthChanged();
-    await verify(true);
-    setSubmitting(false);
-    router.refresh();
+    if (res.data?.status === 'verification_sent') {
+      setPendingVerificationEmail(res.data.email ?? trimmedEmail);
+      setPassword('');
+      return;
+    }
+
+    // Fallback for legacy response shape during rollout.
+    setPendingVerificationEmail(trimmedEmail);
+    setPassword('');
   }
 
   if (loading) {
@@ -219,6 +231,7 @@ export function AuthGuard({
                   setActiveTab('login');
                   setFieldErrors({});
                   setFormError(null);
+                  setEmailNotConfirmed(false);
                 }}
               >
                 Masuk
@@ -232,11 +245,35 @@ export function AuthGuard({
                   setActiveTab('signup');
                   setFieldErrors({});
                   setFormError(null);
+                  setEmailNotConfirmed(false);
                 }}
               >
                 Daftar Akun Baru
               </button>
             </div>
+
+            {pendingVerificationEmail && activeTab === 'signup' ? (
+              <NoticeBanner variant="info" title="Cek email kamu">
+                <p style={{ margin: '0 0 8px' }}>
+                  Kami telah mengirim tautan verifikasi ke{' '}
+                  <strong style={{ color: 'var(--ink-primary)' }}>{pendingVerificationEmail}</strong>.
+                  Buka email tersebut untuk mengaktifkan akunmu.
+                </p>
+                <p style={{ margin: '0 0 8px' }}>
+                  Periksa folder Spam atau Promosi. Tautan verifikasi berlaku dalam waktu terbatas.
+                </p>
+                <ResendVerificationButton email={pendingVerificationEmail} />
+              </NoticeBanner>
+            ) : null}
+
+            {emailNotConfirmed && activeTab === 'login' ? (
+              <NoticeBanner variant="warning" title="Email belum diverifikasi">
+                <p style={{ margin: '0 0 8px' }}>
+                  Verifikasi emailmu terlebih dahulu sebelum masuk.
+                </p>
+                <ResendVerificationButton email={email} disabled={!email.trim()} />
+              </NoticeBanner>
+            ) : null}
 
             {formError ? (
               <NoticeBanner
@@ -248,6 +285,7 @@ export function AuthGuard({
               </NoticeBanner>
             ) : null}
 
+            {!(pendingVerificationEmail && activeTab === 'signup') ? (
             <form onSubmit={handleModalSubmit} className="form-stack" noValidate>
               {activeTab === 'signup' ? (
                 <FormField id="modal-fullname" label="Nama Lengkap" error={fieldErrors.fullName}>
@@ -311,12 +349,32 @@ export function AuthGuard({
                 {activeTab === 'login' ? 'Masuk Sekarang' : 'Daftar & Lanjutkan'}
               </Button>
             </form>
+            ) : null}
 
-            <AuthDivider />
-            <GoogleAuthButton
-              label={activeTab === 'login' ? 'Masuk dengan Google' : 'Daftar dengan Google'}
-              next={pathname}
-            />
+            {!(pendingVerificationEmail && activeTab === 'signup') ? (
+              <>
+                <AuthDivider />
+                <GoogleAuthButton
+                  label={activeTab === 'login' ? 'Masuk dengan Google' : 'Daftar dengan Google'}
+                  next={pathname}
+                />
+              </>
+            ) : (
+              <div style={{ marginTop: 12 }}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setPendingVerificationEmail(null);
+                    setActiveTab('login');
+                    setFormError(null);
+                    setFieldErrors({});
+                  }}
+                >
+                  Sudah verifikasi? Masuk
+                </Button>
+              </div>
+            )}
 
             <div
               style={{
