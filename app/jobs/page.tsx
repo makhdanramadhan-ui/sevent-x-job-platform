@@ -37,6 +37,7 @@ import {
   type WorkMode,
 } from '@/lib/contracts';
 import type { EmptyHint } from '@/lib/recommendation/empty-hint';
+import { proxiedLogoSrc } from '@/lib/logo-proxy';
 
 type JobsApiResponse = {
   items: Array<Job & { location_note?: string | null }>;
@@ -238,7 +239,7 @@ function CompanyLogoBox({
     >
       {canRenderLogo ? (
         <img
-          src={logoUrl}
+          src={proxiedLogoSrc(logoUrl)}
           alt=""
           width={44}
           height={44}
