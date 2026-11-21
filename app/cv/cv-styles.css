@@ -1,0 +1,353 @@
+/* =============================================================
+   CV MODULE STYLES — app/cv/cv-styles.css
+   Styles for CV editor page and ATS preview print layout.
+   Imported by cv-preview.tsx and [id]/page.tsx
+   ============================================================= */
+
+/* ---- CV EDITOR PAGE LAYOUT ---- */
+.cv-actions-bar {
+  background: #ffffff;
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.12));
+  border-radius: var(--radius-md, 12px);
+  padding: 12px 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.cv-workspace-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.cv-preview-sticky {
+  position: sticky;
+  top: 90px;
+}
+
+/* Screen only media query to prevent print view from hiding preview column */
+@media screen and (max-width: 1024px) {
+  .cv-mode-toggle {
+    display: flex !important;
+  }
+
+  .cv-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cv-column-hidden-mobile {
+    display: none !important;
+  }
+}
+
+/* ---- ATS CLASSIC RESUME STYLESHEET (SCREEN & PREVIEW) ---- */
+
+.cv-ats-preview-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  background: #e5e7eb;
+  padding: 24px;
+  border-radius: var(--radius-md, 12px);
+  display: flex;
+  justify-content: center;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.cv-ats-sheet {
+  width: 100%;
+  max-width: 800px;
+  min-height: 1100px;
+  background: #ffffff;
+  color: #000000;
+  padding: 40px 48px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.1);
+  font-family: 'Times New Roman', Times, Georgia, serif;
+  line-height: 1.35;
+  font-size: 10.5pt;
+}
+
+/* HEADER ATS */
+.cv-ats-header {
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.cv-ats-name {
+  font-family: 'Times New Roman', Times, Georgia, serif;
+  font-size: 24pt;
+  font-weight: 700;
+  color: #000000;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.cv-ats-contacts {
+  font-size: 9.5pt;
+  color: #111111;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+}
+
+.cv-ats-contact-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+.cv-ats-sep {
+  margin: 0 5px;
+  color: #444444;
+}
+
+.cv-ats-link {
+  color: #000000;
+  text-decoration: underline;
+}
+
+/* SECTION HEADINGS WITH SOLID DIVIDER UNDERNEATH */
+.cv-ats-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cv-ats-section {
+  break-inside: avoid;
+  page-break-inside: avoid;
+  margin-bottom: 2px;
+}
+
+.cv-ats-section-title {
+  font-family: 'Times New Roman', Times, Georgia, serif;
+  font-size: 11pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #000000;
+  margin: 0;
+  letter-spacing: 0.04em;
+}
+
+.cv-ats-divider {
+  width: 100%;
+  height: 1px;
+  background-color: #000000;
+  margin: 3px 0 8px 0;
+}
+
+.cv-ats-text {
+  font-size: 9.5pt;
+  color: #111111;
+  margin: 0;
+  line-height: 1.45;
+  text-align: justify;
+}
+
+/* ENTRY ROW */
+.cv-ats-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cv-ats-entry {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.cv-ats-entry-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.cv-ats-role {
+  font-weight: 700;
+  font-size: 10pt;
+  color: #000000;
+}
+
+.cv-ats-date {
+  font-size: 9.5pt;
+  font-style: italic;
+  color: #000000;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.cv-ats-institution {
+  font-style: italic;
+  font-size: 9.5pt;
+  color: #000000;
+  margin-top: 1px;
+}
+
+/* BULLETS */
+.cv-ats-bullets {
+  margin: 3px 0 0 0;
+  padding-left: 20px;
+  font-size: 9.5pt;
+  line-height: 1.4;
+  list-style-type: disc;
+}
+
+.cv-ats-bullets li {
+  margin-bottom: 2px;
+  text-align: justify;
+}
+
+/* CERTIFICATION ROW */
+.cv-ats-cert-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 9.5pt;
+  margin-bottom: 3px;
+}
+
+.cv-ats-cert-title {
+  font-weight: 400;
+  color: #000000;
+}
+
+/* SKILLS 3-COLUMN LAYOUT */
+.cv-ats-skills-3col {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cv-ats-skill-col {
+  margin: 0;
+  padding-left: 16px;
+}
+
+/* =============================================================
+   PRINT CONFIGURATION FOR TRUE ATS PDF DOWNLOAD (CTRL+P / BUTTON)
+   Ensures the CV content is fully rendered and not a blank canvas.
+   ============================================================= */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Unclip any ancestor shell containers */
+  .app-shell,
+  .app-main,
+  #main-content {
+    display: block !important;
+    min-height: auto !important;
+    height: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    position: static !important;
+    float: none !important;
+  }
+
+  /* Sembunyikan elemen web aplikasi */
+  .site-header,
+  .site-footer,
+  .cv-actions-bar,
+  .cv-mode-toggle,
+  .cv-editor-column,
+  .auth-modal-overlay,
+  button,
+  .page-banner,
+  .state-panel,
+  .notice-banner,
+  header,
+  footer {
+    display: none !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Jadikan workspace layout block sederhana */
+  .cv-workspace-grid {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* PAKSA kolom pratinjau tampil penuh tanpa terpengaruh status mobile */
+  .cv-preview-column,
+  .cv-preview-column.cv-column-hidden-mobile,
+  .cv-column-hidden-mobile {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: static !important;
+    float: none !important;
+  }
+
+  .cv-preview-sticky,
+  .cv-preview-column > div {
+    position: static !important;
+    top: auto !important;
+  }
+
+  .cv-ats-preview-wrapper {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    display: block !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  .cv-ats-sheet {
+    max-width: 100% !important;
+    width: 100% !important;
+    min-height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+    font-size: 10.5pt;
+  }
+
+  .cv-ats-section,
+  .cv-ats-entry {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  a {
+    color: #000000 !important;
+    text-decoration: underline !important;
+  }
+}
