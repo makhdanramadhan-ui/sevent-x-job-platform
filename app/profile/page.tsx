@@ -13,7 +13,6 @@ import {
   type ApiCallError,
   AuthGuard,
   apiFetch,
-  Badge,
   Button,
   EmptyState,
   ErrorState,
@@ -510,59 +509,142 @@ function ProfileInner({ session: initialSession }: { session: SessionInfo }) {
               title="Profil Kamu Masih Kosong"
               description="Lengkapi formulir di bawah ini agar kami dapat mencocokkan profilmu dengan lowongan yang relevan dan mempermudah pembuatan CV-mu."
             />
-          ) : (
-            <section className="surface-card" aria-label="Ringkasan kelengkapan profil">
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: 12,
-                  marginBottom: 12,
-                }}
-              >
-                <div>
-                  <strong style={{ fontSize: '1.05rem' }}>
-                    {profile.full_name || 'Nama Belum Dicantumkan'}
-                  </strong>
-                  {profile.headline ? (
-                    <span style={{ color: 'var(--ink-secondary)', marginLeft: 10, fontSize: '0.9rem' }}>
-                      — {profile.headline}
-                    </span>
-                  ) : null}
-                </div>
-                <span className="job-timestamp">
-                  Diperbarui: {formatDateTimeId(profile.updated_at)}
-                </span>
-              </div>
+          ) : (() => {
+            const summaryStats = [
+              {
+                key: 'skills',
+                label: 'Keahlian',
+                count: profile.skills.length,
+                icon: (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                  </svg>
+                ),
+              },
+              {
+                key: 'education',
+                label: 'Pendidikan',
+                count: profile.education.length,
+                icon: (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                    <path d="M6 12v5c3 3 9 3 12 0v-5" />
+                  </svg>
+                ),
+              },
+              {
+                key: 'experiences',
+                label: 'Pengalaman',
+                count: profile.experiences.length,
+                icon: (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                  </svg>
+                ),
+              },
+              {
+                key: 'projects',
+                label: 'Proyek',
+                count: profile.projects.length,
+                icon: (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                    <polyline points="2 17 12 22 22 17" />
+                    <polyline points="2 12 12 17 22 12" />
+                  </svg>
+                ),
+              },
+              {
+                key: 'organizations',
+                label: 'Organisasi',
+                count: profile.organizations.length,
+                icon: (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                ),
+              },
+              {
+                key: 'achievements',
+                label: 'Pencapaian',
+                count: profile.achievements.length,
+                icon: (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="8" r="7" />
+                    <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+                  </svg>
+                ),
+              },
+              {
+                key: 'positions',
+                label: 'Posisi Preferensi',
+                count: profile.preferences.positions.length,
+                icon: (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <circle cx="12" cy="12" r="6" />
+                    <circle cx="12" cy="12" r="2" />
+                  </svg>
+                ),
+              },
+            ];
+            const filledCount = summaryStats.filter((item) => item.count > 0).length;
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                <Badge variant={profile.skills.length > 0 ? 'open' : 'warning'}>
-                  {profile.skills.length} Keahlian
-                </Badge>
-                <Badge variant={profile.education.length > 0 ? 'open' : 'neutral'}>
-                  {profile.education.length} Pendidikan
-                </Badge>
-                <Badge variant={profile.experiences.length > 0 ? 'open' : 'neutral'}>
-                  {profile.experiences.length} Pengalaman Kerja
-                </Badge>
-                <Badge variant="neutral">{profile.projects.length} Proyek</Badge>
-                <Badge variant="neutral">{profile.organizations.length} Organisasi</Badge>
-                <Badge variant="neutral">{profile.achievements.length} Pencapaian</Badge>
-                <Badge
-                  variant={
-                    profile.preferences.positions.length > 0 ||
-                    profile.preferences.work_modes.length > 0
-                      ? 'open'
-                      : 'warning'
-                  }
-                >
-                  {profile.preferences.positions.length} Posisi Preferensi
-                </Badge>
-              </div>
-            </section>
-          )}
+            return (
+              <section className="profile-summary-card" aria-label="Ringkasan kelengkapan profil">
+                <div className="profile-summary-head">
+                  <div className="profile-summary-identity">
+                    <span className="profile-summary-badge" aria-hidden="true">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                    </span>
+                    <div className="profile-summary-title-wrap">
+                      <strong className="profile-summary-name">
+                        {profile.full_name || 'Nama Belum Dicantumkan'}
+                      </strong>
+                      {profile.headline ? (
+                        <span className="profile-summary-headline">{profile.headline}</span>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="profile-summary-meta">
+                    <span className="profile-summary-progress">
+                      {filledCount}/{summaryStats.length} bagian terisi
+                    </span>
+                    <span className="profile-summary-updated">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                      Diperbarui: {formatDateTimeId(profile.updated_at)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="profile-stats-grid">
+                  {summaryStats.map((stat) => (
+                    <div
+                      key={stat.key}
+                      className={`profile-stat-tile ${stat.count > 0 ? 'profile-stat-tile--filled' : ''}`}
+                    >
+                      <span className="profile-stat-icon">{stat.icon}</span>
+                      <div className="profile-stat-body">
+                        <span className="profile-stat-value">{stat.count}</span>
+                        <span className="profile-stat-label">{stat.label}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          })()}
 
           <ProfileEditorForm
             key={formVersion}

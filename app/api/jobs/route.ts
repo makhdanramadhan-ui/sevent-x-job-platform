@@ -32,15 +32,46 @@ const QUERY_KEYS = [
   'employment_type',
   'level',
   'status',
+  'sort',
 ] as const;
+
+const SORT_OPTIONS = ['relevance', 'newest'] as const;
 
 function hasExplicitSearch(params: URLSearchParams): boolean {
   for (const key of QUERY_KEYS) {
-    if (key === 'page' || key === 'limit') continue;
+    if (key === 'page' || key === 'limit' || key === 'sort') continue;
     const value = params.get(key);
     if (value !== null && value.trim().length > 0) return true;
   }
   return false;
+}
+
+function jobTimestampMs(job: {
+  last_fetched_at?: string | null;
+  first_seen_at?: string | null;
+  updated_at?: string | null;
+}): number {
+  const raw = job.last_fetched_at ?? job.first_seen_at ?? job.updated_at;
+  if (!raw) return 0;
+  const ms = Date.parse(raw);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function keywordRelevanceScore(
+  job: { title?: string | null; company?: string | null },
+  q: string | null,
+): number {
+  if (!q) return 0;
+  const needle = q.trim().toLowerCase();
+  if (!needle) return 0;
+  const title = (job.title ?? '').toLowerCase();
+  const company = (job.company ?? '').toLowerCase();
+  let score = 0;
+  if (title === needle) score += 100;
+  else if (title.startsWith(needle)) score += 60;
+  else if (title.includes(needle)) score += 30;
+  if (company.includes(needle)) score += 15;
+  return score;
 }
 
 export async function GET(req: NextRequest) {
@@ -57,10 +88,12 @@ export async function GET(req: NextRequest) {
     const employmentType = params.get('employment_type');
     const level = params.get('level');
     const status = params.get('status');
+    const rawSort = params.get('sort');
+    const sort = rawSort ? oneOf(rawSort, 'sort', SORT_OPTIONS) : 'relevance';
 
     const explicit = hasExplicitSearch(params);
 
-    if (!explicit) {
+    if (!explicit && sort === 'relevance') {
       const { data: profile, error: profileError } = await auth.supabase
         .from('profiles')
         .select(PROFILE_COLUMNS)
@@ -146,6 +179,7 @@ export async function GET(req: NextRequest) {
         page,
         limit,
         pages,
+        sort,
         profile_state: profileState,
         location_diagnostics: selection.diagnostics,
         location_counts: selection.locationCounts,
@@ -169,19 +203,71 @@ export async function GET(req: NextRequest) {
     if (status) query = query.eq('status', oneOf(status, 'status', JOB_STATUSES));
 
     const from = (page - 1) * limit;
-    const { data, error, count } = await query
-      .order('last_fetched_at', { ascending: false, nullsFirst: false })
-      .order('id', { ascending: true })
-      .range(from, from + limit - 1);
+    if (sort === 'newest' || from >= 200) {
+      const { data, error, count } = await query
+        .order('last_fetched_at', { ascending: false, nullsFirst: false })
+        .order('first_seen_at', { ascending: false, nullsFirst: false })
+        .order('id', { ascending: true })
+        .range(from, from + limit - 1);
+      if (error) throwDb(error);
+
+      const total = count ?? 0;
+      return ok({
+        items: data ?? [],
+        total,
+        page,
+        limit,
+        pages: total === 0 ? 0 : Math.ceil(total / limit),
+        sort,
+        profile_state: explicit ? 'explicit_search' : 'all_newest',
+      });
+    }
+
+    const [{ data, error, count }, profileRes] = await Promise.all([
+      query
+        .order('last_fetched_at', { ascending: false, nullsFirst: false })
+        .order('id', { ascending: true })
+        .range(0, 199),
+      auth.supabase
+        .from('profiles')
+        .select('skills, preferences')
+        .eq('user_id', auth.user.id)
+        .maybeSingle(),
+    ]);
     if (error) throwDb(error);
 
-    const total = count ?? 0;
+    const candidates = (data ?? []) as Array<Record<string, any>>;
+    const profileScoreById = new Map<string, number>();
+    if (!profileRes.error && profileRes.data) {
+      const keywordState = extractProfileKeywords(profileRes.data as any);
+      if (!keywordState.isEmpty) {
+        const ranked = rankJobs({
+          profile: profileRes.data as RecommendationProfileInput,
+          jobs: candidates as any,
+        });
+        for (const item of ranked.items) {
+          profileScoreById.set(item.job_id, item.score);
+        }
+      }
+    }
+
+    const sortedCandidates = [...candidates].sort((a, b) => {
+      const aScore = keywordRelevanceScore(a, q) + (profileScoreById.get(a.id) ?? 0);
+      const bScore = keywordRelevanceScore(b, q) + (profileScoreById.get(b.id) ?? 0);
+      if (bScore !== aScore) return bScore - aScore;
+      const timeDiff = jobTimestampMs(b) - jobTimestampMs(a);
+      if (timeDiff !== 0) return timeDiff;
+      return String(a.id).localeCompare(String(b.id));
+    });
+
+    const total = count ?? sortedCandidates.length;
     return ok({
-      items: data ?? [],
+      items: sortedCandidates.slice(from, from + limit),
       total,
       page,
       limit,
       pages: total === 0 ? 0 : Math.ceil(total / limit),
+      sort,
       profile_state: 'explicit_search',
     });
   });
