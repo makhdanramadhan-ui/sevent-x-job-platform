@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers';
 import Link from 'next/link';
 import {
   EMPLOYMENT_TYPE_LABELS,
@@ -14,6 +13,7 @@ import {
   CopySourceUrlButton,
   DeferredDescriptionBlocks,
   DetailCompanyLogo,
+  JobDetailCookieGate,
   JobDetailTopActions,
   SourceSiteLogo,
 } from '@/components/ui/job-detail-islands';
@@ -21,9 +21,9 @@ import type { JobDetail, JobStatus } from '@/lib/contracts';
 import { readSupabaseEnv } from '@/lib/env';
 import { type DescriptionBlock, parseJobDescriptionBlocks } from '@/lib/job-description';
 import { displaySourceName } from '@/lib/job-source';
-import { createCookieClient } from '@/lib/supabase';
+import { createPublicServerClient } from '@/lib/supabase';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SERVER_JOB_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -214,26 +214,16 @@ function statusBadgeClass(status: JobStatus): string {
 }
 
 async function getServerJobDetail(jobId: string): Promise<{
-  authenticated: boolean;
   job: JobDetail | null;
   descriptionBlocks: DescriptionBlock[];
 }> {
   if (!UUID_RE.test(jobId)) {
-    return { authenticated: false, job: null, descriptionBlocks: [] };
-  }
-
-  const store = await cookies();
-  const hasSessionCookie = store
-    .getAll()
-    .some((cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('auth-token'));
-  if (!hasSessionCookie) {
-    return { authenticated: false, job: null, descriptionBlocks: [] };
+    return { job: null, descriptionBlocks: [] };
   }
 
   const cached = serverJobCache.get(jobId);
   if (cached && Date.now() < cached.expiresAt) {
     return {
-      authenticated: true,
       job: cached.job,
       descriptionBlocks: cached.blocks,
     };
@@ -241,11 +231,11 @@ async function getServerJobDetail(jobId: string): Promise<{
 
   const env = readSupabaseEnv();
   if (!env) {
-    return { authenticated: false, job: null, descriptionBlocks: [] };
+    return { job: null, descriptionBlocks: [] };
   }
 
   try {
-    const supabase = await createCookieClient(env);
+    const supabase = createPublicServerClient(env);
     const jobRes = await supabase
       .from('jobs')
       .select('*, job_sources(*)')
@@ -254,7 +244,7 @@ async function getServerJobDetail(jobId: string): Promise<{
       .maybeSingle();
 
     if (jobRes.error || !jobRes.data) {
-      return { authenticated: true, job: null, descriptionBlocks: [] };
+      return { job: null, descriptionBlocks: [] };
     }
 
     const job = jobRes.data as JobDetail;
@@ -269,12 +259,11 @@ async function getServerJobDetail(jobId: string): Promise<{
     });
 
     return {
-      authenticated: true,
       job,
       descriptionBlocks,
     };
   } catch {
-    return { authenticated: false, job: null, descriptionBlocks: [] };
+    return { job: null, descriptionBlocks: [] };
   }
 }
 
@@ -286,7 +275,7 @@ export default async function JobDetailPage({
   const { id } = await params;
   const serverResult = await getServerJobDetail(id);
 
-  if (!serverResult.authenticated || !serverResult.job) {
+  if (!serverResult.job) {
     return (
       <div style={{ minHeight: '78vh' }}>
         <JobDetailAuthSection />
@@ -295,8 +284,8 @@ export default async function JobDetailPage({
   }
 
   const { job, descriptionBlocks } = serverResult;
-  const initialBlocks = descriptionBlocks.slice(0, 4);
-  const deferredBlocks = descriptionBlocks.slice(4);
+  const initialBlocks = descriptionBlocks.slice(0, 2);
+  const deferredBlocks = descriptionBlocks.slice(2);
   const deferredEstimatedHeight = deferredBlocks.reduce((acc, block) => {
     if (block.type === 'heading') return acc + 52;
     if (block.type === 'list') return acc + block.items.length * 32 + 16;
@@ -305,6 +294,7 @@ export default async function JobDetailPage({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <JobDetailCookieGate />
       <JobDetailTopActions jobId={job.id} />
 
       {/* Main Header Card: gunakan <header> agar <h1> tidak berada di dalam <section> */}

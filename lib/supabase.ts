@@ -17,6 +17,16 @@ export async function createCookieClient(env: SupabaseEnv): Promise<SupabaseClie
   });
 }
 
+export function createPublicServerClient(env: SupabaseEnv): SupabaseClient {
+  return createClient(env.url, env.anonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
+}
+
 export function createBearerClient(env: SupabaseEnv, token: string): SupabaseClient {
   return createClient(env.url, env.anonKey, {
     auth: {
