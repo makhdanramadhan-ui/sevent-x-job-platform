@@ -139,14 +139,36 @@ export function SourceSiteLogo({ host }: { host: string | null }) {
 
 export function JobDetailTopActions({
   jobId,
-  initialBookmarked,
+  initialBookmarked = false,
 }: {
   jobId: string;
-  initialBookmarked: boolean;
+  initialBookmarked?: boolean;
 }) {
   const [isBookmarked, setIsBookmarked] = useState(initialBookmarked);
   const [toggling, setToggling] = useState(false);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    let synced = false;
+    const syncBookmark = () => {
+      if (synced) return;
+      synced = true;
+      void apiFetch<{ items: Array<{ job_id: string }> }>('/api/bookmarks').then((res) => {
+        if (res.ok) {
+          setIsBookmarked(res.data.items.some((item) => item.job_id === jobId));
+        }
+      });
+    };
+
+    window.addEventListener('pointerdown', syncBookmark, { passive: true, once: true });
+    window.addEventListener('touchstart', syncBookmark, { passive: true, once: true });
+    window.addEventListener('scroll', syncBookmark, { passive: true, once: true });
+    return () => {
+      window.removeEventListener('pointerdown', syncBookmark);
+      window.removeEventListener('touchstart', syncBookmark);
+      window.removeEventListener('scroll', syncBookmark);
+    };
+  }, [jobId]);
 
   async function handleToggleBookmark() {
     setToggling(true);
@@ -375,17 +397,19 @@ export function DeferredDescriptionBlocks({
       setMounted(true);
     };
 
-    const timer = window.setTimeout(reveal, 2800);
     window.addEventListener('scroll', reveal, { passive: true, once: true });
+    window.addEventListener('wheel', reveal, { passive: true, once: true });
     window.addEventListener('pointerdown', reveal, { passive: true, once: true });
     window.addEventListener('touchstart', reveal, { passive: true, once: true });
+    window.addEventListener('touchmove', reveal, { passive: true, once: true });
     window.addEventListener('keydown', reveal, { passive: true, once: true });
 
     return () => {
-      window.clearTimeout(timer);
       window.removeEventListener('scroll', reveal);
+      window.removeEventListener('wheel', reveal);
       window.removeEventListener('pointerdown', reveal);
       window.removeEventListener('touchstart', reveal);
+      window.removeEventListener('touchmove', reveal);
       window.removeEventListener('keydown', reveal);
     };
   }, []);
