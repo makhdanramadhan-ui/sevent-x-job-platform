@@ -1493,12 +1493,6 @@ h4 {
   line-height: 1.68;
 }
 
-/* Tunda kalkulasi Style & Layout untuk paragraf deskripsi bagian bawah & sidebar bawah di HP. */
-.job-desc-content > :nth-child(n + 7) {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 72px;
-}
-
 @media (max-width: 960px) {
   .job-detail-layout {
     grid-template-columns: minmax(0, 1fr);
@@ -1507,8 +1501,6 @@ h4 {
 
   .job-detail-sidebar {
     position: static;
-    content-visibility: auto;
-    contain-intrinsic-size: auto 460px;
   }
 }
 
