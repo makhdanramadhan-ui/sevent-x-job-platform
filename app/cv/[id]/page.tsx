@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch } from '@/components/ui/api-client';
 import { AuthGuard } from '@/components/ui/auth-guard';
 import { ButtonText } from '@/components/ui/button-text';
@@ -70,6 +70,26 @@ function updateDemoDocument(
   }
 }
 
+type CvEditorSnapshot = {
+  title: string;
+  templateVersion: string;
+  content: CvContent;
+};
+
+type PendingLeaveAction =
+  | { type: 'internal'; href: string }
+  | { type: 'external'; href: string }
+  | { type: 'back' }
+  | { type: 'logout'; proceed: () => void };
+
+function serializeCvSnapshot(snapshot: CvEditorSnapshot): string {
+  return JSON.stringify({
+    title: snapshot.title,
+    templateVersion: snapshot.templateVersion,
+    content: snapshot.content,
+  });
+}
+
 function CvEditorInner({
   cvId,
   session,
@@ -79,28 +99,217 @@ function CvEditorInner({
   session: SessionInfo;
   isDemo?: boolean;
 }) {
+  const router = useRouter();
   const [doc, setDoc] = useState<CvDocument | null>(null);
   const [title, setTitle] = useState('');
   const [templateVersion, setTemplateVersion] = useState<string>('v1-default');
   const [content, setContent] = useState<CvContent | null>(null);
+  const [baseline, setBaseline] = useState<CvEditorSnapshot | null>(null);
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
   const [activeSection, setActiveSection] = useState<CvSectionId>('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingLeaveAction | null>(null);
+
+  const baselineSerialized = useMemo(
+    () => (baseline ? serializeCvSnapshot(baseline) : null),
+    [baseline],
+  );
+  const isDirty = useMemo(() => {
+    if (!content || baselineSerialized === null) return false;
+    return (
+      serializeCvSnapshot({
+        title,
+        templateVersion,
+        content,
+      }) !== baselineSerialized
+    );
+  }, [title, templateVersion, content, baselineSerialized]);
+
+  const isDirtyRef = useRef(isDirty);
+  isDirtyRef.current = isDirty;
+  const savingRef = useRef(saving);
+  savingRef.current = saving;
+  const bypassGuardRef = useRef(false);
+  const hasSentinelRef = useRef(false);
+
+  const executePendingAction = useCallback(
+    (action: PendingLeaveAction) => {
+      bypassGuardRef.current = true;
+      setPendingAction(null);
+
+      if (action.type === 'internal') {
+        if (hasSentinelRef.current) {
+          hasSentinelRef.current = false;
+          router.replace(action.href);
+        } else {
+          router.push(action.href);
+        }
+        return;
+      }
+      if (action.type === 'external') {
+        window.location.assign(action.href);
+        return;
+      }
+      if (action.type === 'back') {
+        hasSentinelRef.current = false;
+        window.history.go(-2);
+        return;
+      }
+      hasSentinelRef.current = false;
+      action.proceed();
+    },
+    [router],
+  );
+
+  useEffect(() => {
+    if (isDirty) {
+      setSuccessNotice(null);
+    }
+  }, [isDirty]);
+
+  useEffect(() => {
+    if (isDirty && !hasSentinelRef.current && !bypassGuardRef.current) {
+      window.history.pushState(
+        { ...(window.history.state ?? {}), __rakitkarierCvGuard: true },
+        '',
+        window.location.href,
+      );
+      hasSentinelRef.current = true;
+    }
+  }, [isDirty]);
+
+  useEffect(() => {
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      if (!isDirtyRef.current || bypassGuardRef.current) return;
+      event.preventDefault();
+      event.returnValue = '';
+    }
+
+    function handlePopState() {
+      if (bypassGuardRef.current) return;
+      if (isDirtyRef.current) {
+        window.history.pushState(
+          { ...(window.history.state ?? {}), __rakitkarierCvGuard: true },
+          '',
+          window.location.href,
+        );
+        hasSentinelRef.current = true;
+        setPendingAction({ type: 'back' });
+        return;
+      }
+      if (hasSentinelRef.current) {
+        hasSentinelRef.current = false;
+        bypassGuardRef.current = true;
+        window.history.back();
+      }
+    }
+
+    function handleDocumentClick(event: MouseEvent) {
+      if (!isDirtyRef.current || bypassGuardRef.current) return;
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+      const anchor = target?.closest('a[href]') as HTMLAnchorElement | null;
+      if (!anchor) return;
+      if (anchor.target === '_blank' || anchor.hasAttribute('download')) return;
+
+      const rawHref = anchor.getAttribute('href');
+      if (!rawHref || rawHref.startsWith('#')) return;
+
+      let url: URL;
+      try {
+        url = new URL(anchor.href, window.location.href);
+      } catch {
+        return;
+      }
+
+      if (
+        url.origin === window.location.origin &&
+        url.pathname === window.location.pathname &&
+        url.search === window.location.search
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (url.origin === window.location.origin) {
+        setPendingAction({
+          type: 'internal',
+          href: `${url.pathname}${url.search}${url.hash}`,
+        });
+      } else {
+        setPendingAction({ type: 'external', href: url.href });
+      }
+    }
+
+    function handleBeforeLogout(event: Event) {
+      if (!isDirtyRef.current || bypassGuardRef.current) return;
+      const customEvent = event as CustomEvent<{ proceed?: () => void }>;
+      const proceed = customEvent.detail?.proceed;
+      if (!proceed) return;
+      event.preventDefault();
+      setPendingAction({ type: 'logout', proceed });
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    document.addEventListener('click', handleDocumentClick, true);
+    window.addEventListener('seventx:before-logout', handleBeforeLogout);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+      document.removeEventListener('click', handleDocumentClick, true);
+      window.removeEventListener('seventx:before-logout', handleBeforeLogout);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!pendingAction) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !savingRef.current) {
+        setPendingAction(null);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [pendingAction]);
 
   const loadDocument = useCallback(async () => {
+    bypassGuardRef.current = false;
     setLoading(true);
     setApiError(null);
+    setBaseline(null);
 
     if (isDemo || cvId.startsWith('demo-')) {
       const demoDoc = getDemoDocument(cvId);
       if (demoDoc) {
+        const loadedTitle = demoDoc.title;
+        const loadedTemplate = demoDoc.template_version || 'v1-default';
+        const loadedContent = normalizeCvContent(demoDoc.content, session.user.email ?? undefined);
         setDoc(demoDoc);
-        setTitle(demoDoc.title);
-        setTemplateVersion(demoDoc.template_version || 'v1-default');
-        setContent(normalizeCvContent(demoDoc.content, session.user.email ?? undefined));
+        setTitle(loadedTitle);
+        setTemplateVersion(loadedTemplate);
+        setContent(loadedContent);
+        setBaseline({
+          title: loadedTitle,
+          templateVersion: loadedTemplate,
+          content: loadedContent,
+        });
       } else {
         setApiError('Dokumen uji coba demo tidak ditemukan di penyimpanan browser.');
       }
@@ -110,10 +319,18 @@ function CvEditorInner({
 
     const res = await apiFetch<CvDocument>(`/api/cv/${cvId}`);
     if (res.ok) {
+      const loadedTitle = res.data.title;
+      const loadedTemplate = res.data.template_version || 'v1-default';
+      const loadedContent = normalizeCvContent(res.data.content, session.user.email ?? undefined);
       setDoc(res.data);
-      setTitle(res.data.title);
-      setTemplateVersion(res.data.template_version || 'v1-default');
-      setContent(normalizeCvContent(res.data.content, session.user.email ?? undefined));
+      setTitle(loadedTitle);
+      setTemplateVersion(loadedTemplate);
+      setContent(loadedContent);
+      setBaseline({
+        title: loadedTitle,
+        templateVersion: loadedTemplate,
+        content: loadedContent,
+      });
     } else {
       setApiError(res.error.message);
     }
@@ -124,8 +341,8 @@ function CvEditorInner({
     loadDocument();
   }, [loadDocument]);
 
-  async function handleSave() {
-    if (!content) return;
+  async function handleSave(): Promise<boolean> {
+    if (!content) return false;
     setApiError(null);
     setSuccessNotice(null);
 
@@ -137,26 +354,33 @@ function CvEditorInner({
 
     if (!validation.valid) {
       setApiError(validation.error ?? 'Ukuran dokumen CV melebihi batas 160 KB.');
-      return;
+      return false;
     }
 
     setSaving(true);
+    const normalizedTitle = title.trim() || 'Dokumen CV ATS';
 
     if (isDemo || cvId.startsWith('demo-')) {
-      const ok = updateDemoDocument(cvId, title.trim() || 'Dokumen CV ATS', templateVersion, content);
+      const ok = updateDemoDocument(cvId, normalizedTitle, templateVersion, content);
       setSaving(false);
       if (ok) {
+        setTitle(normalizedTitle);
+        setBaseline({
+          title: normalizedTitle,
+          templateVersion,
+          content,
+        });
         setSuccessNotice('Perubahan CV berhasil disimpan ke penyimpanan browser (Demo Mode).');
-      } else {
-        setApiError('Gagal menyimpan ke penyimpanan lokal browser.');
+        return true;
       }
-      return;
+      setApiError('Gagal menyimpan ke penyimpanan lokal browser.');
+      return false;
     }
 
     const res = await apiFetch<CvDocument>(`/api/cv/${cvId}`, {
       method: 'PUT',
       body: {
-        title: title.trim() || 'Dokumen CV ATS',
+        title: normalizedTitle,
         template_version: templateVersion,
         content,
       },
@@ -164,11 +388,47 @@ function CvEditorInner({
     setSaving(false);
 
     if (res.ok) {
+      const savedTitle = res.data.title || normalizedTitle;
+      const savedTemplate = res.data.template_version || templateVersion;
+      const savedContent = normalizeCvContent(res.data.content, session.user.email ?? undefined);
       setDoc(res.data);
+      setTitle(savedTitle);
+      setTemplateVersion(savedTemplate);
+      setContent(savedContent);
+      setBaseline({
+        title: savedTitle,
+        templateVersion: savedTemplate,
+        content: savedContent,
+      });
       setSuccessNotice('Perubahan CV berhasil disimpan ke basis data.');
-    } else {
-      setApiError(`Gagal menyimpan: ${res.error.message}`);
+      return true;
     }
+    setApiError(`Gagal menyimpan: ${res.error.message}`);
+    return false;
+  }
+
+  async function handleSaveAndLeave() {
+    if (!pendingAction) return;
+    const action = pendingAction;
+    const saved = await handleSave();
+    if (saved) {
+      executePendingAction(action);
+    } else {
+      setPendingAction(null);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  function handleDiscardAndLeave() {
+    if (!pendingAction) return;
+    const action = pendingAction;
+    if (baseline) {
+      setTitle(baseline.title);
+      setTemplateVersion(baseline.templateVersion);
+      setContent(baseline.content);
+    }
+    setApiError(null);
+    executePendingAction(action);
   }
 
   if (loading) {
@@ -236,6 +496,11 @@ function CvEditorInner({
           </div>
 
           <div className="cv-actions-right">
+            {isDirty ? (
+              <span className="unsaved-dirty-pill cv-unsaved-pill" role="status">
+                Ada perubahan belum disimpan
+              </span>
+            ) : null}
             <Button
               variant="outline"
               size="md"
@@ -244,7 +509,7 @@ function CvEditorInner({
               Unduh PDF (ATS)
             </Button>
 
-            <Button variant="primary" size="md" loading={saving} onClick={handleSave}>
+            <Button variant="primary" size="md" loading={saving} onClick={() => void handleSave()}>
               Simpan Perubahan
             </Button>
           </div>
@@ -320,6 +585,100 @@ function CvEditorInner({
           </div>
         </div>
       </div>
+
+      {pendingAction ? (
+        <div
+          className="auth-modal-overlay"
+          role="presentation"
+          onClick={() => {
+            if (!saving) setPendingAction(null);
+          }}
+        >
+          <div
+            className="unsaved-modal-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="unsaved-cv-title"
+            aria-describedby="unsaved-cv-desc"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="unsaved-modal-head">
+              <div className="unsaved-modal-title-wrap">
+                <span className="unsaved-modal-icon" aria-hidden="true">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.1"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                </span>
+                <h2
+                  id="unsaved-cv-title"
+                  style={{ fontFamily: 'var(--font-display)', fontSize: '1.18rem', margin: 0, fontWeight: 600 }}
+                >
+                  Perubahan CV Belum Disimpan
+                </h2>
+              </div>
+              <button
+                type="button"
+                className="auth-modal-close"
+                aria-label="Tutup peringatan dan tetap di editor"
+                disabled={saving}
+                onClick={() => setPendingAction(null)}
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            <p id="unsaved-cv-desc" className="unsaved-modal-desc">
+              Kamu telah mengubah isi atau pengaturan dokumen CV yang belum disimpan. Simpan perubahan
+              terlebih dahulu sebelum keluar atau berpindah halaman?
+            </p>
+
+            <div className="unsaved-modal-actions">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                disabled={saving}
+                onClick={handleDiscardAndLeave}
+              >
+                Buang Perubahan
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                loading={saving}
+                onClick={() => void handleSaveAndLeave()}
+              >
+                Simpan Perubahan
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
