@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
     const level = params.get('level');
     const status = params.get('status');
     const rawSort = params.get('sort');
-    const sort = rawSort ? oneOf(rawSort, 'sort', SORT_OPTIONS) : 'relevance';
+    const sort = rawSort ? oneOf(rawSort, 'sort', SORT_OPTIONS) : 'newest';
 
     const explicit = hasExplicitSearch(params);
 
