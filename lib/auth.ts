@@ -55,6 +55,20 @@ export function assertOriginAllowed(req: NextRequest): void {
   }
 }
 
+function isEmailProviderUser(user: User): boolean {
+  const provider = (user.app_metadata as { provider?: string } | undefined)?.provider;
+  if (provider === 'email') return true;
+  const providers = (user.app_metadata as { providers?: string[] } | undefined)?.providers;
+  if (Array.isArray(providers) && providers.includes('email')) return true;
+  return false;
+}
+
+function assertEmailConfirmed(user: User): void {
+  if (!user.email_confirmed_at && isEmailProviderUser(user)) {
+    throw new ApiError(401, 'email_not_confirmed', 'Email belum diverifikasi.');
+  }
+}
+
 export async function requireAuth(req: NextRequest): Promise<AuthContext> {
   const authorization = req.headers.get('authorization');
   const env = readSupabaseEnv();
@@ -73,6 +87,7 @@ export async function requireAuth(req: NextRequest): Promise<AuthContext> {
     if (error || !data.user) {
       throw new ApiError(401, 'unauthorized', 'Kredensial tidak valid atau kedaluwarsa.');
     }
+    assertEmailConfirmed(data.user);
     return { user: data.user, supabase, mode: 'bearer' };
   }
 
@@ -94,5 +109,6 @@ export async function requireAuth(req: NextRequest): Promise<AuthContext> {
   if (error || !data.user) {
     throw new ApiError(401, 'unauthorized', 'Sesi tidak valid atau kedaluwarsa.');
   }
+  assertEmailConfirmed(data.user);
   return { user: data.user, supabase, mode: 'cookie' };
 }

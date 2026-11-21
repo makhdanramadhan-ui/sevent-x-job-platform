@@ -1,4 +1,6 @@
 import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { readSupabaseAdminEnv, readSupabaseEnv } from '@/lib/env';
 import { ApiError, asObject, ok, readJson, rejectUnknownKeys, run } from '@/lib/http';
 import { assertOriginAllowed } from '@/lib/auth';
@@ -47,6 +49,28 @@ export async function POST(req: NextRequest) {
       }
       throw new ApiError(401, 'invalid_credentials', 'Email atau password salah.');
     }
+
+    if (!data.user.email_confirmed_at) {
+      const provider = (data.user.app_metadata as { provider?: string } | undefined)?.provider;
+      const providers = (data.user.app_metadata as { providers?: string[] } | undefined)?.providers;
+      const isEmailProvider =
+        provider === 'email' || (Array.isArray(providers) && providers.includes('email'));
+      if (isEmailProvider) {
+        await supabase.auth.signOut().catch(() => undefined);
+        const store = await cookies();
+        const responseCookiesToClear: string[] = [];
+        for (const c of store.getAll()) {
+          if (c.name.startsWith('sb-')) responseCookiesToClear.push(c.name);
+        }
+        const bodyOut = { error: { code: 'email_not_confirmed', message: 'Email belum diverifikasi.' } };
+        const res = NextResponse.json(bodyOut, { status: 403 });
+        for (const name of responseCookiesToClear) {
+          res.cookies.delete(name);
+        }
+        return res;
+      }
+    }
+
     return ok({ user: { id: data.user.id, email: data.user.email ?? email } });
   });
 }
