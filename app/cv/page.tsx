@@ -282,10 +282,10 @@ function CvDashboardInner({
 
         <div className="cv-dashboard-actions">
           <Button variant="outline" size="md" onClick={handleLoadSampleAtsTemplate} loading={creating}>
-            Muat Contoh CV ATS
+            Contoh CV ATS
           </Button>
           <Button variant="outline" size="md" onClick={() => setImportOpen(true)}>
-            Impor CV (PDF / DOCX)
+            Impor PDF / DOCX
           </Button>
           <Button variant="primary" size="md" loading={creating} onClick={handleCreateFromScratch}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -323,7 +323,7 @@ function CvDashboardInner({
                   : 'Mulai susun CV standar ATS dari data profil, impor berkas CV lama, atau gunakan contoh template ATS.'
               }
               action={
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <div className="cv-empty-actions">
                   <Button
                     variant="primary"
                     size="md"
