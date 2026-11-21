@@ -22,7 +22,9 @@ export function PageBanner({
   tone = 'mist',
 }: PageBannerProps) {
   return (
-    <section className={`page-banner page-banner--${tone}`}>
+    // <header>, bukan <section>: Chrome memperingatkan <h1> di dalam
+    // article/aside/nav/section (aturan ukuran bawaan sedang dihapus).
+    <header className={`page-banner page-banner--${tone}`}>
       <div className="page-banner__media" aria-hidden="true">
         <Image
           src={imageSrc}
@@ -45,6 +47,6 @@ export function PageBanner({
 
         {actions ? <div className="page-banner__actions">{actions}</div> : null}
       </div>
-    </section>
+    </header>
   );
 }
