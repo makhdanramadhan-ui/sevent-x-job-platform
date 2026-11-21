@@ -17,7 +17,6 @@ import {
   JobDetailTopActions,
   SourceSiteLogo,
 } from '@/components/ui/job-detail-islands';
-import { isEmailProviderUser } from '@/lib/auth';
 import type { JobDetail, JobStatus } from '@/lib/contracts';
 import { readSupabaseEnv } from '@/lib/env';
 import { type DescriptionBlock, parseJobDescriptionBlocks } from '@/lib/job-description';
@@ -27,6 +26,11 @@ import { createCookieClient } from '@/lib/supabase';
 export const dynamic = 'force-dynamic';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SERVER_JOB_CACHE_TTL_MS = 5 * 60 * 1000;
+const serverJobCache = new Map<
+  string,
+  { job: JobDetail; blocks: DescriptionBlock[]; expiresAt: number }
+>();
 
 const EXTRA_HEADING_PREFIXES = [
   'Why Join',
@@ -212,15 +216,10 @@ function statusBadgeClass(status: JobStatus): string {
 async function getServerJobDetail(jobId: string): Promise<{
   authenticated: boolean;
   job: JobDetail | null;
-  isBookmarked: boolean;
+  descriptionBlocks: DescriptionBlock[];
 }> {
   if (!UUID_RE.test(jobId)) {
-    return { authenticated: false, job: null, isBookmarked: false };
-  }
-
-  const env = readSupabaseEnv();
-  if (!env) {
-    return { authenticated: false, job: null, isBookmarked: false };
+    return { authenticated: false, job: null, descriptionBlocks: [] };
   }
 
   const store = await cookies();
@@ -228,45 +227,54 @@ async function getServerJobDetail(jobId: string): Promise<{
     .getAll()
     .some((cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('auth-token'));
   if (!hasSessionCookie) {
-    return { authenticated: false, job: null, isBookmarked: false };
+    return { authenticated: false, job: null, descriptionBlocks: [] };
+  }
+
+  const cached = serverJobCache.get(jobId);
+  if (cached && Date.now() < cached.expiresAt) {
+    return {
+      authenticated: true,
+      job: cached.job,
+      descriptionBlocks: cached.blocks,
+    };
+  }
+
+  const env = readSupabaseEnv();
+  if (!env) {
+    return { authenticated: false, job: null, descriptionBlocks: [] };
   }
 
   try {
     const supabase = await createCookieClient(env);
-    const { data: authData, error: authErr } = await supabase.auth.getUser();
-    if (authErr || !authData.user) {
-      return { authenticated: false, job: null, isBookmarked: false };
-    }
-    if (!authData.user.email_confirmed_at && isEmailProviderUser(authData.user)) {
-      return { authenticated: false, job: null, isBookmarked: false };
-    }
-
-    const [jobRes, bmRes] = await Promise.all([
-      supabase
-        .from('jobs')
-        .select('*, job_sources(*)')
-        .eq('id', jobId)
-        .order('fetched_at', { referencedTable: 'job_sources', ascending: false })
-        .maybeSingle(),
-      supabase
-        .from('bookmarks')
-        .select('job_id')
-        .eq('user_id', authData.user.id)
-        .eq('job_id', jobId)
-        .maybeSingle(),
-    ]);
+    const jobRes = await supabase
+      .from('jobs')
+      .select('*, job_sources(*)')
+      .eq('id', jobId)
+      .order('fetched_at', { referencedTable: 'job_sources', ascending: false })
+      .maybeSingle();
 
     if (jobRes.error || !jobRes.data) {
-      return { authenticated: true, job: null, isBookmarked: false };
+      return { authenticated: true, job: null, descriptionBlocks: [] };
     }
+
+    const job = jobRes.data as JobDetail;
+    const descriptionBlocks = job.description
+      ? enhanceDescriptionBlocks(parseJobDescriptionBlocks(job.description))
+      : [];
+
+    serverJobCache.set(jobId, {
+      job,
+      blocks: descriptionBlocks,
+      expiresAt: Date.now() + SERVER_JOB_CACHE_TTL_MS,
+    });
 
     return {
       authenticated: true,
-      job: jobRes.data as JobDetail,
-      isBookmarked: Boolean(bmRes.data),
+      job,
+      descriptionBlocks,
     };
   } catch {
-    return { authenticated: false, job: null, isBookmarked: false };
+    return { authenticated: false, job: null, descriptionBlocks: [] };
   }
 }
 
@@ -286,10 +294,7 @@ export default async function JobDetailPage({
     );
   }
 
-  const { job, isBookmarked } = serverResult;
-  const descriptionBlocks = job.description
-    ? enhanceDescriptionBlocks(parseJobDescriptionBlocks(job.description))
-    : [];
+  const { job, descriptionBlocks } = serverResult;
   const initialBlocks = descriptionBlocks.slice(0, 4);
   const deferredBlocks = descriptionBlocks.slice(4);
   const deferredEstimatedHeight = deferredBlocks.reduce((acc, block) => {
@@ -300,7 +305,7 @@ export default async function JobDetailPage({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <JobDetailTopActions jobId={job.id} initialBookmarked={isBookmarked} />
+      <JobDetailTopActions jobId={job.id} />
 
       {/* Main Header Card: gunakan <header> agar <h1> tidak berada di dalam <section> */}
       <header className="ledger-card">
