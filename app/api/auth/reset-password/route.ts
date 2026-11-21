@@ -15,9 +15,9 @@ export const RESET_ATTEMPT_MAX = 5;
 export const RESET_ATTEMPT_WINDOW_SECONDS = 15 * 60;
 
 export function parseResetCode(value: unknown): string {
-  const raw = text(value, 'code', 6, 6);
-  if (!/^\d{6}$/.test(raw)) {
-    throw new ApiError(400, 'validation_error', 'Input code harus berupa 6 digit.', { field: 'code' });
+  const raw = text(value, 'code', 8, 8);
+  if (!/^\d{8}$/.test(raw)) {
+    throw new ApiError(400, 'validation_error', 'Input code harus berupa 8 digit.', { field: 'code' });
   }
   return raw;
 }
