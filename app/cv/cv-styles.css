@@ -221,6 +221,10 @@
 
 .cv-mode-btn {
   flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   min-height: 38px;
   border: none;
   border-radius: var(--r-sm, 8px);
@@ -231,6 +235,10 @@
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.16s ease, color 0.16s ease;
+}
+
+.cv-mode-btn:hover {
+  color: var(--p-ink);
 }
 
 .cv-mode-btn--active {
