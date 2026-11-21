@@ -117,10 +117,16 @@ export async function POST(req: NextRequest) {
         rejected: sendResult.rejected,
       });
     } catch (err) {
-      console.error('[resend-verification] send failed', err);
+      const e = err as Record<string, unknown> | null;
+      console.error('[resend-verification] send failed', {
+        message: err instanceof Error ? err.message : String(err),
+        code: e && typeof e === 'object' ? e.code : undefined,
+        responseCode: e && typeof e === 'object' ? e.responseCode : undefined,
+        command: e && typeof e === 'object' ? e.command : undefined,
+        response: e && typeof e.response === 'string' ? e.response.slice(0, 300) : undefined,
+      });
       return ok({ status: 'sent_if_pending' });
     }
-
     return ok({ status: 'sent_if_pending' });
   });
 }

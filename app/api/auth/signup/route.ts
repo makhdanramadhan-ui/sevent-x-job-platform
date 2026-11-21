@@ -89,12 +89,19 @@ export async function POST(req: NextRequest) {
       (linkData?.properties as { hashedToken?: string } | undefined)?.hashedToken;
 
     if (linkError || !hashedToken) {
+      console.error('[signup] generateLink failed', {
+        hasError: Boolean(linkError),
+        message: linkError?.message,
+        status: linkError?.status,
+        hasHashedToken: Boolean(hashedToken),
+        propertyKeys: linkData?.properties ? Object.keys(linkData.properties) : [],
+      });
       await admin.auth.admin.deleteUser(userId).catch(() => undefined);
       throw new ApiError(503, 'email_send_failed', 'Gagal mengirim email verifikasi. Coba lagi.');
     }
-
     const verificationType = (linkData?.properties?.verification_type ?? 'magiclink') as string;
     const confirmUrl = `${siteUrl}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}&type=${encodeURIComponent(verificationType)}`;
+
     const smtpConfig = readSmtpConfig();
     if (!smtpConfig) {
       await admin.auth.admin.deleteUser(userId).catch(() => undefined);
@@ -106,7 +113,6 @@ export async function POST(req: NextRequest) {
       confirmUrl,
       expiresNote: 'Tautan verifikasi berlaku dalam waktu terbatas.',
     });
-
     try {
       const sendResult = await sendMatchEmail(smtpConfig, {
         to: email,
@@ -122,11 +128,17 @@ export async function POST(req: NextRequest) {
         rejected: sendResult.rejected,
       });
     } catch (err) {
-      console.error('[signup] email send failed', err);
+      const e = err as Record<string, unknown> | null;
+      console.error('[signup] email send failed', {
+        message: err instanceof Error ? err.message : String(err),
+        code: e && typeof e === 'object' ? e.code : undefined,
+        responseCode: e && typeof e === 'object' ? e.responseCode : undefined,
+        command: e && typeof e === 'object' ? e.command : undefined,
+        response: e && typeof e.response === 'string' ? e.response.slice(0, 300) : undefined,
+      });
       await admin.auth.admin.deleteUser(userId).catch(() => undefined);
       throw new ApiError(503, 'email_send_failed', 'Gagal mengirim email verifikasi. Coba lagi.');
     }
-
     return ok({ status: 'verification_sent', email }, 201);
   });
 }
