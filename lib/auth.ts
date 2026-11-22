@@ -11,6 +11,7 @@ export type AuthContext = {
   user: User;
   supabase: SupabaseClient;
   mode: AuthMode;
+  accessToken: string | null;
 };
 
 const MUTATING_METHODS: Record<string, true> = {
@@ -69,6 +70,43 @@ export function assertEmailConfirmed(user: User): void {
   }
 }
 
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const parts = token.split('.');
+  if (parts.length < 2) return null;
+  try {
+    const payload = Buffer.from(parts[1]!, 'base64url').toString('utf8');
+    const parsed = JSON.parse(payload) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    return parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function readTokenIat(token: string | null): number | null {
+  if (!token) return null;
+  const payload = decodeJwtPayload(token);
+  const iat = payload?.iat;
+  return typeof iat === 'number' && Number.isFinite(iat) ? iat : null;
+}
+
+export function isSessionInvalidated(user: User, accessToken: string | null): boolean {
+  const appMeta = (user.app_metadata ?? {}) as Record<string, unknown>;
+  const invalidatedAtRaw = appMeta.sessions_invalidated_at;
+  if (typeof invalidatedAtRaw !== 'string' || !invalidatedAtRaw) return false;
+  const invalidatedAt = Date.parse(invalidatedAtRaw);
+  if (!Number.isFinite(invalidatedAt)) return false;
+  const iat = readTokenIat(accessToken);
+  if (iat === null) return true;
+  return iat * 1000 < invalidatedAt;
+}
+
+export function assertSessionNotInvalidated(user: User, accessToken: string | null): void {
+  if (isSessionInvalidated(user, accessToken)) {
+    throw new ApiError(401, 'unauthorized', 'Sesi tidak valid atau kedaluwarsa.');
+  }
+}
+
 export async function requireAuth(req: NextRequest): Promise<AuthContext> {
   const authorization = req.headers.get('authorization');
   const env = readSupabaseEnv();
@@ -88,7 +126,8 @@ export async function requireAuth(req: NextRequest): Promise<AuthContext> {
       throw new ApiError(401, 'unauthorized', 'Kredensial tidak valid atau kedaluwarsa.');
     }
     assertEmailConfirmed(data.user);
-    return { user: data.user, supabase, mode: 'bearer' };
+    assertSessionNotInvalidated(data.user, token);
+    return { user: data.user, supabase, mode: 'bearer', accessToken: token };
   }
 
   const store = await cookies();
@@ -109,6 +148,11 @@ export async function requireAuth(req: NextRequest): Promise<AuthContext> {
   if (error || !data.user) {
     throw new ApiError(401, 'unauthorized', 'Sesi tidak valid atau kedaluwarsa.');
   }
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const accessToken = session?.access_token ?? null;
   assertEmailConfirmed(data.user);
-  return { user: data.user, supabase, mode: 'cookie' };
+  assertSessionNotInvalidated(data.user, accessToken);
+  return { user: data.user, supabase, mode: 'cookie', accessToken };
 }

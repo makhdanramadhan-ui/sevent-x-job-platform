@@ -7,6 +7,12 @@ export type SupabaseAdminEnv = SupabaseEnv & {
   serviceRoleKey: string;
 };
 
+export function readAccountSettingsSecret(): string | null {
+  const secret = process.env.ACCOUNT_SETTINGS_SECRET?.trim();
+  if (!secret || secret.length < 16) return null;
+  return secret;
+}
+
 export function readSupabaseEnv(): SupabaseEnv | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();

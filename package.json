@@ -15,7 +15,8 @@
     "test:match-email": "node --import tsx scripts/test-match-email.mts",
     "test:deadline-email": "node --import tsx scripts/test-deadline-email.mts",
     "test:forgot-password": "node --import tsx scripts/test-forgot-password.mts",
-    "test:email-verify": "node --import tsx scripts/test-email-verify.mts && node --import tsx scripts/test-auth-email-guards.mts && node --import tsx scripts/test-resend-identical.mts && node --import tsx scripts/test-forgot-password.mts"
+    "test:email-verify": "node --import tsx scripts/test-email-verify.mts && node --import tsx scripts/test-auth-email-guards.mts && node --import tsx scripts/test-resend-identical.mts && node --import tsx scripts/test-forgot-password.mts",
+    "test:account-settings": "node --import tsx scripts/test-account-settings.mts"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
