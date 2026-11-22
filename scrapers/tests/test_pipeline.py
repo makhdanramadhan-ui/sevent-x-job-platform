@@ -27,6 +27,7 @@ from scrapers.normalizer import (
     VALID_STATUSES,
     VALID_WORK_MODES,
     build_ingest_payload,
+    is_published_at_older_than_days,
     normalize_education,
     normalize_employment_type,
     normalize_level,
@@ -91,6 +92,15 @@ class TestNormalizerAndContract(unittest.TestCase):
         )
         self.assertEqual(payload_with_pub["source"]["published_at"], "2026-11-10T08:00:00Z")
         self.assertEqual(payload_with_pub["source"]["fetched_at"], "2026-11-18T10:00:00Z")
+
+    def test_published_at_older_than_30_days_is_rejected(self) -> None:
+        ref = "2026-11-22"
+        self.assertFalse(is_published_at_older_than_days("2026-11-20", max_age_days=30, reference_date=ref))
+        self.assertFalse(is_published_at_older_than_days("2026-10-24", max_age_days=30, reference_date=ref))
+        self.assertTrue(is_published_at_older_than_days("2026-10-20", max_age_days=30, reference_date=ref))
+        self.assertTrue(is_published_at_older_than_days("2026-08-08", max_age_days=30, reference_date=ref))
+        self.assertTrue(is_published_at_older_than_days("2025-12-11", max_age_days=30, reference_date=ref))
+        self.assertFalse(is_published_at_older_than_days(None, max_age_days=30, reference_date=ref))
 
     def test_expired_deadline_sets_status_closed_and_no_deadline_stays_open(self) -> None:
         expired_payload = build_ingest_payload(

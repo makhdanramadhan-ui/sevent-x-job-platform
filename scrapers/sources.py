@@ -27,10 +27,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from .normalizer import build_ingest_payload, is_placeholder_logo_url, strip_html
+from .normalizer import (
+    MAX_JOB_AGE_DAYS,
+    build_ingest_payload,
+    is_placeholder_logo_url,
+    is_published_at_older_than_days,
+    strip_html,
+)
 
 USER_AGENT = "SeventX-JobPlatform-Ingest/1.0 (+https://github.com/makhdanramadhan-ui/sevent-x-job-platform)"
 BROWSER_LIKE_ACCEPT_LANGUAGE = "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
+LINKEDIN_TIME_POSTED_RANGE_30D = "r2592000"
 
 
 @dataclass
@@ -313,6 +320,7 @@ def fetch_linkedin_guest_jobs(
                 "keywords": clean_kw,
                 "location": location,
                 "start": 0,
+                "f_TPR": LINKEDIN_TIME_POSTED_RANGE_30D,
             }
         )
         search_url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?{query_str}"
@@ -358,7 +366,16 @@ def fetch_linkedin_guest_jobs(
                 fetched_at=now_iso,
                 reason="LinkedIn menampilkan halaman verifikasi keamanan/CAPTCHA. Scraper berhenti.",
             )
-        for card in cards[: max(1, limit_per_keyword)]:
+        fresh_cards = [
+            card
+            for card in cards
+            if not is_published_at_older_than_days(
+                card.get("published_at"),
+                max_age_days=MAX_JOB_AGE_DAYS,
+                reference_date=reference_date,
+            )
+        ]
+        for card in fresh_cards[: max(1, limit_per_keyword)]:
             job_id = card.get("job_id") or ""
             if not job_id or job_id in seen_job_ids:
                 continue
@@ -437,8 +454,16 @@ def fetch_himalayas_public_api(
         jobs_raw = data.get("jobs", []) if isinstance(data, dict) else []
         payloads: List[Dict[str, Any]] = []
 
-        for item in jobs_raw[:limit]:
+        for item in jobs_raw:
+            if len(payloads) >= limit:
+                break
             if not isinstance(item, dict):
+                continue
+            if is_published_at_older_than_days(
+                item.get("pubDate"),
+                max_age_days=MAX_JOB_AGE_DAYS,
+                reference_date=reference_date,
+            ):
                 continue
             source_url = str(item.get("applicationLink") or item.get("guid") or "").strip()
             title = str(item.get("title") or "").strip()
@@ -523,8 +548,16 @@ def fetch_jobicy_public_api(
         jobs_raw = data.get("jobs", []) if isinstance(data, dict) else []
         payloads: List[Dict[str, Any]] = []
 
-        for item in jobs_raw[:limit]:
+        for item in jobs_raw:
+            if len(payloads) >= limit:
+                break
             if not isinstance(item, dict):
+                continue
+            if is_published_at_older_than_days(
+                item.get("pubDate"),
+                max_age_days=MAX_JOB_AGE_DAYS,
+                reference_date=reference_date,
+            ):
                 continue
             job_id = str(item.get("id") or "").strip()
             title = str(item.get("jobTitle") or "").strip()
@@ -600,8 +633,16 @@ def fetch_remotive_public_api(
         jobs_raw = data.get("jobs", []) if isinstance(data, dict) else []
         payloads: List[Dict[str, Any]] = []
 
-        for item in jobs_raw[:limit]:
+        for item in jobs_raw:
+            if len(payloads) >= limit:
+                break
             if not isinstance(item, dict):
+                continue
+            if is_published_at_older_than_days(
+                item.get("publication_date"),
+                max_age_days=MAX_JOB_AGE_DAYS,
+                reference_date=reference_date,
+            ):
                 continue
             job_id = str(item.get("id") or "").strip()
             title = str(item.get("title") or "").strip()

@@ -670,6 +670,35 @@ export function normalizeIsoTimestamp(raw: unknown): string | null {
   }
 }
 
+export const MAX_JOB_AGE_DAYS = 30;
+
+export function isPublishedAtOlderThanDays(
+  publishedAt: unknown,
+  maxAgeDays: number = MAX_JOB_AGE_DAYS,
+  referenceDate?: string | null,
+): boolean {
+  const normPub = normalizeIsoTimestamp(publishedAt);
+  if (!normPub) return false;
+
+  const pubDateOnlyMatch = ISO_DATE_RE.test(normPub);
+  const pubMs = new Date(pubDateOnlyMatch ? `${normPub}T00:00:00Z` : normPub).getTime();
+  if (!Number.isFinite(pubMs)) return false;
+
+  let refMs = Date.now();
+  if (referenceDate && referenceDate.trim()) {
+    const trimmedRef = referenceDate.trim();
+    const parsedRef = new Date(
+      ISO_DATE_RE.test(trimmedRef) ? `${trimmedRef}T23:59:59Z` : trimmedRef,
+    ).getTime();
+    if (Number.isFinite(parsedRef)) {
+      refMs = parsedRef;
+    }
+  }
+
+  const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
+  return refMs - pubMs > maxAgeMs;
+}
+
 export function normalizeDeadline(raw: unknown): string | null {
   if (raw === null || raw === undefined || typeof raw !== 'string') return null;
   const text = raw.trim();
