@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import {
@@ -277,6 +278,23 @@ async function getServerJobDetail(jobId: string): Promise<{
   } catch {
     return { authenticated: false, job: null, descriptionBlocks: [] };
   }
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const serverResult = await getServerJobDetail(id);
+  if (serverResult.job) {
+    return {
+      title: `${serverResult.job.title} - ${serverResult.job.company}`,
+    };
+  }
+  return {
+    title: 'Detail Lowongan',
+  };
 }
 
 export default async function JobDetailPage({

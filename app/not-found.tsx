@@ -1,6 +1,11 @@
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ButtonText } from '@/components/ui/button-text';
+
+export const metadata: Metadata = {
+  title: 'Halaman Tidak Ditemukan',
+};
 
 export default function NotFound() {
   return (

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { apiFetch } from '@/components/ui/api-client';
+import { apiFetch, SITE_NAME } from '@/components/ui/api-client';
 import { AuthGuard } from '@/components/ui/auth-guard';
 import { ButtonText } from '@/components/ui/button-text';
 import { LoadingState, NoticeBanner } from '@/components/ui/feedback';
@@ -293,6 +293,12 @@ function CvEditorInner({
       setActiveSection(content.section_order[0] ?? 'profile');
     }
   }, [content, activeSection]);
+
+  useEffect(() => {
+    if (!doc && loading) return;
+    const cleanTitle = title.trim();
+    document.title = cleanTitle ? `${cleanTitle} - ${SITE_NAME}` : `Editor CV - ${SITE_NAME}`;
+  }, [doc, loading, title]);
 
   const loadDocument = useCallback(async () => {
     bypassGuardRef.current = false;

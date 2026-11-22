@@ -13,7 +13,10 @@ const instrumentSans = Instrument_Sans({
 });
 
 export const metadata: Metadata = {
-  title: `${SITE_NAME} - Cari Lowongan Kerja & Cek Kecocokan Profil`,
+  title: {
+    default: `${SITE_NAME} - Cari Lowongan Kerja & Cek Kecocokan Profil`,
+    template: `%s - ${SITE_NAME}`,
+  },
   description:
     'Cari lowongan kerja lintas bidang di Indonesia, lihat kecocokan kualifikasi profilmu secara transparan, siapkan CV, lalu lamar langsung di situs resmi perusahaan.',
 };
