@@ -15,6 +15,7 @@ import { validatePassword } from '@/lib/password-policy';
 type AccountSettings = {
   email: string;
   canManageCredentials: boolean;
+  canDeleteAccount: boolean;
 };
 
 type RequestResponse = {
@@ -604,26 +605,59 @@ function ChangePasswordSection() {
   );
 }
 
-function DeleteAccountSection() {
+function DeleteAccountSection({ canManageCredentials }: { canManageCredentials: boolean }) {
   const router = useRouter();
   const [currentPassword, setCurrentPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
+  const [currentCode, setCurrentCode] = useState('');
+  const [verificationId, setVerificationId] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{
     currentPassword?: string;
+    currentCode?: string;
     confirmation?: string;
   }>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [confirmArmed, setConfirmArmed] = useState(false);
 
+  async function handleRequestDeleteCode() {
+    setFieldErrors({});
+    setFormError(null);
+    setSubmitting(true);
+    const res = await apiFetch<RequestResponse>('/api/account/settings/request', {
+      method: 'POST',
+      body: { action: 'delete' },
+    });
+    setSubmitting(false);
+
+    if (!res.ok) {
+      setFormError(friendlyAccountError(res.error, 'Kode konfirmasi penghapusan akun tidak dapat dikirim.'));
+      return;
+    }
+
+    setVerificationId(res.data.verificationId);
+    setCodeSent(true);
+  }
+
   async function handleDelete(e: FormEvent) {
     e.preventDefault();
     setFieldErrors({});
     setFormError(null);
 
-    const errors: { currentPassword?: string; confirmation?: string } = {};
-    if (!currentPassword) {
-      errors.currentPassword = 'Password saat ini wajib diisi.';
+    const errors: { currentPassword?: string; currentCode?: string; confirmation?: string } = {};
+    if (canManageCredentials) {
+      if (!currentPassword) {
+        errors.currentPassword = 'Password saat ini wajib diisi.';
+      }
+    } else {
+      if (!codeSent || !verificationId) {
+        setFormError('Minta kode verifikasi terlebih dahulu sebelum menghapus akun.');
+        return;
+      }
+      if (!CODE_PATTERN.test(currentCode)) {
+        errors.currentCode = 'Masukkan kode 8 digit dari email Anda.';
+      }
     }
     if (confirmation !== DELETE_CONFIRMATION) {
       errors.confirmation = `Ketik ${DELETE_CONFIRMATION} untuk mengonfirmasi penghapusan akun.`;
@@ -636,7 +670,9 @@ function DeleteAccountSection() {
     setSubmitting(true);
     const res = await apiFetch<DeleteResponse>('/api/account/settings', {
       method: 'DELETE',
-      body: { currentPassword, confirmation },
+      body: canManageCredentials
+        ? { currentPassword, confirmation }
+        : { verificationId, currentCode: currentCode.trim(), confirmation },
     });
     setSubmitting(false);
 
@@ -650,10 +686,24 @@ function DeleteAccountSection() {
     router.refresh();
   }
 
+  function resetGoogleFlow() {
+    setCodeSent(false);
+    setVerificationId('');
+    setCurrentCode('');
+    setConfirmation('');
+    setConfirmArmed(false);
+    setFieldErrors({});
+    setFormError(null);
+  }
+
   return (
     <SectionCard
       title="Hapus Akun"
-      description="Tindakan ini menghapus akun Anda secara permanen. Data yang terkait akun dapat ikut terhapus sesuai kebijakan sistem."
+      description={
+        canManageCredentials
+          ? 'Tindakan ini menghapus akun Anda secara permanen. Data yang terkait akun dapat ikut terhapus sesuai kebijakan sistem.'
+          : 'Tindakan ini menghapus akun RakitKarier Anda secara permanen. Penghapusan akun RakitKarier tidak memengaruhi akun Google Anda.'
+      }
       tone="danger"
     >
       <form onSubmit={handleDelete} className="form-stack" noValidate>
@@ -663,95 +713,169 @@ function DeleteAccountSection() {
           </NoticeBanner>
         ) : null}
         <NoticeBanner variant="warning" title="Tindakan Permanen">
-          Penghapusan akun tidak dapat dibatalkan. Pastikan Anda benar-benar ingin menghapus akun ini.
+          {canManageCredentials
+            ? 'Penghapusan akun tidak dapat dibatalkan. Pastikan Anda benar-benar ingin menghapus akun ini.'
+            : 'Penghapusan akun RakitKarier tidak dapat dibatalkan dan tidak memengaruhi akun Google Anda.'}
         </NoticeBanner>
-        <FormField
-          id="settings-delete-password"
-          label="Password Saat Ini"
-          error={fieldErrors.currentPassword}
-          required
-        >
-          <PasswordInput
-            id="settings-delete-password"
-            autoComplete="current-password"
-            value={currentPassword}
-            hasError={Boolean(fieldErrors.currentPassword)}
-            onChange={(e) => {
-              setCurrentPassword(e.target.value);
-              if (fieldErrors.currentPassword) setFieldErrors((prev) => ({ ...prev, currentPassword: undefined }));
-            }}
-          />
-        </FormField>
-        <FormField
-          id="settings-delete-confirmation"
-          label={`Ketik ${DELETE_CONFIRMATION} untuk konfirmasi`}
-          hint={`Masukkan kata ${DELETE_CONFIRMATION} dengan huruf kapital.`}
-          error={fieldErrors.confirmation}
-          required
-        >
-          <TextInput
-            id="settings-delete-confirmation"
-            type="text"
-            value={confirmation}
-            placeholder={DELETE_CONFIRMATION}
-            hasError={Boolean(fieldErrors.confirmation)}
-            autoComplete="off"
-            onChange={(e) => {
-              setConfirmation(e.target.value);
-              if (fieldErrors.confirmation) setFieldErrors((prev) => ({ ...prev, confirmation: undefined }));
-            }}
-          />
-        </FormField>
 
-        {!confirmArmed ? (
-          <div>
-            <Button
-              type="button"
-              variant="danger"
-              disabled={submitting}
-              onClick={() => setConfirmArmed(true)}
-            >
-              Hapus Akun...
-            </Button>
-          </div>
+        {canManageCredentials ? (
+          <FormField
+            id="settings-delete-password"
+            label="Password Saat Ini"
+            error={fieldErrors.currentPassword}
+            required
+          >
+            <PasswordInput
+              id="settings-delete-password"
+              autoComplete="current-password"
+              value={currentPassword}
+              hasError={Boolean(fieldErrors.currentPassword)}
+              onChange={(e) => {
+                setCurrentPassword(e.target.value);
+                if (fieldErrors.currentPassword) setFieldErrors((prev) => ({ ...prev, currentPassword: undefined }));
+              }}
+            />
+          </FormField>
         ) : (
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <Button type="submit" variant="danger" loading={submitting}>
-              Ya, Hapus Akun Permanen
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={submitting}
-              onClick={() => setConfirmArmed(false)}
-            >
-              Batal
-            </Button>
-          </div>
+          <>
+            {!codeSent ? (
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  loading={submitting}
+                  onClick={handleRequestDeleteCode}
+                >
+                  Kirim Kode Konfirmasi
+                </Button>
+              </div>
+            ) : (
+              <>
+                <NoticeBanner variant="info" title="Kode Verifikasi Dikirim">
+                  Kode 8 digit telah dikirim ke email Anda. Masukkan kode tersebut untuk mengonfirmasi
+                  penghapusan akun RakitKarier.
+                </NoticeBanner>
+                <FormField
+                  id="settings-delete-code"
+                  label="Kode Verifikasi"
+                  error={fieldErrors.currentCode}
+                  required
+                >
+                  <TextInput
+                    id="settings-delete-code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={8}
+                    placeholder="00000000"
+                    value={currentCode}
+                    hasError={Boolean(fieldErrors.currentCode)}
+                    onChange={(e) => {
+                      const next = e.target.value.replace(/\D/g, '').slice(0, 8);
+                      setCurrentCode(next);
+                      if (fieldErrors.currentCode) setFieldErrors((prev) => ({ ...prev, currentCode: undefined }));
+                    }}
+                  />
+                </FormField>
+              </>
+            )}
+          </>
         )}
+
+        {(canManageCredentials || codeSent) ? (
+          <>
+            <FormField
+              id="settings-delete-confirmation"
+              label={`Ketik ${DELETE_CONFIRMATION} untuk konfirmasi`}
+              hint={`Masukkan kata ${DELETE_CONFIRMATION} dengan huruf kapital.`}
+              error={fieldErrors.confirmation}
+              required
+            >
+              <TextInput
+                id="settings-delete-confirmation"
+                type="text"
+                value={confirmation}
+                placeholder={DELETE_CONFIRMATION}
+                hasError={Boolean(fieldErrors.confirmation)}
+                autoComplete="off"
+                onChange={(e) => {
+                  setConfirmation(e.target.value);
+                  if (fieldErrors.confirmation) setFieldErrors((prev) => ({ ...prev, confirmation: undefined }));
+                }}
+              />
+            </FormField>
+
+            {!confirmArmed ? (
+              <div>
+                <Button
+                  type="button"
+                  variant="danger"
+                  disabled={submitting}
+                  onClick={() => setConfirmArmed(true)}
+                >
+                  Hapus Akun...
+                </Button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <Button type="submit" variant="danger" loading={submitting}>
+                  Ya, Hapus Akun Permanen
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={submitting}
+                  onClick={() => {
+                    setConfirmArmed(false);
+                    if (!canManageCredentials) {
+                      resetGoogleFlow();
+                    }
+                  }}
+                >
+                  Batal
+                </Button>
+              </div>
+            )}
+          </>
+        ) : null}
       </form>
     </SectionCard>
   );
 }
 
-function GoogleManagedNotice({ email }: { email: string }) {
+function GoogleManagedNotice({
+  email,
+  canDeleteAccount,
+}: {
+  email: string;
+  canDeleteAccount: boolean;
+}) {
   return (
     <section className="ledger-card" aria-labelledby="google-managed-heading">
+      <p className="page-kicker" style={{ marginBottom: 8 }}>
+        Dikelola oleh akun Google
+      </p>
       <h2 id="google-managed-heading" style={{ fontSize: '1.1rem', margin: '0 0 4px' }}>
         Akun Dikelola Google
       </h2>
       <p style={{ margin: '0 0 16px', fontSize: '0.9rem', color: 'var(--ink-secondary)' }}>
-        Akun ini masuk menggunakan Google. Perubahan email, password, dan penghapusan kredensial
-        RakitKarier tidak tersedia dari halaman ini.
+        Akun ini masuk menggunakan Google. Email dan password dikelola oleh Google, jadi tidak dapat
+        diubah dari RakitKarier.
       </p>
-      <NoticeBanner variant="info" title="Kelola Akun Melalui Google">
-        Untuk keamanan akun Anda, kelola kredensial melalui akun Google yang terhubung
+      <NoticeBanner variant="info" title="Kelola Kredensial Melalui Google">
+        Untuk keamanan akun Anda, kelola email dan password melalui akun Google yang terhubung
         {email ? (
           <>
             {' '}(<strong>{email}</strong>)
           </>
         ) : null}
         .
+        {canDeleteAccount ? (
+          <>
+            {' '}Anda tetap dapat menghapus akun RakitKarier Anda dari halaman ini. Penghapusan akun
+            RakitKarier tidak memengaruhi akun Google Anda.
+          </>
+        ) : null}
       </NoticeBanner>
       <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <Link href="/profile" className="btn btn-outline btn-sm">
@@ -822,14 +946,26 @@ function AccountSettingsInner({ session }: { session: SessionInfo }) {
   }
 
   if (!settings.canManageCredentials) {
-    return <GoogleManagedNotice email={settings.email || session.user.email || ''} />;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <GoogleManagedNotice
+          email={settings.email || session.user.email || ''}
+          canDeleteAccount={settings.canDeleteAccount}
+        />
+        {settings.canDeleteAccount ? (
+          <DeleteAccountSection canManageCredentials={false} />
+        ) : null}
+      </div>
+    );
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <ChangeEmailSection settingsEmail={settings.email} />
       <ChangePasswordSection />
-      <DeleteAccountSection />
+      {settings.canDeleteAccount ? (
+        <DeleteAccountSection canManageCredentials={true} />
+      ) : null}
     </div>
   );
 }
