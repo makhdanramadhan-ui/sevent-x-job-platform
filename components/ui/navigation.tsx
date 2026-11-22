@@ -220,6 +220,9 @@ function AvatarMenu({ user, loggingOut, onNavigate, onLogout }: AvatarMenuProps)
           <Link href="/profile" role="menuitem" className="avatar-dropdown-item" onClick={handleNavigate}>
             Profil
           </Link>
+          <Link href="/account/settings" role="menuitem" className="avatar-dropdown-item" onClick={handleNavigate}>
+            Pengaturan Akun
+          </Link>
           <Link href="/cv" prefetch={false} role="menuitem" className="avatar-dropdown-item" onClick={handleNavigate}>
             Studio CV
           </Link>
