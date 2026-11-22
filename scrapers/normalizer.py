@@ -715,6 +715,50 @@ def normalize_iso_timestamp(raw: Any) -> Optional[str]:
         return None
 
 
+MAX_JOB_AGE_DAYS = 30
+
+
+def is_published_at_older_than_days(
+    published_at: Any,
+    max_age_days: int = MAX_JOB_AGE_DAYS,
+    reference_date: Optional[str] = None,
+) -> bool:
+    """
+    Memeriksa apakah waktu terbit lowongan (published_at) sudah lebih tua dari max_age_days (default 30 hari / 1 bulan).
+    Mengembalikan False jika published_at kosong/tidak dapat di-parse.
+    """
+    norm_pub = normalize_iso_timestamp(published_at)
+    if not norm_pub:
+        return False
+
+    try:
+        pub_str = f"{norm_pub}T00:00:00+00:00" if ISO_DATE_RE.match(norm_pub) else norm_pub.replace("Z", "+00:00")
+        pub_dt = datetime.fromisoformat(pub_str)
+        if pub_dt.tzinfo is None:
+            pub_dt = pub_dt.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return False
+
+    ref_dt = datetime.now(timezone.utc)
+    if reference_date and reference_date.strip():
+        trimmed_ref = reference_date.strip()
+        try:
+            ref_str = (
+                f"{trimmed_ref}T23:59:59+00:00"
+                if ISO_DATE_RE.match(trimmed_ref)
+                else trimmed_ref.replace("Z", "+00:00")
+            )
+            parsed_ref = datetime.fromisoformat(ref_str)
+            if parsed_ref.tzinfo is None:
+                parsed_ref = parsed_ref.replace(tzinfo=timezone.utc)
+            ref_dt = parsed_ref
+        except ValueError:
+            pass
+
+    age_seconds = (ref_dt - pub_dt).total_seconds()
+    return age_seconds > (max_age_days * 86400)
+
+
 def normalize_deadline(raw: Any) -> Optional[str]:
     """
     Menormalisasi tenggat lamaran ke format YYYY-MM-DD sesuai aturan ingest_job.

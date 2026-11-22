@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { canonicalizeCatalogValues, normalizeCatalogText } from '../catalog-core';
 import { loadSkillCatalog } from '../skills';
-import type { IngestPayload } from './normalize';
+import { MAX_JOB_AGE_DAYS, type IngestPayload } from './normalize';
 import { enrichMissingCompanyLogos } from './logo-fallback';
 import {
   buildInternshipSearchKeywords,
@@ -174,6 +174,24 @@ export async function runKeywordIngest(
     } catch {
       summary.ingest_errors += 1;
     }
+  }
+
+  try {
+    const cutoffIso = new Date(
+      Date.now() - MAX_JOB_AGE_DAYS * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    const { data: staleSources } = await admin
+      .from('job_sources')
+      .select('job_id')
+      .lt('published_at', cutoffIso);
+    const staleJobIds = Array.from(
+      new Set((staleSources ?? []).map((s) => s.job_id).filter(Boolean)),
+    );
+    if (staleJobIds.length > 0) {
+      await admin.from('jobs').delete().in('id', staleJobIds);
+    }
+  } catch {
+    // Non-fatal cleanup
   }
 
   return summary;
