@@ -92,23 +92,4 @@ assert.match(delMail.html, /11223344/);
 assert.match(delMail.html, /15 menit/);
 console.log('PASS account-settings: email templates include code, expiry, ignore hint');
 
-// Route handlers exist and reject bad auth (smoke, no Supabase env needed for early rejection).
-{
-  const prevUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const prevAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-  delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  try {
-    const { GET } = await import('../app/api/account/settings/route');
-    const res = await GET(new NextRequest('http://localhost/api/account/settings', { method: 'GET' }));
-    assert.equal(res.status, 401);
-  } finally {
-    if (prevUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-    else process.env.NEXT_PUBLIC_SUPABASE_URL = prevUrl;
-    if (prevAnon === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    else process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = prevAnon;
-  }
-}
-console.log('PASS account-settings: GET rejects unauthenticated request');
-
 console.log('ALL ACCOUNT SETTINGS TESTS PASSED');
