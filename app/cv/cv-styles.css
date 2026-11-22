@@ -1380,7 +1380,7 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 12mm 15mm;
+    margin: 0; /* Menghilangkan header & footer otomatis browser (tanggal, URL, judul dokumen) */
   }
 
   *,
@@ -1477,11 +1477,12 @@
   }
 
   .cv-ats-sheet {
-    max-width: 100% !important;
-    width: 100% !important;
-    min-height: auto !important;
-    padding: 0 !important;
-    margin: 0 !important;
+    box-sizing: border-box !important;
+    width: 210mm !important;
+    max-width: 210mm !important;
+    min-height: 297mm !important;
+    padding: 12mm 15mm !important; /* Presisi margin ATS A4 di dalam lembar cetak */
+    margin: 0 auto !important;
     box-shadow: none !important;
     border: none !important;
     color: #111111 !important;

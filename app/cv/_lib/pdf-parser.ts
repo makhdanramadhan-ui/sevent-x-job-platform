@@ -25,7 +25,7 @@ declare global {
           numPages: number;
           getPage: (pageNumber: number) => Promise<{
             getTextContent: () => Promise<{
-              items: Array<{ str?: string; transform?: number[] }>;
+              items: Array<{ str?: string; transform?: number[]; hasEOL?: boolean; width?: number; height?: number }>;
             }>;
           }>;
         }>;
@@ -141,20 +141,52 @@ export async function parsePdfFile(file: File): Promise<PdfParseResult> {
           const content = await page.getTextContent();
           const items = content.items;
 
-          const xCoords: number[] = [];
-          let pageText = '';
+          if (!items || items.length === 0) continue;
 
-          for (const item of items) {
-            if (item.str) {
-              const textStr = item.str.trim();
-              if (textStr.length > 0) {
-                pageText += item.str + ' ';
-                totalCharCount += textStr.length;
-                if (item.transform && item.transform.length >= 6) {
-                  xCoords.push(item.transform[4]);
-                }
-              }
+          // Urutkan item teks berdasarkan posisi halaman (Y atas ke bawah, X kiri ke kanan)
+          // Di PDF.js: transform[4] = X, transform[5] = Y (koordinat Y dimulai dari bawah ke atas)
+          const validItems = items
+            .filter((it) => it.str && it.str.trim().length > 0)
+            .map((it) => ({
+              str: it.str || '',
+              x: it.transform && it.transform.length >= 6 ? it.transform[4] : 0,
+              y: it.transform && it.transform.length >= 6 ? it.transform[5] : 0,
+              hasEOL: Boolean(it.hasEOL),
+            }));
+
+          validItems.sort((a, b) => {
+            const yDiff = b.y - a.y;
+            if (Math.abs(yDiff) > 4) {
+              return yDiff; // Baris atas ke bawah
             }
+            return a.x - b.x; // Kolom kiri ke kanan
+          });
+
+          const pageLines: string[] = [];
+          let currentLine = '';
+          let lastY: number | null = null;
+          const xCoords: number[] = [];
+
+          for (const it of validItems) {
+            totalCharCount += it.str.trim().length;
+            xCoords.push(it.x);
+
+            const isNewLine = lastY !== null && Math.abs(it.y - lastY) > 5;
+
+            if (isNewLine || it.hasEOL) {
+              if (currentLine.trim().length > 0) {
+                pageLines.push(currentLine.trim());
+              }
+              currentLine = it.str;
+            } else {
+              currentLine += (currentLine.length > 0 ? ' ' : '') + it.str;
+            }
+
+            lastY = it.y;
+          }
+
+          if (currentLine.trim().length > 0) {
+            pageLines.push(currentLine.trim());
           }
 
           if (xCoords.length > 10) {
@@ -168,8 +200,8 @@ export async function parsePdfFile(file: File): Promise<PdfParseResult> {
             }
           }
 
-          if (pageText.trim().length > 0) {
-            allParagraphs.push(pageText.trim());
+          if (pageLines.length > 0) {
+            allParagraphs.push(pageLines.join('\n'));
           }
         }
 
