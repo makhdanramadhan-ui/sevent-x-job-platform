@@ -1,7 +1,12 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ButtonText } from '@/components/ui/button-text';
 import { JobsAuthSection } from '@/components/ui/jobs-auth-section';
 import { PageBanner } from '@/components/ui/page-banner';
+
+export const metadata: Metadata = {
+  title: 'Cari Lowongan Kerja',
+};
 
 export default function JobsPage() {
   return (

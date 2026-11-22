@@ -10,6 +10,7 @@ import {
   EXPERIENCE_LEVEL_LABELS,
   formatDateId,
   formatDateTimeId,
+  SITE_NAME,
   WORK_MODE_LABELS,
 } from '@/components/ui/api-client';
 import { ButtonText } from '@/components/ui/button-text';
@@ -369,6 +370,11 @@ export default function JobDetailClient() {
   const [togglingBookmark, setTogglingBookmark] = useState(false);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [copiedSourceId, setCopiedSourceId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!job) return;
+    document.title = `${job.title} - ${job.company} - ${SITE_NAME}`;
+  }, [job]);
 
   async function handleCopySourceUrl(sourceId: string, url: string) {
     try {
