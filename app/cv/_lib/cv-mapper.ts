@@ -8,6 +8,7 @@ import type {
 } from '@/lib/contracts';
 import type { CvContent } from './types';
 import { createDefaultCvContent } from './cv-defaults';
+import { cleanExtractedPdfText } from './pdf-parser';
 
 export type MappedCvResult = {
   content: CvContent;
@@ -133,6 +134,230 @@ const SECTION_HEADERS: Record<SectionKey, RegExp> = {
     /^[\s•\-\*\d.:\t\(\)]*(?:informasi tambahan|informasi tambahan lainnya|additional information|lain-lain|hobi|hobby|interests|other|keterangan lainnya)(?:[:\s-]*$)/i,
 };
 
+export function parseEducationLines(lines: string[]): ProfileEducation[] {
+  const educations: ProfileEducation[] = [];
+
+  let current: {
+    institution?: string;
+    degree?: string;
+    field?: string;
+    start_date?: string | null;
+    end_date?: string | null;
+    description?: string;
+  } | null = null;
+
+  function commit() {
+    if (!current) return;
+    let inst = (current.institution || '').trim();
+    let field = (current.field || '').trim();
+    let degree = (current.degree || '').trim();
+    let desc = (current.description || '').trim();
+
+    if (!inst && field) {
+      if (/universitas|institut|institute|sekolah|madrasah|college|university|academy|padjadjaran/i.test(field)) {
+        inst = field;
+        field = '';
+      }
+    }
+
+    if (/padjadjaran/i.test(inst) && !/universitas/i.test(inst)) {
+      inst = 'Universitas Padjadjaran';
+    }
+
+    // Pisahkan grade / ipk dari field atau inst jika ada
+    const gradeMatch = `${field} ${inst}`.match(
+      /(?:average grade|grade|nilai rata-rata|ipk|gpa)\s*[:–—-]?\s*([0-9.,]+(?:\s*(?:out of|\/)\s*[0-9.,]+)?)/i,
+    );
+    if (gradeMatch) {
+      const gradeText = `Average Grade / IPK: ${gradeMatch[1]}`;
+      if (!desc.includes(gradeText)) {
+        desc = (desc ? `${desc}\n` : '') + `• ${gradeText}`;
+      }
+      field = field.replace(gradeMatch[0], '').replace(/[–—-]\s*$/, '').trim();
+      inst = inst.replace(gradeMatch[0], '').replace(/[–—-]\s*$/, '').trim();
+    }
+
+    // Deteksi jenjang & jurusan kontekstual
+    if (
+      /student of government administration/i.test(field) ||
+      /student of government administration/i.test(inst)
+    ) {
+      if (!degree) degree = 'S1 (Sarjana)';
+      field = 'Administrasi Pemerintahan';
+    } else if (/science student/i.test(field) || /science student/i.test(inst)) {
+      if (!degree) degree = 'Madrasah Aliyah (MA)';
+      field = 'Ilmu Pengetahuan Alam (IPA / Science)';
+    }
+
+    if (!degree) {
+      if (/s1|sarjana|bachelor/i.test(field)) degree = 'S1 (Sarjana)';
+      else if (/s2|magister|master/i.test(field)) degree = 'S2 (Magister)';
+      else if (/d3|diploma/i.test(field)) degree = 'D3 (Diploma)';
+      else if (/d4/i.test(field)) degree = 'D4 (Sarjana Terapan)';
+      else if (/ma\b|ma'?had|madrasah/i.test(inst)) degree = 'Madrasah Aliyah (MA)';
+      else if (/sma\b|smk\b/i.test(inst)) degree = 'SMA / SMK';
+    }
+
+    inst = inst.replace(/[-–—\s]+$/, '').trim();
+
+    if (inst || field) {
+      educations.push({
+        institution: inst || 'Institusi Pendidikan',
+        degree: degree || null,
+        field: field || null,
+        start_date: current.start_date ?? null,
+        end_date: current.end_date ?? null,
+        description: desc || null,
+      });
+    }
+    current = null;
+  }
+
+  for (const rawLine of lines) {
+    const line = cleanExtractedPdfText(rawLine);
+    if (!line) continue;
+
+    const dateRangeMatch = line.match(
+      /([A-Za-z]+\s+\d{2,4}|\d{4}(?:-\d{2})?|\d{1,2}\/\d{4})\s*(?:-|–|—|s\/d|to)\s*([A-Za-z]+\s+\d{2,4}|\d{4}(?:-\d{2})?|\d{1,2}\/\d{4}|present|sekarang|saat ini)/i,
+    );
+
+    const isInstLine =
+      /universitas|institut|institute|sekolah|politeknik|polytechnic|academy|college|university|madrasah|ma'?had|ma\b|sma\b|smk\b|padjadjaran/i.test(
+        line,
+      );
+
+    const isGrade = /average grade|nilai|ipk|gpa/i.test(line);
+
+    if (isInstLine && !isGrade) {
+      if (current && current.institution) {
+        commit();
+      }
+      if (!current) current = {};
+      let instText = line;
+      if (dateRangeMatch) {
+        instText = line.replace(dateRangeMatch[0], '').trim();
+        current.start_date = normalizeDateMatch(dateRangeMatch[1]);
+        current.end_date = /present|sekarang|saat ini/i.test(dateRangeMatch[2])
+          ? null
+          : normalizeDateMatch(dateRangeMatch[2]);
+      }
+      current.institution = instText;
+      continue;
+    }
+
+    if (dateRangeMatch) {
+      if (current && current.start_date) {
+        commit();
+      }
+      if (!current) current = {};
+      current.start_date = normalizeDateMatch(dateRangeMatch[1]);
+      current.end_date = /present|sekarang|saat ini/i.test(dateRangeMatch[2])
+        ? null
+        : normalizeDateMatch(dateRangeMatch[2]);
+      const rem = line.replace(dateRangeMatch[0], '').trim();
+      if (rem.length > 2) {
+        if (!current.field) current.field = rem;
+        else current.description = (current.description ? `${current.description}\n` : '') + `• ${rem}`;
+      }
+      continue;
+    }
+
+    if (isGrade) {
+      if (!current) current = {};
+      const parts = line.split(/[–—-]/);
+      if (parts.length >= 2 && /science student|student of|major/i.test(parts[0])) {
+        if (!current.field) current.field = parts[0].trim();
+        const gradePart = parts.slice(1).join('–').trim();
+        const bullet = `• ${gradePart.replace(/^[•\-\*]\s*/, '')}`;
+        current.description = current.description ? `${current.description}\n${bullet}` : bullet;
+      } else {
+        const bullet = `• ${line.replace(/^[•\-\*]\s*/, '')}`;
+        current.description = current.description ? `${current.description}\n${bullet}` : bullet;
+      }
+      continue;
+    }
+
+    if (current) {
+      if (!current.field) {
+        current.field = line;
+      } else {
+        const bullet = line.startsWith('•') || line.startsWith('-') ? line : `• ${line}`;
+        current.description = current.description ? `${current.description}\n${bullet}` : bullet;
+      }
+    } else {
+      current = { field: line };
+    }
+  }
+
+  commit();
+  return educations;
+}
+
+export function detectSectionHeader(line: string): SectionKey | null {
+  const trimmed = line.trim();
+  if (trimmed.length === 0 || trimmed.length > 70) return null;
+
+  // 1. Cek regex standar
+  for (const [key, regex] of Object.entries(SECTION_HEADERS)) {
+    if (regex.test(trimmed)) {
+      return key as SectionKey;
+    }
+  }
+
+  // 2. Cek variasi letter-spaced dari Canva/desain (misal "E D U C A T I O N", "P E N D I D I K A N")
+  const compact = trimmed.replace(/[^a-zA-Z]/g, '').toLowerCase();
+
+  if (
+    /^(?:education|pendidikan|riwayatpendidikan|academicbackground|academic|educations|formaleducation|educationalbackground|pendidikanformal|latarbelakangpendidikan)$/i.test(
+      compact,
+    )
+  ) {
+    return 'education';
+  }
+  if (
+    /^(?:organization|organisasi|pengalamanorganisasi|organizationexperience|organizationalexperience|organizational|aktivitaskepanitiaan|kepanitiaan|volunteer|volunteering|extracurricular)$/i.test(
+      compact,
+    )
+  ) {
+    return 'organization';
+  }
+  if (
+    /^(?:workexperience|professionalexperience|pengalamankerja|pengalaman|riwayatpekerjaan|employmenthistory|pengalamanprofesional|experience|careerhistory|workhistory)$/i.test(
+      compact,
+    )
+  ) {
+    return 'experience';
+  }
+  if (
+    /^(?:skills|keahlian|kemampuan|technicalskills|skillsandtools|skillsandabilities|kompetensi|hardsoftskills|skillstools)$/i.test(
+      compact,
+    )
+  ) {
+    return 'skills';
+  }
+  if (
+    /^(?:certifications|courses|sertifikasi|kursussertifikasi|coursecertifications|awards|honors|prestasi|pelatihan|licenses)$/i.test(
+      compact,
+    )
+  ) {
+    return 'certifications';
+  }
+  if (
+    /^(?:projects|proyek|portofolio|portfolio|personalprojects|academicprojects)$/i.test(compact)
+  ) {
+    return 'projects';
+  }
+  if (
+    /^(?:summary|profile|profil|ringkasan|tentangsaya|aboutme|professionalsummary|ikhtisar)$/i.test(
+      compact,
+    )
+  ) {
+    return 'summary';
+  }
+
+  return null;
+}
+
 export function mapRawTextToCv(rawText: string, warnings?: string[]): MappedCvResult {
   const result = createDefaultCvContent();
   const unmappedLines: string[] = [];
@@ -211,12 +436,12 @@ export function mapRawTextToCv(rawText: string, warnings?: string[]): MappedCvRe
       line.length <= 60 &&
       !line.includes(':')
     ) {
-      result.profile.full_name = line;
+      result.profile.full_name = cleanExtractedPdfText(line);
       nameFound = true;
       continue;
     }
 
-    const isHeaderLine = Object.values(SECTION_HEADERS).some((r) => r.test(line));
+    const isHeaderLine = detectSectionHeader(line) !== null;
     if (
       nameFound &&
       !result.profile.headline &&
@@ -229,16 +454,11 @@ export function mapRawTextToCv(rawText: string, warnings?: string[]): MappedCvRe
   }
 
   for (const line of lines) {
-    let matchedHeader = false;
-    for (const [key, regex] of Object.entries(SECTION_HEADERS)) {
-      if (regex.test(line)) {
-        currentSection = key as SectionKey;
-        matchedHeader = true;
-        break;
-      }
+    const matchedKey = detectSectionHeader(line);
+    if (matchedKey) {
+      currentSection = matchedKey;
+      continue;
     }
-
-    if (matchedHeader) continue;
 
     if (currentSection !== 'unknown') {
       sectionBuckets[currentSection].push(line);
@@ -393,56 +613,100 @@ export function mapRawTextToCv(rawText: string, warnings?: string[]): MappedCvRe
       description: currentOrg.description || null,
     });
   }
-  result.organizations = organizations.slice(0, 20);
 
-  // Education
-  const eduLines = sectionBuckets.education;
-  const educations: ProfileEducation[] = [];
-  let currentEdu: Partial<ProfileEducation> | null = null;
+  // Pemisahan cerdas: Cek apakah ada entri pendidikan yang keliru masuk ke Organisasi
+  const finalOrgs: ProfileOrganization[] = [];
+  const transferredEduEntries: ProfileEducation[] = [];
 
-  for (const line of eduLines) {
-    const isInst = /universitas|institut|sekolah|politeknik|academy|college|university|smk|sma|ma /i.test(
-      line,
-    );
-    if (isInst) {
-      if (currentEdu && currentEdu.institution) {
-        educations.push({
-          institution: currentEdu.institution,
-          degree: currentEdu.degree ?? null,
-          field: currentEdu.field ?? null,
-          start_date: currentEdu.start_date ?? null,
-          end_date: currentEdu.end_date ?? null,
-          description: currentEdu.description ?? null,
-        });
+  for (const org of organizations) {
+    const combined = `${org.name} ${org.role || ''} ${org.description || ''}`.toLowerCase();
+    const isEduEntry =
+      /student of|science student|ma ma'had|ma'had|average grade|ipk|gpa/i.test(
+        combined,
+      ) &&
+      !/hima|k\s*abim|media and publication|kepanitiaan|ketua\b|wakil\b|staff of media/i.test(combined);
+
+    if (isEduEntry) {
+      let inst = org.name;
+      let field = org.role || '';
+      let degree = '';
+      let desc = org.description || '';
+
+      if (inst.includes('@')) {
+        const parts = inst.split('@').map((s) => s.trim());
+        field = parts[0];
+        inst = parts.slice(1).join(' @ ');
       }
-      currentEdu = {
-        institution: line.slice(0, 180),
-        degree: null,
-        field: null,
-        start_date: null,
-        end_date: null,
-        description: null,
-      };
-    } else if (currentEdu) {
-      if (!currentEdu.field) {
-        currentEdu.field = line;
-      } else {
-        currentEdu.description = ((currentEdu.description || '') + ' ' + line).trim();
+
+      if (/padjadjaran/i.test(inst) && !/universitas/i.test(inst)) {
+        inst = 'Universitas Padjadjaran';
       }
+
+      const gradeMatch = `${field} ${inst}`.match(
+        /(?:average grade|grade|nilai rata-rata|ipk|gpa)\s*[:–—-]?\s*([0-9.,]+(?:\s*(?:out of|\/)\s*[0-9.,]+)?)/i,
+      );
+      if (gradeMatch) {
+        const gradeText = `Average Grade / IPK: ${gradeMatch[1]}`;
+        if (!desc.includes(gradeText)) {
+          desc = (desc ? `${desc}\n` : '') + `• ${gradeText}`;
+        }
+        field = field.replace(gradeMatch[0], '').replace(/[–—-]\s*$/, '').trim();
+        inst = inst.replace(gradeMatch[0], '').replace(/[–—-]\s*$/, '').trim();
+      }
+
+      if (
+        /student of government administration/i.test(field) ||
+        /student of government administration/i.test(inst)
+      ) {
+        degree = 'S1 (Sarjana)';
+        field = 'Administrasi Pemerintahan';
+      } else if (
+        /science student/i.test(field) ||
+        /science student/i.test(inst)
+      ) {
+        degree = 'Madrasah Aliyah (MA)';
+        field = 'Ilmu Pengetahuan Alam (IPA / Science)';
+      }
+
+      if (!degree) {
+        if (/s1|sarjana|bachelor/i.test(field)) degree = 'S1 (Sarjana)';
+        else if (/s2|magister|master/i.test(field)) degree = 'S2 (Magister)';
+        else if (/d3|diploma/i.test(field)) degree = 'D3 (Diploma)';
+        else if (/d4/i.test(field)) degree = 'D4 (Sarjana Terapan)';
+        else if (/sma|smk|ma|madrasah/i.test(inst)) degree = 'SMA / MA / Sederajat';
+      }
+
+      inst = inst.replace(/[-–—\s]+$/, '').trim();
+
+      transferredEduEntries.push({
+        institution: inst || 'Institusi Pendidikan',
+        degree: degree || null,
+        field: field || null,
+        start_date: org.start_date,
+        end_date: org.end_date,
+        description: desc || null,
+      });
+    } else {
+      finalOrgs.push(org);
     }
   }
 
-  if (currentEdu && currentEdu.institution) {
-    educations.push({
-      institution: currentEdu.institution,
-      degree: currentEdu.degree ?? null,
-      field: currentEdu.field ?? null,
-      start_date: currentEdu.start_date ?? null,
-      end_date: currentEdu.end_date ?? null,
-      description: currentEdu.description ?? null,
-    });
+  result.organizations = finalOrgs.slice(0, 20);
+
+  // Education: Parse baris di section pendidikan dan gabungkan dengan transferredEduEntries
+  const parsedEdu = parseEducationLines(sectionBuckets.education);
+  const combinedEdu: ProfileEducation[] = [...parsedEdu];
+  for (const trans of transferredEduEntries) {
+    const alreadyExists = combinedEdu.some(
+      (e) =>
+        e.institution.toLowerCase().includes(trans.institution.toLowerCase()) ||
+        trans.institution.toLowerCase().includes(e.institution.toLowerCase()),
+    );
+    if (!alreadyExists) {
+      combinedEdu.push(trans);
+    }
   }
-  result.education = educations.slice(0, 20);
+  result.education = combinedEdu.slice(0, 20);
 
   // Projects (Portofolio & Proyek)
   const projLines = sectionBuckets.projects;

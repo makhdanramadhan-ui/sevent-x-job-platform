@@ -8,6 +8,7 @@ import { Badge, Button } from '@/components/ui/forms';
 import type { CvDocument, ProfileRecord } from '@/lib/contracts';
 import type { ProfileInput } from '@/lib/profile';
 import type { MappedCvResult } from '../_lib/cv-mapper';
+import { generateContextualEnglishCv } from '../_lib/contextual-translator';
 import { validateCvPayload } from '../_lib/payload-validator';
 import { detectActivePreset } from '../_lib/presets';
 import type { CvContent } from '../_lib/types';
@@ -26,11 +27,23 @@ export function CvImportReview({
   onSuccess: (cvId: string) => void;
 }) {
   const router = useRouter();
-  const [content] = useState<CvContent>(mappedResult.content);
+  const [content, setContent] = useState<CvContent>(mappedResult.content);
+  const [isEnglish, setIsEnglish] = useState(mappedResult.content.language === 'en');
   const [cvTitle, setCvTitle] = useState(`CV Hasil Impor (${fileName})`);
   const [syncToProfile, setSyncToProfile] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  function handleToggleLanguage(targetLang: 'id' | 'en') {
+    if (targetLang === 'en') {
+      const translated = generateContextualEnglishCv(content);
+      setContent(translated);
+      setIsEnglish(true);
+    } else {
+      setContent({ ...mappedResult.content, language: 'id' });
+      setIsEnglish(false);
+    }
+  }
 
   const { unmappedLines, confidence } = mappedResult;
 
@@ -149,6 +162,53 @@ export function CvImportReview({
           Periksa data yang berhasil diekstraksi dari <strong>{fileName}</strong>. Data ini{' '}
           <em>tidak akan menimpa profil lama Anda</em> tanpa persetujuan eksplisit.
         </p>
+
+        {/* Kontrol Bahasa Dokumen CV (Bahasa Indonesia / English) */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 10,
+            marginTop: 14,
+            padding: '10px 14px',
+            background: 'var(--p-surface, #f9fafb)',
+            borderRadius: 'var(--r-md, 10px)',
+            border: '1px solid var(--border-subtle, rgba(17, 17, 17, 0.08))',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: '0.86rem', fontWeight: 600 }}>Bahasa Dokumen CV:</span>
+            <div style={{ display: 'inline-flex', gap: 6 }}>
+              <Button
+                type="button"
+                variant={!isEnglish ? 'primary' : 'outline'}
+                size="sm"
+                onClick={() => handleToggleLanguage('id')}
+              >
+                🇮🇩 Indonesia
+              </Button>
+              <Button
+                type="button"
+                variant={isEnglish ? 'primary' : 'outline'}
+                size="sm"
+                onClick={() => handleToggleLanguage('en')}
+              >
+                🌐 English (ATS Standard)
+              </Button>
+            </div>
+          </div>
+          {isEnglish ? (
+            <span style={{ fontSize: '0.82rem', color: 'var(--status-open, #059669)', fontWeight: 600 }}>
+              ✓ Otomatis diterjemahkan ke Bahasa Inggris profesional
+            </span>
+          ) : (
+            <span style={{ fontSize: '0.82rem', color: 'var(--ink-secondary)' }}>
+              Klik English jika ingin CV berbahasa Inggris
+            </span>
+          )}
+        </div>
       </div>
 
       {mappedResult.warnings && mappedResult.warnings.length > 0 ? (
@@ -239,7 +299,13 @@ export function CvImportReview({
           </li>
           <li>
             <strong>Pendidikan:</strong>{' '}
-            {content.education.map((e) => e.institution).join(', ') || '—'}
+            {content.education
+              .map((e) =>
+                e.degree || e.field
+                  ? `${e.institution} (${[e.degree, e.field].filter(Boolean).join(' - ')})`
+                  : e.institution,
+              )
+              .join(' | ') || '—'}
           </li>
           <li>
             <strong>Keahlian:</strong> {content.skills.join(', ') || '—'}

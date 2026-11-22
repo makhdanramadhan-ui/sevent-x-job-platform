@@ -13,6 +13,7 @@ import type { CvDocument } from '@/lib/contracts';
 import { CvPreview } from '../_components/cv-preview';
 import { CvSectionForm } from '../_components/cv-section-form';
 import { CvSectionReorder } from '../_components/cv-section-reorder';
+import { generateContextualEnglishCv } from '../_lib/contextual-translator';
 import { normalizeCvContent } from '../_lib/cv-defaults';
 import { triggerCvPrint } from '../_lib/export-helpers';
 import { validateCvPayload } from '../_lib/payload-validator';
@@ -506,6 +507,30 @@ function CvEditorInner({
                 Ada perubahan belum disimpan
               </span>
             ) : null}
+            <Button
+              variant={content.language === 'en' ? 'secondary' : 'outline'}
+              size="md"
+              onClick={() => {
+                if (content.language === 'en') {
+                  setContent({ ...content, language: 'id' });
+                  setSuccessNotice('Bahasa CV dialihkan ke Bahasa Indonesia.');
+                } else {
+                  const translated = generateContextualEnglishCv(content);
+                  setContent(translated);
+                  setSuccessNotice(
+                    'CV berhasil diterjemahkan ke Bahasa Inggris profesional (English). Judul seksi ATS, tanggal, dan deskripsi kini berbahasa Inggris. Simpan perubahan jika sudah sesuai.',
+                  );
+                }
+              }}
+              title={
+                content.language === 'en'
+                  ? 'Bahasa CV: English (Klik untuk ubah ke Bahasa Indonesia)'
+                  : 'Terjemahkan seluruh isi CV ke Bahasa Inggris profesional'
+              }
+            >
+              🌐 {content.language === 'en' ? 'English (Aktif)' : 'Terjemahkan ke English'}
+            </Button>
+
             <Button
               variant="outline"
               size="md"

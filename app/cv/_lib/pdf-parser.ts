@@ -96,6 +96,26 @@ function extractTextFromRawPdfBytes(bytes: Uint8Array): string[] {
   return textChunks;
 }
 
+export function cleanExtractedPdfText(text: string): string {
+  return text
+    // 1. Perbaiki pecahan huruf kapital di awal kata seperti "E diting" -> "Editing", "E xcel" -> "Excel", "P oster" -> "Poster", "T ypografi" -> "Typografi"
+    .replace(/(?:^|\s)([A-Z])\s+([a-z]{2,})\b/g, (match, p1, p2) => {
+      const leadingSpace = match.startsWith(' ') ? ' ' : '';
+      return `${leadingSpace}${p1}${p2}`;
+    })
+    // 2. Perbaiki pecahan huruf kecil di akhir kata seperti "Alifa h" -> "Alifah", "poster s" -> "posters"
+    .replace(/\b([A-Za-z]{3,})\s+([b-hj-z])\b/gi, '$1$2')
+    // 3. Perbaiki tanda kutip seperti "Ma ' had" -> "Ma'had", "Ma ’ had" -> "Ma'had"
+    .replace(/\b([A-Za-z]+)\s*[''’`]\s*([A-Za-z]+)\b/g, "$1'$2")
+    // 4. Perbaiki tanda hubung terpisah seperti "A L -" atau "AL -"
+    .replace(/\b([A-Z])\s+([A-Z])\s*-\s*/g, '$1$2-')
+    // 5. Perbaiki pecahan desimal angka seperti "88 . 00" -> "88.00"
+    .replace(/(\d+)\s*\.\s*(\d+)/g, '$1.$2')
+    // 6. Rapikan spasi ganda
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+}
+
 export async function parsePdfFile(file: File): Promise<PdfParseResult> {
   try {
     const arrayBuffer = await file.arrayBuffer();
@@ -146,11 +166,12 @@ export async function parsePdfFile(file: File): Promise<PdfParseResult> {
           // Urutkan item teks berdasarkan posisi halaman (Y atas ke bawah, X kiri ke kanan)
           // Di PDF.js: transform[4] = X, transform[5] = Y (koordinat Y dimulai dari bawah ke atas)
           const validItems = items
-            .filter((it) => it.str && it.str.trim().length > 0)
+            .filter((it) => it.str && it.str.length > 0)
             .map((it) => ({
               str: it.str || '',
               x: it.transform && it.transform.length >= 6 ? it.transform[4] : 0,
               y: it.transform && it.transform.length >= 6 ? it.transform[5] : 0,
+              width: it.width || 0,
               hasEOL: Boolean(it.hasEOL),
             }));
 
@@ -165,6 +186,8 @@ export async function parsePdfFile(file: File): Promise<PdfParseResult> {
           const pageLines: string[] = [];
           let currentLine = '';
           let lastY: number | null = null;
+          let lastX: number | null = null;
+          let lastWidth = 0;
           const xCoords: number[] = [];
 
           for (const it of validItems) {
@@ -175,18 +198,28 @@ export async function parsePdfFile(file: File): Promise<PdfParseResult> {
 
             if (isNewLine || it.hasEOL) {
               if (currentLine.trim().length > 0) {
-                pageLines.push(currentLine.trim());
+                pageLines.push(cleanExtractedPdfText(currentLine.trim()));
               }
               currentLine = it.str;
             } else {
-              currentLine += (currentLine.length > 0 ? ' ' : '') + it.str;
+              // Jika jarak antar huruf/kata rapat (< 2px), jangan tambah spasi agar kata tidak terbelah
+              const gap = lastX !== null ? it.x - (lastX + lastWidth) : 0;
+              const needsSpace =
+                currentLine.length > 0 &&
+                !currentLine.endsWith(' ') &&
+                !it.str.startsWith(' ') &&
+                gap > 2.2;
+
+              currentLine += (needsSpace ? ' ' : '') + it.str;
             }
 
             lastY = it.y;
+            lastX = it.x;
+            lastWidth = it.width;
           }
 
           if (currentLine.trim().length > 0) {
-            pageLines.push(currentLine.trim());
+            pageLines.push(cleanExtractedPdfText(currentLine.trim()));
           }
 
           if (xCoords.length > 10) {
