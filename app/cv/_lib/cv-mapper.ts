@@ -115,18 +115,22 @@ type SectionKey =
   | 'unknown';
 
 const SECTION_HEADERS: Record<SectionKey, RegExp> = {
-  summary: /^(profile|profil|ringkasan|tentang saya|about me|summary|professional summary|ikhtisar)/i,
+  summary:
+    /^[\s•\-\*\d.:\t\(\)]*(?:profile|profil|ringkasan|tentang saya|about me|summary|professional summary|ikhtisar)(?:[:\s-]*$)/i,
   organization:
-    /^(organization experience|pengalaman organisasi|organisasi|organization|aktivitas kepanitiaan|volunteer)/i,
+    /^[\s•\-\*\d.:\t\(\)]*(?:organization experience|pengalaman organisasi|organisasi|organization|aktivitas kepanitiaan|volunteer)(?:[:\s-]*$)/i,
   experience:
-    /^(work experience|professional experience|pengalaman kerja|pengalaman|riwayat pekerjaan|employment history)/i,
+    /^[\s•\-\*\d.:\t\(\)]*(?:work experience|professional experience|pengalaman kerja|pengalaman profesional|riwayat pekerjaan|employment history|pengalaman)(?:[:\s-]*$)/i,
   certifications:
-    /^(course & certification|course & certifications|sertifikasi|kursus & sertifikasi|certifications|awards|honors)/i,
-  education: /^(education|pendidikan|riwayat pendidikan|academic background)/i,
-  skills: /^(skills & tools|skills and tools|keahlian & tools|keahlian|kemampuan|skills|technical skills)/i,
-  projects: /^(projects|proyek|portofolio|portfolio|personal projects)/i,
+    /^[\s•\-\*\d.:\t\(\)]*(?:course & certification|course & certifications|sertifikasi|kursus & sertifikasi|certifications|awards|honors|prestasi & sertifikasi|prestasi)(?:[:\s-]*$)/i,
+  education:
+    /^[\s•\-\*\d.:\t\(\)]*(?:education|pendidikan|riwayat pendidikan|academic background|latar belakang pendidikan)(?:[:\s-]*$)/i,
+  skills:
+    /^[\s•\-\*\d.:\t\(\)]*(?:skills & tools|skills and tools|keahlian & tools|keahlian|kemampuan|skills|technical skills|hard skills & soft skills)(?:[:\s-]*$)/i,
+  projects:
+    /^[\s•\-\*\d.:\t\(\)]*(?:projects|proyek|portofolio|portfolio|personal projects|pengalaman proyek)(?:[:\s-]*$)/i,
   unknown:
-    /^(informasi tambahan|informasi tambahan lainnya|additional information|lain-lain|hobi|hobby|interests|other|keterangan lainnya)(?:[:\s-]*$)/i,
+    /^[\s•\-\*\d.:\t\(\)]*(?:informasi tambahan|informasi tambahan lainnya|additional information|lain-lain|hobi|hobby|interests|other|keterangan lainnya)(?:[:\s-]*$)/i,
 };
 
 export function mapRawTextToCv(rawText: string, warnings?: string[]): MappedCvResult {
@@ -193,8 +197,13 @@ export function mapRawTextToCv(rawText: string, warnings?: string[]): MappedCvRe
       }
     }
 
+    const isDocTitle = /^(curriculum vitae|resume|cv|biodata)$/i.test(line.trim());
+    const isSectionHeader = Object.values(SECTION_HEADERS).some((r) => r.test(line));
+
     if (
       !nameFound &&
+      !isDocTitle &&
+      !isSectionHeader &&
       !line.match(EMAIL_REGEX) &&
       !line.match(PHONE_REGEX) &&
       !line.match(URL_REGEX) &&
@@ -253,6 +262,78 @@ export function mapRawTextToCv(rawText: string, warnings?: string[]): MappedCvRe
 
     result.skills = Array.from(new Set(tokens)).slice(0, 50);
   }
+
+  // Experience (Pengalaman Kerja)
+  const expLines = sectionBuckets.experience;
+  const experiences: ProfileExperience[] = [];
+  let currentExp: Partial<ProfileExperience> | null = null;
+
+  for (const line of expLines) {
+    const dateRangeMatch = line.match(
+      /([A-Za-z]+\s+\d{2,4}|\d{4}(?:-\d{2})?|\d{1,2}\/\d{4})\s*(?:-|–|—|s\/d|to)\s*([A-Za-z]+\s+\d{2,4}|\d{4}(?:-\d{2})?|\d{1,2}\/\d{4}|present|sekarang|saat ini)/i,
+    );
+
+    if (dateRangeMatch) {
+      if (currentExp && currentExp.company) {
+        experiences.push({
+          company: currentExp.company,
+          title: currentExp.title ?? 'Posisi Pekerjaan',
+          location: currentExp.location ?? null,
+          start_date: currentExp.start_date ?? null,
+          end_date: currentExp.end_date ?? null,
+          current: !currentExp.end_date,
+          description: currentExp.description || null,
+        });
+      }
+
+      currentExp = {
+        company: line.replace(dateRangeMatch[0], '').trim() || 'Perusahaan',
+        title: '',
+        location: null,
+        start_date: normalizeDateMatch(dateRangeMatch[1]),
+        end_date: /present|sekarang|saat ini/i.test(dateRangeMatch[2])
+          ? null
+          : normalizeDateMatch(dateRangeMatch[2]),
+        current: /present|sekarang|saat ini/i.test(dateRangeMatch[2]),
+        description: '',
+      };
+      continue;
+    }
+
+    if (currentExp) {
+      if (!currentExp.title) {
+        currentExp.title = line;
+      } else {
+        const bullet = line.startsWith('•') || line.startsWith('-') ? line : `• ${line}`;
+        currentExp.description = currentExp.description
+          ? `${currentExp.description}\n${bullet}`
+          : bullet;
+      }
+    } else {
+      currentExp = {
+        company: line,
+        title: '',
+        location: null,
+        start_date: null,
+        end_date: null,
+        current: false,
+        description: '',
+      };
+    }
+  }
+
+  if (currentExp && currentExp.company) {
+    experiences.push({
+      company: currentExp.company,
+      title: currentExp.title || 'Posisi Pekerjaan',
+      location: currentExp.location ?? null,
+      start_date: currentExp.start_date ?? null,
+      end_date: currentExp.end_date ?? null,
+      current: !currentExp.end_date,
+      description: currentExp.description || null,
+    });
+  }
+  result.experiences = experiences.slice(0, 20);
 
   // Organization
   const orgLines = sectionBuckets.organization;
@@ -362,6 +443,49 @@ export function mapRawTextToCv(rawText: string, warnings?: string[]): MappedCvRe
     });
   }
   result.education = educations.slice(0, 20);
+
+  // Projects (Portofolio & Proyek)
+  const projLines = sectionBuckets.projects;
+  const projects: ProfileProject[] = [];
+  let currentProj: Partial<ProfileProject> | null = null;
+
+  for (const line of projLines) {
+    const isBullet = line.startsWith('•') || line.startsWith('-') || line.startsWith('*');
+    if (!isBullet && (!currentProj || currentProj.description)) {
+      if (currentProj && currentProj.name) {
+        projects.push({
+          name: currentProj.name,
+          start_date: currentProj.start_date ?? null,
+          end_date: currentProj.end_date ?? null,
+          description: currentProj.description || null,
+          url: currentProj.url ?? null,
+        });
+      }
+      currentProj = {
+        name: line,
+        start_date: null,
+        end_date: null,
+        description: '',
+        url: null,
+      };
+    } else if (currentProj) {
+      const bullet = isBullet ? line : `• ${line}`;
+      currentProj.description = currentProj.description
+        ? `${currentProj.description}\n${bullet}`
+        : bullet;
+    }
+  }
+
+  if (currentProj && currentProj.name) {
+    projects.push({
+      name: currentProj.name,
+      start_date: currentProj.start_date ?? null,
+      end_date: currentProj.end_date ?? null,
+      description: currentProj.description || null,
+      url: currentProj.url ?? null,
+    });
+  }
+  result.projects = projects.slice(0, 20);
 
   // Certifications
   const certLines = sectionBuckets.certifications;
