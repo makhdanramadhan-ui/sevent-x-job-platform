@@ -8,7 +8,7 @@ import { AuthGuard } from '@/components/ui/auth-guard';
 import { ButtonText } from '@/components/ui/button-text';
 import { EmptyState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
 import { Badge, Button } from '@/components/ui/forms';
-import { type SessionInfo, useAuthSession } from '@/components/ui/navigation';
+import type { SessionInfo } from '@/components/ui/navigation';
 import { PageBanner } from '@/components/ui/page-banner';
 import type { CvDocument, CvDocumentSummary, ProfileRecord } from '@/lib/contracts';
 import { CvImportDialog } from './_components/cv-import-dialog';
@@ -423,9 +423,6 @@ function CvDashboardInner({
 }
 
 export default function CvPage() {
-  const { session, loading: authLoading } = useAuthSession();
-  const [useDemo, setUseDemo] = useState(false);
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
       <PageBanner
@@ -446,58 +443,9 @@ export default function CvPage() {
         }
       />
 
-      {useDemo ? (
-        <CvDashboardInner
-          session={{
-            user: {
-              id: 'demo-user-123',
-              email: 'penguji@seventx.local',
-              name: 'Budi Santoso',
-              avatar_url: null,
-            },
-            auth_mode: 'cookie',
-            has_profile: true,
-          }}
-          isDemo={true}
-          onExitDemo={() => setUseDemo(false)}
-        />
-      ) : (
-        <>
-          {!authLoading && !session ? (
-            <div className="cv-demo-strip">
-              <span className="cv-demo-strip__copy">
-                <svg
-                  className="cv-demo-strip__icon"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="16" x2="12" y2="12" />
-                  <line x1="12" y1="8" x2="12.01" y2="8" />
-                </svg>
-                <span>
-                  <strong>Belum masuk atau ingin uji coba cepat?</strong> Coba susun dan unduh CV ATS
-                  secara lokal tanpa perlu login.
-                </span>
-              </span>
-              <Button variant="primary" size="sm" onClick={() => setUseDemo(true)}>
-                Coba Mode Demo
-              </Button>
-            </div>
-          ) : null}
-
-          <AuthGuard title="Masuk untuk Mengakses Studio CV">
-            {(activeSession) => <CvDashboardInner session={activeSession} isDemo={false} />}
-          </AuthGuard>
-        </>
-      )}
+      <AuthGuard title="Masuk untuk Mengakses Studio CV">
+        {(activeSession) => <CvDashboardInner session={activeSession} />}
+      </AuthGuard>
     </div>
   );
 }

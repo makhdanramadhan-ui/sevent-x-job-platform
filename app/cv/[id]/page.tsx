@@ -707,21 +707,6 @@ function CvEditorInner({
 export default function CvEditorPage() {
   const params = useParams();
   const cvId = typeof params?.id === 'string' ? params.id : '';
-  const isDemoDoc = cvId.startsWith('demo-');
-
-  if (isDemoDoc) {
-    const demoSession: SessionInfo = {
-      user: {
-        id: 'demo-user-123',
-        email: 'penguji@seventx.local',
-        name: 'Budi Santoso',
-        avatar_url: null,
-      },
-      auth_mode: 'cookie',
-      has_profile: true,
-    };
-    return <CvEditorInner cvId={cvId} session={demoSession} isDemo={true} />;
-  }
 
   return (
     <AuthGuard title="Masuk untuk Mengakses Editor CV ATS">
