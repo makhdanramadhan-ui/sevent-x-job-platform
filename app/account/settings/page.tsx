@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { type FormEvent, type ReactNode, useCallback, useEffect, useId, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useState } from 'react';
 import { type ApiCallError, apiFetch } from '@/components/ui/api-client';
 import { AuthGuard } from '@/components/ui/auth-guard';
+import { ButtonText } from '@/components/ui/button-text';
 import { ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
 import { Button, FormField, PasswordInput, TextInput } from '@/components/ui/forms';
 import { notifyAuthChanged, type SessionInfo } from '@/components/ui/navigation';
@@ -43,7 +44,7 @@ function friendlyAccountError(error: ApiCallError, fallback: string): string {
     return 'Password saat ini tidak sesuai.';
   }
   if (error.code === 'duplicate_email' || error.code === 'email_already_exists') {
-    return 'Email baru sudah digunakan oleh akun lain.';
+    return 'Email sudah terdaftar.';
   }
   if (error.status === 429 || error.code === 'rate_limited' || error.code === 'too_many_attempts') {
     return 'Terlalu banyak percobaan. Coba lagi nanti.';
@@ -66,32 +67,63 @@ function friendlyAccountError(error: ApiCallError, fallback: string): string {
   return fallback;
 }
 
-function SectionCard({
-  title,
-  description,
-  children,
-  tone = 'default',
-}: {
-  title: string;
-  description: string;
-  children: ReactNode;
-  tone?: 'default' | 'danger';
-}) {
-  const headingId = useId();
+function CloseIcon() {
   return (
-    <section
-      className={tone === 'danger' ? 'surface-card' : 'ledger-card'}
-      style={tone === 'danger' ? { borderColor: 'var(--status-danger-border)' } : undefined}
-      aria-labelledby={headingId}
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
     >
-      <h2 id={headingId} style={{ fontSize: '1.1rem', margin: '0 0 4px' }}>
-        {title}
-      </h2>
-      <p style={{ margin: '0 0 20px', fontSize: '0.9rem', color: 'var(--ink-secondary)' }}>
-        {description}
-      </p>
-      {children}
-    </section>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+      <path d="m15 5 4 4" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 6h18" />
+      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
   );
 }
 
@@ -109,8 +141,8 @@ function SuccessSignInAgain({
       <NoticeBanner variant="success" title={title}>
         {message}
       </NoticeBanner>
-      <div>
-        <Button type="button" variant="primary" onClick={onContinue}>
+      <div className="unsaved-modal-actions">
+        <Button type="button" variant="primary" size="md" onClick={onContinue}>
           Masuk Kembali
         </Button>
       </div>
@@ -120,7 +152,13 @@ function SuccessSignInAgain({
 
 type EmailStep = 'request' | 'confirm' | 'done';
 
-function ChangeEmailSection({ settingsEmail }: { settingsEmail: string }) {
+function ChangeEmailModal({
+  settingsEmail,
+  onClose,
+}: {
+  settingsEmail: string;
+  onClose: () => void;
+}) {
   const router = useRouter();
   const [step, setStep] = useState<EmailStep>('request');
   const [currentPassword, setCurrentPassword] = useState('');
@@ -136,6 +174,14 @@ function ChangeEmailSection({ settingsEmail }: { settingsEmail: string }) {
   }>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !submitting) onClose();
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [submitting, onClose]);
 
   async function handleRequest(e: FormEvent) {
     e.preventDefault();
@@ -218,157 +264,200 @@ function ChangeEmailSection({ settingsEmail }: { settingsEmail: string }) {
     router.refresh();
   }
 
-  function resetFlow() {
-    setStep('request');
-    setCurrentPassword('');
-    setNewEmail('');
-    setVerificationId('');
-    setCurrentCode('');
-    setNewCode('');
-    setFieldErrors({});
-    setFormError(null);
-  }
-
   return (
-    <SectionCard
-      title="Ubah Email"
-      description="Perubahan email memerlukan password saat ini dan kode verifikasi yang dikirim ke email lama dan email baru."
+    <div
+      className="auth-modal-overlay"
+      role="presentation"
+      onClick={() => {
+        if (!submitting) onClose();
+      }}
     >
-      {step === 'done' ? (
-        <SuccessSignInAgain
-          title="Email Berhasil Diperbarui"
-          message="Email akun Anda telah diperbarui. Masuk kembali untuk melanjutkan."
-          onContinue={handleSignInAgain}
-        />
-      ) : null}
+      <div
+        className="unsaved-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-change-email-title"
+        aria-describedby="modal-change-email-desc"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="unsaved-modal-head">
+          <h2
+            id="modal-change-email-title"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '1.18rem',
+              margin: 0,
+              fontWeight: 600,
+            }}
+          >
+            Ubah Email
+          </h2>
+          <button
+            type="button"
+            className="auth-modal-close"
+            aria-label="Tutup dialog ubah email"
+            disabled={submitting}
+            onClick={onClose}
+          >
+            <CloseIcon />
+          </button>
+        </div>
 
-      {step === 'request' ? (
-        <form onSubmit={handleRequest} className="form-stack" noValidate>
-          {formError ? (
-            <NoticeBanner variant="error" title="Permintaan Gagal" onDismiss={() => setFormError(null)}>
-              {formError}
-            </NoticeBanner>
-          ) : null}
-          <FormField
-            id="settings-email-current"
-            label="Email Saat Ini"
-            hint="Email ini digunakan untuk menerima kode konfirmasi."
-          >
-            <TextInput id="settings-email-current" type="email" value={settingsEmail} disabled readOnly />
-          </FormField>
-          <FormField id="settings-email-new" label="Email Baru" error={fieldErrors.newEmail} required>
-            <TextInput
-              id="settings-email-new"
-              type="email"
-              autoComplete="email"
-              placeholder="nama-baru@email.com"
-              value={newEmail}
-              hasError={Boolean(fieldErrors.newEmail)}
-              onChange={(e) => {
-                setNewEmail(e.target.value);
-                if (fieldErrors.newEmail) setFieldErrors((prev) => ({ ...prev, newEmail: undefined }));
-              }}
-            />
-          </FormField>
-          <FormField
-            id="settings-email-current-password"
-            label="Password Saat Ini"
-            error={fieldErrors.currentPassword}
-            required
-          >
-            <PasswordInput
+        <p id="modal-change-email-desc" className="unsaved-modal-desc">
+          Email saat ini: <strong>{settingsEmail || '-'}</strong>. Perubahan email memerlukan
+          password saat ini dan kode verifikasi ke email lama dan email baru.
+        </p>
+
+        {step === 'done' ? (
+          <SuccessSignInAgain
+            title="Email Berhasil Diperbarui"
+            message="Email akun Anda telah diperbarui. Masuk kembali untuk melanjutkan."
+            onContinue={handleSignInAgain}
+          />
+        ) : null}
+
+        {step === 'request' ? (
+          <form onSubmit={handleRequest} className="form-stack" noValidate>
+            {formError ? (
+              <NoticeBanner variant="error" title="Permintaan Gagal" onDismiss={() => setFormError(null)}>
+                {formError}
+              </NoticeBanner>
+            ) : null}
+
+            <FormField id="settings-email-new" label="Email Baru" error={fieldErrors.newEmail}>
+              <TextInput
+                id="settings-email-new"
+                type="email"
+                autoComplete="email"
+                autoFocus
+                placeholder="nama-baru@email.com"
+                value={newEmail}
+                hasError={Boolean(fieldErrors.newEmail)}
+                onChange={(e) => {
+                  setNewEmail(e.target.value);
+                  if (fieldErrors.newEmail) setFieldErrors((prev) => ({ ...prev, newEmail: undefined }));
+                }}
+              />
+            </FormField>
+
+            <FormField
               id="settings-email-current-password"
-              autoComplete="current-password"
-              value={currentPassword}
-              hasError={Boolean(fieldErrors.currentPassword)}
-              onChange={(e) => {
-                setCurrentPassword(e.target.value);
-                if (fieldErrors.currentPassword) {
-                  setFieldErrors((prev) => ({ ...prev, currentPassword: undefined }));
-                }
-              }}
-            />
-          </FormField>
-          <div>
-            <Button type="submit" variant="primary" loading={submitting}>
-              Kirim Kode Verifikasi
-            </Button>
-          </div>
-        </form>
-      ) : null}
+              label="Password Saat Ini"
+              error={fieldErrors.currentPassword}
+            >
+              <PasswordInput
+                id="settings-email-current-password"
+                autoComplete="current-password"
+                placeholder="Masukkan password saat ini"
+                value={currentPassword}
+                hasError={Boolean(fieldErrors.currentPassword)}
+                onChange={(e) => {
+                  setCurrentPassword(e.target.value);
+                  if (fieldErrors.currentPassword) {
+                    setFieldErrors((prev) => ({ ...prev, currentPassword: undefined }));
+                  }
+                }}
+              />
+            </FormField>
 
-      {step === 'confirm' ? (
-        <form onSubmit={handleConfirm} className="form-stack" noValidate>
-          <NoticeBanner variant="info" title="Kode Verifikasi Dikirim">
-            Kode 8 digit telah dikirim ke email saat ini dan email baru. Masukkan kedua kode untuk
-            menyelesaikan perubahan email.
-          </NoticeBanner>
-          {formError ? (
-            <NoticeBanner variant="error" title="Konfirmasi Gagal" onDismiss={() => setFormError(null)}>
-              {formError}
+            <div className="unsaved-modal-actions" style={{ marginTop: 6 }}>
+              <Button type="button" variant="outline" size="md" disabled={submitting} onClick={onClose}>
+                Batal
+              </Button>
+              <Button type="submit" variant="primary" size="md" loading={submitting}>
+                Kirim Kode Verifikasi
+              </Button>
+            </div>
+          </form>
+        ) : null}
+
+        {step === 'confirm' ? (
+          <form onSubmit={handleConfirm} className="form-stack" noValidate>
+            <NoticeBanner variant="info" title="Kode Verifikasi Dikirim">
+              Kode 8 digit telah dikirim ke email saat ini dan email baru. Masukkan kedua kode untuk
+              menyelesaikan perubahan email.
             </NoticeBanner>
-          ) : null}
-          <FormField
-            id="settings-email-current-code"
-            label="Kode dari Email Saat Ini"
-            error={fieldErrors.currentCode}
-            required
-          >
-            <TextInput
+            {formError ? (
+              <NoticeBanner variant="error" title="Konfirmasi Gagal" onDismiss={() => setFormError(null)}>
+                {formError}
+              </NoticeBanner>
+            ) : null}
+
+            <FormField
               id="settings-email-current-code"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={8}
-              placeholder="00000000"
-              value={currentCode}
-              hasError={Boolean(fieldErrors.currentCode)}
-              onChange={(e) => {
-                const next = e.target.value.replace(/\D/g, '').slice(0, 8);
-                setCurrentCode(next);
-                if (fieldErrors.currentCode) setFieldErrors((prev) => ({ ...prev, currentCode: undefined }));
-              }}
-            />
-          </FormField>
-          <FormField
-            id="settings-email-new-code"
-            label="Kode dari Email Baru"
-            error={fieldErrors.newCode}
-            required
-          >
-            <TextInput
+              label="Kode dari Email Saat Ini"
+              error={fieldErrors.currentCode}
+            >
+              <TextInput
+                id="settings-email-current-code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                autoFocus
+                maxLength={8}
+                placeholder="00000000"
+                value={currentCode}
+                hasError={Boolean(fieldErrors.currentCode)}
+                onChange={(e) => {
+                  const next = e.target.value.replace(/\D/g, '').slice(0, 8);
+                  setCurrentCode(next);
+                  if (fieldErrors.currentCode) setFieldErrors((prev) => ({ ...prev, currentCode: undefined }));
+                }}
+              />
+            </FormField>
+
+            <FormField
               id="settings-email-new-code"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={8}
-              placeholder="00000000"
-              value={newCode}
-              hasError={Boolean(fieldErrors.newCode)}
-              onChange={(e) => {
-                const next = e.target.value.replace(/\D/g, '').slice(0, 8);
-                setNewCode(next);
-                if (fieldErrors.newCode) setFieldErrors((prev) => ({ ...prev, newCode: undefined }));
-              }}
-            />
-          </FormField>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <Button type="submit" variant="primary" loading={submitting}>
-              Konfirmasi Email Baru
-            </Button>
-            <Button type="button" variant="outline" disabled={submitting} onClick={resetFlow}>
-              Batal
-            </Button>
-          </div>
-        </form>
-      ) : null}
-    </SectionCard>
+              label="Kode dari Email Baru"
+              error={fieldErrors.newCode}
+            >
+              <TextInput
+                id="settings-email-new-code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={8}
+                placeholder="00000000"
+                value={newCode}
+                hasError={Boolean(fieldErrors.newCode)}
+                onChange={(e) => {
+                  const next = e.target.value.replace(/\D/g, '').slice(0, 8);
+                  setNewCode(next);
+                  if (fieldErrors.newCode) setFieldErrors((prev) => ({ ...prev, newCode: undefined }));
+                }}
+              />
+            </FormField>
+
+            <div className="unsaved-modal-actions" style={{ marginTop: 6 }}>
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                disabled={submitting}
+                onClick={() => {
+                  setStep('request');
+                  setCurrentCode('');
+                  setNewCode('');
+                  setFieldErrors({});
+                  setFormError(null);
+                }}
+              >
+                Kembali
+              </Button>
+              <Button type="submit" variant="primary" size="md" loading={submitting}>
+                Konfirmasi Email Baru
+              </Button>
+            </div>
+          </form>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
 type PasswordStep = 'request' | 'confirm' | 'done';
 
-function ChangePasswordSection() {
+function ChangePasswordModal({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const [step, setStep] = useState<PasswordStep>('request');
   const [currentPassword, setCurrentPassword] = useState('');
@@ -384,6 +473,14 @@ function ChangePasswordSection() {
   }>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !submitting) onClose();
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [submitting, onClose]);
 
   async function handleRequest(e: FormEvent) {
     e.preventDefault();
@@ -425,12 +522,16 @@ function ChangePasswordSection() {
       errors.currentCode = 'Masukkan kode 8 digit dari email Anda.';
     }
     const passwordValidation = validatePassword(newPassword);
-    if (!passwordValidation.ok) {
+    if (!newPassword) {
+      errors.newPassword = 'Password baru wajib diisi.';
+    } else if (!passwordValidation.ok) {
       errors.newPassword = 'Password baru belum memenuhi syarat.';
     } else if (newPassword.length > 72) {
       errors.newPassword = 'Password maksimal 72 karakter.';
     }
-    if (confirmNewPassword !== newPassword) {
+    if (!confirmNewPassword) {
+      errors.confirmNewPassword = 'Konfirmasi password baru wajib diisi.';
+    } else if (confirmNewPassword !== newPassword) {
       errors.confirmNewPassword = 'Konfirmasi password baru tidak sama.';
     }
     if (Object.keys(errors).length > 0) {
@@ -464,148 +565,209 @@ function ChangePasswordSection() {
     router.refresh();
   }
 
-  function resetFlow() {
-    setStep('request');
-    setCurrentPassword('');
-    setVerificationId('');
-    setCurrentCode('');
-    setNewPassword('');
-    setConfirmNewPassword('');
-    setFieldErrors({});
-    setFormError(null);
-  }
-
   return (
-    <SectionCard
-      title="Ubah Password"
-      description="Gunakan password baru yang memenuhi syarat. Setelah password diperbarui, Anda perlu masuk kembali."
+    <div
+      className="auth-modal-overlay"
+      role="presentation"
+      onClick={() => {
+        if (!submitting) onClose();
+      }}
     >
-      {step === 'done' ? (
-        <SuccessSignInAgain
-          title="Password Berhasil Diperbarui"
-          message="Password akun Anda telah diperbarui. Masuk kembali untuk melanjutkan."
-          onContinue={handleSignInAgain}
-        />
-      ) : null}
-
-      {step === 'request' ? (
-        <form onSubmit={handleRequest} className="form-stack" noValidate>
-          {formError ? (
-            <NoticeBanner variant="error" title="Permintaan Gagal" onDismiss={() => setFormError(null)}>
-              {formError}
-            </NoticeBanner>
-          ) : null}
-          <FormField
-            id="settings-password-current"
-            label="Password Saat Ini"
-            error={fieldErrors.currentPassword}
-            required
+      <div
+        className="unsaved-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-change-password-title"
+        aria-describedby="modal-change-password-desc"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="unsaved-modal-head">
+          <h2
+            id="modal-change-password-title"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '1.18rem',
+              margin: 0,
+              fontWeight: 600,
+            }}
           >
-            <PasswordInput
+            Ubah Kata Sandi
+          </h2>
+          <button
+            type="button"
+            className="auth-modal-close"
+            aria-label="Tutup dialog ubah kata sandi"
+            disabled={submitting}
+            onClick={onClose}
+          >
+            <CloseIcon />
+          </button>
+        </div>
+
+        <p id="modal-change-password-desc" className="unsaved-modal-desc">
+          Masukkan password saat ini untuk menerima kode verifikasi ke email Anda, lalu buat password
+          baru.
+        </p>
+
+        {step === 'done' ? (
+          <SuccessSignInAgain
+            title="Password Berhasil Diperbarui"
+            message="Password akun Anda telah diperbarui. Masuk kembali untuk melanjutkan."
+            onContinue={handleSignInAgain}
+          />
+        ) : null}
+
+        {step === 'request' ? (
+          <form onSubmit={handleRequest} className="form-stack" noValidate>
+            {formError ? (
+              <NoticeBanner variant="error" title="Permintaan Gagal" onDismiss={() => setFormError(null)}>
+                {formError}
+              </NoticeBanner>
+            ) : null}
+
+            <FormField
               id="settings-password-current"
-              autoComplete="current-password"
-              value={currentPassword}
-              hasError={Boolean(fieldErrors.currentPassword)}
-              onChange={(e) => {
-                setCurrentPassword(e.target.value);
-                if (fieldErrors.currentPassword) {
-                  setFieldErrors((prev) => ({ ...prev, currentPassword: undefined }));
-                }
-              }}
-            />
-          </FormField>
-          <div>
-            <Button type="submit" variant="primary" loading={submitting}>
-              Kirim Kode Verifikasi
-            </Button>
-          </div>
-        </form>
-      ) : null}
+              label="Password Saat Ini"
+              error={fieldErrors.currentPassword}
+            >
+              <PasswordInput
+                id="settings-password-current"
+                autoComplete="current-password"
+                autoFocus
+                placeholder="Masukkan password saat ini"
+                value={currentPassword}
+                hasError={Boolean(fieldErrors.currentPassword)}
+                onChange={(e) => {
+                  setCurrentPassword(e.target.value);
+                  if (fieldErrors.currentPassword) {
+                    setFieldErrors((prev) => ({ ...prev, currentPassword: undefined }));
+                  }
+                }}
+              />
+            </FormField>
 
-      {step === 'confirm' ? (
-        <form onSubmit={handleConfirm} className="form-stack" noValidate>
-          <NoticeBanner variant="info" title="Kode Verifikasi Dikirim">
-            Kode 8 digit telah dikirim ke email Anda. Masukkan kode tersebut dan password baru Anda.
-          </NoticeBanner>
-          {formError ? (
-            <NoticeBanner variant="error" title="Konfirmasi Gagal" onDismiss={() => setFormError(null)}>
-              {formError}
+            <div className="unsaved-modal-actions" style={{ marginTop: 6 }}>
+              <Button type="button" variant="outline" size="md" disabled={submitting} onClick={onClose}>
+                Batal
+              </Button>
+              <Button type="submit" variant="primary" size="md" loading={submitting}>
+                Kirim Kode Verifikasi
+              </Button>
+            </div>
+          </form>
+        ) : null}
+
+        {step === 'confirm' ? (
+          <form onSubmit={handleConfirm} className="form-stack" noValidate>
+            <NoticeBanner variant="info" title="Kode Verifikasi Dikirim">
+              Kode 8 digit telah dikirim ke email Anda. Masukkan kode tersebut dan password baru
+              Anda.
             </NoticeBanner>
-          ) : null}
-          <FormField
-            id="settings-password-code"
-            label="Kode Verifikasi"
-            error={fieldErrors.currentCode}
-            required
-          >
-            <TextInput
+            {formError ? (
+              <NoticeBanner variant="error" title="Konfirmasi Gagal" onDismiss={() => setFormError(null)}>
+                {formError}
+              </NoticeBanner>
+            ) : null}
+
+            <FormField
               id="settings-password-code"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={8}
-              placeholder="00000000"
-              value={currentCode}
-              hasError={Boolean(fieldErrors.currentCode)}
-              onChange={(e) => {
-                const next = e.target.value.replace(/\D/g, '').slice(0, 8);
-                setCurrentCode(next);
-                if (fieldErrors.currentCode) setFieldErrors((prev) => ({ ...prev, currentCode: undefined }));
-              }}
-            />
-          </FormField>
-          <FormField
-            id="settings-password-new"
-            label="Password Baru"
-            error={fieldErrors.newPassword}
-            required
-          >
-            <PasswordInput
+              label="Kode Verifikasi"
+              error={fieldErrors.currentCode}
+            >
+              <TextInput
+                id="settings-password-code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                autoFocus
+                maxLength={8}
+                placeholder="00000000"
+                value={currentCode}
+                hasError={Boolean(fieldErrors.currentCode)}
+                onChange={(e) => {
+                  const next = e.target.value.replace(/\D/g, '').slice(0, 8);
+                  setCurrentCode(next);
+                  if (fieldErrors.currentCode) setFieldErrors((prev) => ({ ...prev, currentCode: undefined }));
+                }}
+              />
+            </FormField>
+
+            <FormField
               id="settings-password-new"
-              autoComplete="new-password"
-              value={newPassword}
-              hasError={Boolean(fieldErrors.newPassword)}
-              onChange={(e) => {
-                setNewPassword(e.target.value);
-                if (fieldErrors.newPassword) setFieldErrors((prev) => ({ ...prev, newPassword: undefined }));
-              }}
-            />
-            <PasswordPolicyChecklist password={newPassword} />
-          </FormField>
-          <FormField
-            id="settings-password-confirm"
-            label="Konfirmasi Password Baru"
-            error={fieldErrors.confirmNewPassword}
-            required
-          >
-            <PasswordInput
+              label="Password Baru"
+              error={fieldErrors.newPassword}
+            >
+              <PasswordInput
+                id="settings-password-new"
+                autoComplete="new-password"
+                placeholder="Minimal 8 karakter dan 1 huruf besar"
+                value={newPassword}
+                hasError={Boolean(fieldErrors.newPassword)}
+                onChange={(e) => {
+                  setNewPassword(e.target.value);
+                  if (fieldErrors.newPassword) setFieldErrors((prev) => ({ ...prev, newPassword: undefined }));
+                }}
+              />
+              <PasswordPolicyChecklist password={newPassword} />
+            </FormField>
+
+            <FormField
               id="settings-password-confirm"
-              autoComplete="new-password"
-              value={confirmNewPassword}
-              hasError={Boolean(fieldErrors.confirmNewPassword)}
-              onChange={(e) => {
-                setConfirmNewPassword(e.target.value);
-                if (fieldErrors.confirmNewPassword) {
-                  setFieldErrors((prev) => ({ ...prev, confirmNewPassword: undefined }));
-                }
-              }}
-            />
-          </FormField>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <Button type="submit" variant="primary" loading={submitting}>
-              Simpan Password Baru
-            </Button>
-            <Button type="button" variant="outline" disabled={submitting} onClick={resetFlow}>
-              Batal
-            </Button>
-          </div>
-        </form>
-      ) : null}
-    </SectionCard>
+              label="Konfirmasi Password Baru"
+              error={fieldErrors.confirmNewPassword}
+            >
+              <PasswordInput
+                id="settings-password-confirm"
+                autoComplete="new-password"
+                placeholder="Ulangi password baru"
+                value={confirmNewPassword}
+                hasError={Boolean(fieldErrors.confirmNewPassword)}
+                onChange={(e) => {
+                  setConfirmNewPassword(e.target.value);
+                  if (fieldErrors.confirmNewPassword) {
+                    setFieldErrors((prev) => ({ ...prev, confirmNewPassword: undefined }));
+                  }
+                }}
+              />
+            </FormField>
+
+            <div className="unsaved-modal-actions" style={{ marginTop: 6 }}>
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                disabled={submitting}
+                onClick={() => {
+                  setStep('request');
+                  setCurrentCode('');
+                  setNewPassword('');
+                  setConfirmNewPassword('');
+                  setFieldErrors({});
+                  setFormError(null);
+                }}
+              >
+                Kembali
+              </Button>
+              <Button type="submit" variant="primary" size="md" loading={submitting}>
+                Simpan Password Baru
+              </Button>
+            </div>
+          </form>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
-function DeleteAccountSection({ canManageCredentials }: { canManageCredentials: boolean }) {
+function DeleteAccountModal({
+  email,
+  canManageCredentials,
+  onClose,
+}: {
+  email: string;
+  canManageCredentials: boolean;
+  onClose: () => void;
+}) {
   const router = useRouter();
   const [currentPassword, setCurrentPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -619,7 +781,14 @@ function DeleteAccountSection({ canManageCredentials }: { canManageCredentials: 
   }>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [confirmArmed, setConfirmArmed] = useState(false);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !submitting) onClose();
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [submitting, onClose]);
 
   async function handleRequestDeleteCode() {
     setFieldErrors({});
@@ -686,203 +855,190 @@ function DeleteAccountSection({ canManageCredentials }: { canManageCredentials: 
     router.refresh();
   }
 
-  function resetGoogleFlow() {
-    setCodeSent(false);
-    setVerificationId('');
-    setCurrentCode('');
-    setConfirmation('');
-    setConfirmArmed(false);
-    setFieldErrors({});
-    setFormError(null);
-  }
-
   return (
-    <SectionCard
-      title="Hapus Akun"
-      description={
-        canManageCredentials
-          ? 'Tindakan ini menghapus akun Anda secara permanen. Data yang terkait akun dapat ikut terhapus sesuai kebijakan sistem.'
-          : 'Tindakan ini menghapus akun RakitKarier Anda secara permanen. Penghapusan akun RakitKarier tidak memengaruhi akun Google Anda.'
-      }
-      tone="danger"
+    <div
+      className="auth-modal-overlay"
+      role="presentation"
+      onClick={() => {
+        if (!submitting) onClose();
+      }}
     >
-      <form onSubmit={handleDelete} className="form-stack" noValidate>
-        {formError ? (
-          <NoticeBanner variant="error" title="Penghapusan Gagal" onDismiss={() => setFormError(null)}>
-            {formError}
-          </NoticeBanner>
-        ) : null}
-        <NoticeBanner variant="warning" title="Tindakan Permanen">
-          {canManageCredentials
-            ? 'Penghapusan akun tidak dapat dibatalkan. Pastikan Anda benar-benar ingin menghapus akun ini.'
-            : 'Penghapusan akun RakitKarier tidak dapat dibatalkan dan tidak memengaruhi akun Google Anda.'}
-        </NoticeBanner>
-
-        {canManageCredentials ? (
-          <FormField
-            id="settings-delete-password"
-            label="Password Saat Ini"
-            error={fieldErrors.currentPassword}
-            required
-          >
-            <PasswordInput
-              id="settings-delete-password"
-              autoComplete="current-password"
-              value={currentPassword}
-              hasError={Boolean(fieldErrors.currentPassword)}
-              onChange={(e) => {
-                setCurrentPassword(e.target.value);
-                if (fieldErrors.currentPassword) setFieldErrors((prev) => ({ ...prev, currentPassword: undefined }));
+      <div
+        className="unsaved-modal-dialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="modal-delete-account-title"
+        aria-describedby="modal-delete-account-desc"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="unsaved-modal-head">
+          <div className="unsaved-modal-title-wrap">
+            <span className="unsaved-modal-icon settings-danger-icon" aria-hidden="true">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.1"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </span>
+            <h2
+              id="modal-delete-account-title"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '1.18rem',
+                margin: 0,
+                fontWeight: 600,
               }}
-            />
-          </FormField>
-        ) : (
-          <>
-            {!codeSent ? (
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  loading={submitting}
-                  onClick={handleRequestDeleteCode}
-                >
-                  Kirim Kode Konfirmasi
-                </Button>
-              </div>
-            ) : (
-              <>
-                <NoticeBanner variant="info" title="Kode Verifikasi Dikirim">
-                  Kode 8 digit telah dikirim ke email Anda. Masukkan kode tersebut untuk mengonfirmasi
-                  penghapusan akun RakitKarier.
-                </NoticeBanner>
-                <FormField
-                  id="settings-delete-code"
-                  label="Kode Verifikasi"
-                  error={fieldErrors.currentCode}
-                  required
-                >
-                  <TextInput
-                    id="settings-delete-code"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    maxLength={8}
-                    placeholder="00000000"
-                    value={currentCode}
-                    hasError={Boolean(fieldErrors.currentCode)}
-                    onChange={(e) => {
-                      const next = e.target.value.replace(/\D/g, '').slice(0, 8);
-                      setCurrentCode(next);
-                      if (fieldErrors.currentCode) setFieldErrors((prev) => ({ ...prev, currentCode: undefined }));
-                    }}
-                  />
-                </FormField>
-              </>
-            )}
-          </>
-        )}
-
-        {(canManageCredentials || codeSent) ? (
-          <>
-            <FormField
-              id="settings-delete-confirmation"
-              label={`Ketik ${DELETE_CONFIRMATION} untuk konfirmasi`}
-              hint={`Masukkan kata ${DELETE_CONFIRMATION} dengan huruf kapital.`}
-              error={fieldErrors.confirmation}
-              required
             >
-              <TextInput
-                id="settings-delete-confirmation"
-                type="text"
-                value={confirmation}
-                placeholder={DELETE_CONFIRMATION}
-                hasError={Boolean(fieldErrors.confirmation)}
-                autoComplete="off"
+              Konfirmasi Hapus Akun
+            </h2>
+          </div>
+          <button
+            type="button"
+            className="auth-modal-close"
+            aria-label="Tutup dialog hapus akun"
+            disabled={submitting}
+            onClick={onClose}
+          >
+            <CloseIcon />
+          </button>
+        </div>
+
+        <p id="modal-delete-account-desc" className="unsaved-modal-desc">
+          {canManageCredentials ? (
+            <>
+              Tindakan ini akan menghapus akun <strong>{email}</strong> beserta seluruh data secara
+              permanen dan tidak dapat dibatalkan.
+            </>
+          ) : (
+            <>
+              Tindakan ini akan menghapus akun RakitKarier (<strong>{email}</strong>) secara
+              permanen dan tidak memengaruhi akun Google Anda.
+            </>
+          )}
+        </p>
+
+        <form onSubmit={handleDelete} className="form-stack" noValidate>
+          {formError ? (
+            <NoticeBanner variant="error" title="Penghapusan Gagal" onDismiss={() => setFormError(null)}>
+              {formError}
+            </NoticeBanner>
+          ) : null}
+
+          {canManageCredentials ? (
+            <FormField
+              id="settings-delete-password"
+              label="Password Saat Ini"
+              error={fieldErrors.currentPassword}
+            >
+              <PasswordInput
+                id="settings-delete-password"
+                autoComplete="current-password"
+                autoFocus
+                placeholder="Masukkan password saat ini"
+                value={currentPassword}
+                hasError={Boolean(fieldErrors.currentPassword)}
                 onChange={(e) => {
-                  setConfirmation(e.target.value);
-                  if (fieldErrors.confirmation) setFieldErrors((prev) => ({ ...prev, confirmation: undefined }));
+                  setCurrentPassword(e.target.value);
+                  if (fieldErrors.currentPassword) {
+                    setFieldErrors((prev) => ({ ...prev, currentPassword: undefined }));
+                  }
                 }}
               />
             </FormField>
-
-            {!confirmArmed ? (
-              <div>
-                <Button
-                  type="button"
-                  variant="danger"
-                  disabled={submitting}
-                  onClick={() => setConfirmArmed(true)}
-                >
-                  Hapus Akun...
-                </Button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <Button type="submit" variant="danger" loading={submitting}>
-                  Ya, Hapus Akun Permanen
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={submitting}
-                  onClick={() => {
-                    setConfirmArmed(false);
-                    if (!canManageCredentials) {
-                      resetGoogleFlow();
+          ) : !codeSent ? (
+            <div className="unsaved-modal-actions" style={{ marginTop: 4 }}>
+              <Button type="button" variant="outline" size="md" disabled={submitting} onClick={onClose}>
+                Batal
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="md"
+                loading={submitting}
+                onClick={handleRequestDeleteCode}
+              >
+                Kirim Kode Konfirmasi
+              </Button>
+            </div>
+          ) : (
+            <>
+              <NoticeBanner variant="info" title="Kode Verifikasi Dikirim">
+                Kode 8 digit telah dikirim ke email Anda. Masukkan kode tersebut untuk mengonfirmasi
+                penghapusan akun.
+              </NoticeBanner>
+              <FormField
+                id="settings-delete-code"
+                label="Kode Verifikasi"
+                error={fieldErrors.currentCode}
+              >
+                <TextInput
+                  id="settings-delete-code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  maxLength={8}
+                  placeholder="00000000"
+                  value={currentCode}
+                  hasError={Boolean(fieldErrors.currentCode)}
+                  onChange={(e) => {
+                    const next = e.target.value.replace(/\D/g, '').slice(0, 8);
+                    setCurrentCode(next);
+                    if (fieldErrors.currentCode) {
+                      setFieldErrors((prev) => ({ ...prev, currentCode: undefined }));
                     }
                   }}
-                >
+                />
+              </FormField>
+            </>
+          )}
+
+          {canManageCredentials || codeSent ? (
+            <>
+              <FormField
+                id="settings-delete-confirmation"
+                label={`Ketik ${DELETE_CONFIRMATION} untuk konfirmasi`}
+                hint={`Masukkan kata ${DELETE_CONFIRMATION} dengan huruf kapital.`}
+                error={fieldErrors.confirmation}
+              >
+                <TextInput
+                  id="settings-delete-confirmation"
+                  type="text"
+                  value={confirmation}
+                  placeholder={DELETE_CONFIRMATION}
+                  hasError={Boolean(fieldErrors.confirmation)}
+                  autoComplete="off"
+                  onChange={(e) => {
+                    setConfirmation(e.target.value);
+                    if (fieldErrors.confirmation) {
+                      setFieldErrors((prev) => ({ ...prev, confirmation: undefined }));
+                    }
+                  }}
+                />
+              </FormField>
+
+              <div className="unsaved-modal-actions" style={{ marginTop: 6 }}>
+                <Button type="button" variant="outline" size="md" disabled={submitting} onClick={onClose}>
                   Batal
                 </Button>
+                <Button type="submit" variant="danger" size="md" loading={submitting}>
+                  Ya, Hapus Akun
+                </Button>
               </div>
-            )}
-          </>
-        ) : null}
-      </form>
-    </SectionCard>
-  );
-}
-
-function GoogleManagedNotice({
-  email,
-  canDeleteAccount,
-}: {
-  email: string;
-  canDeleteAccount: boolean;
-}) {
-  return (
-    <section className="ledger-card" aria-labelledby="google-managed-heading">
-      <p className="page-kicker" style={{ marginBottom: 8 }}>
-        Dikelola oleh akun Google
-      </p>
-      <h2 id="google-managed-heading" style={{ fontSize: '1.1rem', margin: '0 0 4px' }}>
-        Akun Dikelola Google
-      </h2>
-      <p style={{ margin: '0 0 16px', fontSize: '0.9rem', color: 'var(--ink-secondary)' }}>
-        Akun ini masuk menggunakan Google. Email dan password dikelola oleh Google, jadi tidak dapat
-        diubah dari RakitKarier.
-      </p>
-      <NoticeBanner variant="info" title="Kelola Kredensial Melalui Google">
-        Untuk keamanan akun Anda, kelola email dan password melalui akun Google yang terhubung
-        {email ? (
-          <>
-            {' '}(<strong>{email}</strong>)
-          </>
-        ) : null}
-        .
-        {canDeleteAccount ? (
-          <>
-            {' '}Anda tetap dapat menghapus akun RakitKarier Anda dari halaman ini. Penghapusan akun
-            RakitKarier tidak memengaruhi akun Google Anda.
-          </>
-        ) : null}
-      </NoticeBanner>
-      <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <Link href="/profile" className="btn btn-outline btn-sm">
-          Kembali ke Profil
-        </Link>
+            </>
+          ) : null}
+        </form>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -890,6 +1046,7 @@ function AccountSettingsInner({ session }: { session: SessionInfo }) {
   const [settings, setSettings] = useState<AccountSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiCallError | null>(null);
+  const [activeModal, setActiveModal] = useState<'email' | 'password' | 'delete' | null>(null);
 
   const loadSettings = useCallback(async () => {
     setLoading(true);
@@ -945,26 +1102,163 @@ function AccountSettingsInner({ session }: { session: SessionInfo }) {
     );
   }
 
-  if (!settings.canManageCredentials) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-        <GoogleManagedNotice
-          email={settings.email || session.user.email || ''}
-          canDeleteAccount={settings.canDeleteAccount}
-        />
-        {settings.canDeleteAccount ? (
-          <DeleteAccountSection canManageCredentials={false} />
-        ) : null}
-      </div>
-    );
-  }
+  const displayEmail = settings.email || session.user.email || '-';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <ChangeEmailSection settingsEmail={settings.email} />
-      <ChangePasswordSection />
-      {settings.canDeleteAccount ? (
-        <DeleteAccountSection canManageCredentials={true} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div
+        className={`settings-grid${!settings.canManageCredentials ? ' settings-grid--two' : ''}`}
+      >
+        {/* Kartu 1: Email */}
+        <section className="settings-tile" aria-labelledby="heading-account-email">
+          <div className="settings-tile__top">
+            <h2 id="heading-account-email" className="settings-tile__title">
+              Email
+            </h2>
+            {settings.canManageCredentials ? (
+              <button
+                type="button"
+                className="settings-tile__icon-btn"
+                aria-label="Ubah alamat email"
+                title="Ubah alamat email"
+                onClick={() => setActiveModal('email')}
+              >
+                <PencilIcon />
+              </button>
+            ) : (
+              <span className="settings-tile__badge">Google</span>
+            )}
+          </div>
+          <p className="settings-tile__value">{displayEmail}</p>
+          <p className="settings-tile__hint">
+            {settings.canManageCredentials
+              ? 'Digunakan untuk masuk dan menerima kode verifikasi keamanan.'
+              : 'Email & kata sandi dikelola langsung oleh akun Google Anda.'}
+          </p>
+        </section>
+
+        {/* Kartu 2: Kata Sandi (khusus akun email/password) */}
+        {settings.canManageCredentials ? (
+          <section className="settings-tile" aria-labelledby="heading-account-password">
+            <div className="settings-tile__top">
+              <h2 id="heading-account-password" className="settings-tile__title">
+                Kata sandi
+              </h2>
+              <button
+                type="button"
+                className="settings-tile__icon-btn"
+                aria-label="Ubah kata sandi"
+                title="Ubah kata sandi"
+                onClick={() => setActiveModal('password')}
+              >
+                <PencilIcon />
+              </button>
+            </div>
+            <p className="settings-tile__value">••••••••••••</p>
+            <p className="settings-tile__hint">
+              Gunakan kombinasi minimal 8 karakter dan 1 huruf besar.
+            </p>
+          </section>
+        ) : null}
+
+        {/* Kartu 3: Hapus Akun */}
+        {settings.canDeleteAccount ? (
+          <section className="settings-tile" aria-labelledby="heading-account-delete">
+            <div className="settings-tile__top">
+              <h2 id="heading-account-delete" className="settings-tile__title">
+                Hapus akun
+              </h2>
+              <button
+                type="button"
+                className="settings-tile__icon-btn settings-tile__icon-btn--danger"
+                aria-label="Hapus akun"
+                title="Hapus akun"
+                onClick={() => setActiveModal('delete')}
+              >
+                <TrashIcon />
+              </button>
+            </div>
+            <p className="settings-tile__value">
+              {settings.canManageCredentials
+                ? 'Hapus akun secara permanen'
+                : 'Hapus akun RakitKarier'}
+            </p>
+            <p className="settings-tile__hint">
+              {settings.canManageCredentials
+                ? 'Menghapus profil, bookmark, dan seluruh data secara permanen.'
+                : 'Tidak memengaruhi akun Google Anda, namun data RakitKarier akan terhapus.'}
+            </p>
+          </section>
+        ) : null}
+      </div>
+
+      {/* Ringkasan Keamanan Akun */}
+      <section className="settings-info-panel" aria-labelledby="heading-security-overview">
+        <div className="settings-info-panel__head">
+          <div>
+            <h2 id="heading-security-overview" className="settings-info-panel__title">
+              Ringkasan Keamanan Akun
+            </h2>
+            <p className="settings-info-panel__subtitle">
+              Setiap perubahan sensitif dilindungi verifikasi kode 8 digit agar akun tetap aman.
+            </p>
+          </div>
+          <span className="settings-status-pill">
+            <span className="settings-status-pill__dot" aria-hidden="true" />
+            {settings.canManageCredentials ? 'Email Terverifikasi' : 'Terhubung Google'}
+          </span>
+        </div>
+
+        <div className="settings-info-grid">
+          <div className="settings-info-item">
+            <span className="settings-info-item__label">Metode Masuk</span>
+            <p className="settings-info-item__value">
+              {settings.canManageCredentials ? 'Email & Kata Sandi' : 'Google OAuth'}
+            </p>
+            <p className="settings-info-item__desc">
+              {settings.canManageCredentials
+                ? 'Anda dapat memperbarui email maupun kata sandi kapan saja dari kartu di atas.'
+                : 'Autentikasi dikelola Google sehingga Anda tidak perlu mengatur kata sandi terpisah.'}
+            </p>
+          </div>
+
+          <div className="settings-info-item">
+            <span className="settings-info-item__label">Verifikasi OTP</span>
+            <p className="settings-info-item__value">Kode 8 digit via email</p>
+            <p className="settings-info-item__desc">
+              Kode verifikasi berlaku 15 menit. Cek juga folder Spam jika email belum terlihat di
+              kotak masuk.
+            </p>
+          </div>
+
+          <div className="settings-info-item">
+            <span className="settings-info-item__label">Perlindungan Sesi</span>
+            <p className="settings-info-item__value">Keluar otomatis setelah ubah</p>
+            <p className="settings-info-item__desc">
+              Setelah email atau kata sandi diperbarui, sesi lama otomatis berakhir dan Anda diminta
+              masuk kembali.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {activeModal === 'email' && settings.canManageCredentials ? (
+        <ChangeEmailModal
+          settingsEmail={displayEmail}
+          onClose={() => setActiveModal(null)}
+        />
+      ) : null}
+
+      {activeModal === 'password' && settings.canManageCredentials ? (
+        <ChangePasswordModal onClose={() => setActiveModal(null)} />
+      ) : null}
+
+      {activeModal === 'delete' && settings.canDeleteAccount ? (
+        <DeleteAccountModal
+          email={displayEmail}
+          canManageCredentials={settings.canManageCredentials}
+          onClose={() => setActiveModal(null)}
+        />
       ) : null}
     </div>
   );
@@ -972,16 +1266,16 @@ function AccountSettingsInner({ session }: { session: SessionInfo }) {
 
 export default function AccountSettingsPage() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
       <PageBanner
         kicker="Akun & Keamanan"
         title="Pengaturan Akun"
-        subtitle="Kelola email, password, dan keamanan akun RakitKarier Anda."
-        tone="sand"
-        imageSrc="/images/banner-profile.jpg"
+        subtitle="Kelola email, kata sandi, dan keamanan akun RakitKarier Anda."
+        tone="mist"
+        imageSrc="/images/banner-profile-vector.svg"
         actions={
           <Link href="/profile" className="btn btn-outline btn-sm">
-            Kembali ke Profil
+            <ButtonText>Kembali ke Profil</ButtonText>
           </Link>
         }
       />
