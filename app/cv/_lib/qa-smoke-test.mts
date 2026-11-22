@@ -189,6 +189,76 @@ Hobi membaca buku sejarah dan bersepeda di akhir pekan.
     assert.ok(mapped.content.raw_unmapped && mapped.content.raw_unmapped.length > 0);
   });
 
+  test(
+    'CV Mapper: Menangani heading spasi (E D U C A T I O N), memisahkan pendidikan dan merapikan pecahan kata',
+    () => {
+      const sampleText = `
+Alifa h Ainur Ridha
+085795220399
+Sumedang
+
+O R G A N I Z A T I O N   E X P E R I E N C E
+Staff of Media and Publication Unit
+HIMA Administrasi Pemerintahan Universitas Padjadjaran
+2022 - 2023
+• Designing and managing visual content for the organization's official social media
+
+K ABIM Universitas Padjadjaran
+2021 - 2022
+• Design promotional poster s, plaques, and participant certificates
+
+E D U C A T I O N
+Universitas Padjadjaran
+Student of Government Administration
+2021 - Present
+
+MA Ma ' had AL-
+Science Student – Average Grade: 88 . 00 out of 100
+2018 - 2021
+
+S K I L L S
+Public Speaking, English, Teamwork, Finance, Adaptability, Content writer, Basic E diting, Canva, P oster T ypografi, E xcel
+      `;
+
+      const mapped = mapRawTextToCv(sampleText);
+
+      // Cek perbaikan pecahan huruf
+      assert.equal(mapped.content.profile.full_name, 'Alifah Ainur Ridha');
+
+      // Cek organisasi
+      assert.ok(mapped.content.organizations.length >= 2);
+      assert.ok(
+        mapped.content.organizations.some((o) =>
+          `${o.name} ${o.role || ''}`.toLowerCase().includes('hima'),
+        ),
+      );
+
+      // Cek pendidikan
+      assert.ok(mapped.content.education.length >= 2, 'Pendidikan harus mengenali minimal 2 entri');
+      const padjadjaran = mapped.content.education.find((e) =>
+        e.institution.toLowerCase().includes('padjadjaran'),
+      );
+      assert.ok(padjadjaran, 'Harus mengenali Universitas Padjadjaran');
+      assert.equal(padjadjaran?.degree, 'S1 (Sarjana)');
+      assert.equal(padjadjaran?.field, 'Administrasi Pemerintahan');
+      assert.equal(padjadjaran?.start_date, '2021-01');
+
+      const mahad = mapped.content.education.find((e) =>
+        e.institution.toLowerCase().includes("ma'had"),
+      );
+      assert.ok(mahad, "Harus mengenali MA Ma'had");
+      assert.equal(mahad?.degree, 'Madrasah Aliyah (MA)');
+      assert.ok(mahad?.description?.includes('88.00'), 'Pecahan desimal 88 . 00 harus dirapikan ke 88.00');
+
+      // Cek penerjemahan bahasa inggris
+      const englishCv = generateContextualEnglishCv(mapped.content);
+      assert.equal(englishCv.language, 'en');
+      const enEdu = englishCv.education.find((e) => e.institution.toLowerCase().includes('padjadjaran'));
+      assert.equal(enEdu?.degree, 'Bachelor Degree (S1)');
+      assert.equal(enEdu?.field, 'Government Administration');
+    },
+  );
+
   console.log(`\n====================================================`);
   console.log(`  HASIL: ${passedTests}/${totalTests} PENGUJIAN BERHASIL (100% PASS)`);
   console.log(`====================================================\n`);

@@ -59,6 +59,10 @@ const ACTION_VERB_PATTERNS: Array<[RegExp, string]> = [
  */
 const CONTEXTUAL_TERM_REPLACEMENTS: Array<[RegExp, string]> = [
   [/\bmahasiswa semester (\d+)\b/gi, '$1th semester student'],
+  [/\bmahasiswa\b/gi, 'Student'],
+  [/\badministrasi pemerintahan\b/gi, 'Government Administration'],
+  [/\btata kelola publik\b/gi, 'public governance'],
+  [/\bkepemimpinan\b/gi, 'leadership'],
   [/\bprogram studi\b/gi, 'Study Program'],
   [/\buniversitas\b/gi, 'University'],
   [/\bhimpunan mahasiswa\b/gi, 'Student Association of'],
@@ -191,8 +195,11 @@ export function translateSkill(skill: string): string {
  * dengan konteks resume/ATS penuh.
  */
 export function generateContextualEnglishCv(cv: CvContent): CvContent {
-  // 1. Terjemahkan Profil / Summary
+  // 1. Terjemahkan Profil / Summary & Headline
   const translatedSummary = translateResumeSentenceToEnglish(cv.summary);
+  const translatedHeadline = cv.profile.headline
+    ? translateResumeSentenceToEnglish(cv.profile.headline)
+    : cv.profile.headline;
 
   // 2. Terjemahkan Organisasi
   const translatedOrgs: ProfileOrganization[] = cv.organizations.map((org) => {
@@ -234,11 +241,11 @@ export function generateContextualEnglishCv(cv: CvContent): CvContent {
     }
 
     let degreeEn = edu.degree || '';
-    if (degreeEn.toUpperCase() === 'D4') degreeEn = 'Applied Bachelor (D4)';
-    else if (degreeEn.toUpperCase() === 'S1') degreeEn = 'Bachelor Degree (S1)';
-    else if (degreeEn.toUpperCase() === 'S2') degreeEn = 'Master Degree (S2)';
-    else if (degreeEn.toUpperCase() === 'D3') degreeEn = 'Associate Degree (D3)';
-    else if (/sma|smk|ma/i.test(degreeEn)) degreeEn = 'High School Diploma';
+    if (/s1|sarjana|bachelor/i.test(degreeEn)) degreeEn = 'Bachelor Degree (S1)';
+    else if (/s2|magister|master/i.test(degreeEn)) degreeEn = 'Master Degree (S2)';
+    else if (/d3|diploma/i.test(degreeEn)) degreeEn = 'Associate Degree (D3)';
+    else if (/d4/i.test(degreeEn)) degreeEn = 'Applied Bachelor (D4)';
+    else if (/sma|smk|ma|madrasah/i.test(degreeEn)) degreeEn = 'High School Diploma (Madrasah Aliyah)';
 
     return {
       ...edu,
@@ -264,9 +271,20 @@ export function generateContextualEnglishCv(cv: CvContent): CvContent {
     description: proj.description ? translateDescriptionBulletPoints(proj.description) : null,
   }));
 
+  // 8. Terjemahkan Custom Sections
+  const translatedCustom = cv.custom_sections?.map((cs) => ({
+    ...cs,
+    title: translateResumeSentenceToEnglish(cs.title),
+    content: translateDescriptionBulletPoints(cs.content),
+  }));
+
   return {
     ...cv,
     language: 'en',
+    profile: {
+      ...cv.profile,
+      headline: translatedHeadline,
+    },
     summary: translatedSummary,
     organizations: translatedOrgs,
     experiences: translatedExps,
@@ -274,5 +292,7 @@ export function generateContextualEnglishCv(cv: CvContent): CvContent {
     achievements: translatedAchievements,
     skills: translatedSkills,
     projects: translatedProjects,
+    custom_sections: translatedCustom,
+    section_titles: {},
   };
 }

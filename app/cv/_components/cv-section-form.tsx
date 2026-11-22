@@ -371,6 +371,38 @@ export function CvSectionForm({
                 }
               />
             </FormField>
+
+            <FormField id="cv-headline" label="Gelar Singkat / Headline Profesional">
+              <TextInput
+                id="cv-headline"
+                maxLength={100}
+                placeholder="Contoh: Frontend Engineer | Public Administration Student"
+                value={profile.headline || ''}
+                onChange={(e) =>
+                  onChange({
+                    ...content,
+                    profile: { ...profile, headline: e.target.value },
+                  })
+                }
+              />
+            </FormField>
+
+            <FormField id="cv-language-select" label="Bahasa Dokumen CV (ATS Standard)">
+              <select
+                id="cv-language-select"
+                className="input-control select-control"
+                value={content.language || 'en'}
+                onChange={(e) =>
+                  onChange({
+                    ...content,
+                    language: e.target.value as 'id' | 'en',
+                  })
+                }
+              >
+                <option value="id">🇮🇩 Bahasa Indonesia</option>
+                <option value="en">🌐 English (Standard ATS)</option>
+              </select>
+            </FormField>
           </div>
 
           <div className="cv-links-section">
