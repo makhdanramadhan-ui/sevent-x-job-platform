@@ -1,5 +1,4 @@
 import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { readSupabaseAdminEnv } from '@/lib/env';
 import { assertOriginAllowed } from '@/lib/auth';
@@ -7,31 +6,16 @@ import { ApiError, asObject, fail, ok, readJson, rejectUnknownKeys, run } from '
 import { clientIp } from '@/lib/rate-limit';
 import { validatePassword } from '@/lib/password-policy';
 import { createAdminClient } from '@/lib/supabase';
-import { emailValue, text } from '@/lib/validation';
+import { emailValue } from '@/lib/validation';
+import {
+  RESET_ATTEMPT_MAX,
+  RESET_ATTEMPT_WINDOW_SECONDS,
+  parseNewPassword,
+  parseResetCode,
+  tooManyAttempts,
+} from '@/lib/reset-password';
 
 export const dynamic = 'force-dynamic';
-
-export const RESET_ATTEMPT_MAX = 5;
-export const RESET_ATTEMPT_WINDOW_SECONDS = 15 * 60;
-
-export function parseResetCode(value: unknown): string {
-  const raw = text(value, 'code', 8, 8);
-  if (!/^\d{8}$/.test(raw)) {
-    throw new ApiError(400, 'validation_error', 'Input code harus berupa 8 digit.', { field: 'code' });
-  }
-  return raw;
-}
-
-export function parseNewPassword(value: unknown): string {
-  if (typeof value !== 'string') {
-    throw new ApiError(400, 'validation_error', 'Input password harus berupa teks.', { field: 'password' });
-  }
-  const bytes = Buffer.byteLength(value, 'utf8');
-  if (bytes < 1 || bytes > 72) {
-    throw new ApiError(400, 'validation_error', 'Input password harus memiliki 1-72 byte.', { field: 'password' });
-  }
-  return value;
-}
 
 type ConsumeResult = { allowed: boolean; retryAfter: number };
 
@@ -55,19 +39,6 @@ async function consumeAttempt(
     throw new Error('consume_rate_limit returned invalid result');
   }
   return { allowed: record.allowed, retryAfter: Math.max(1, Math.floor(record.retry_after)) };
-}
-
-export function tooManyAttempts(retryAfter: number): NextResponse {
-  const seconds = Math.max(1, Math.floor(retryAfter || RESET_ATTEMPT_WINDOW_SECONDS));
-  return NextResponse.json(
-    {
-      error: {
-        code: 'too_many_attempts',
-        message: 'Terlalu sering, coba lagi nanti.',
-      },
-    },
-    { status: 429, headers: { 'Retry-After': String(seconds) } },
-  );
 }
 
 export async function POST(req: NextRequest) {

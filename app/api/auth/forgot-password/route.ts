@@ -7,11 +7,9 @@ import { ApiError, asObject, ok, readJson, rejectUnknownKeys, run } from '@/lib/
 import { clientIp, enforceRateLimits } from '@/lib/rate-limit';
 import { createAdminClient } from '@/lib/supabase';
 import { emailValue } from '@/lib/validation';
+import { FORGOT_PASSWORD_STATUS } from '@/lib/forgot-password';
 
 export const dynamic = 'force-dynamic';
-
-const GENERIC_STATUS = { status: 'code_sent_if_exists' } as const;
-export const FORGOT_PASSWORD_STATUS = GENERIC_STATUS;
 
 function toDomain(email: string): string {
   return email.includes('@') ? email.split('@')[1].toLowerCase() : 'unknown';
@@ -50,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     const smtpConfig = readSmtpConfig();
     if (!smtpConfig) {
-      return ok(GENERIC_STATUS);
+      return ok(FORGOT_PASSWORD_STATUS);
     }
 
     const admin = createAdminClient(env);
@@ -62,7 +60,7 @@ export async function POST(req: NextRequest) {
       const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
       if (error) {
         console.error('[forgot-password] listUsers failed', { message: error.message });
-        return ok(GENERIC_STATUS);
+        return ok(FORGOT_PASSWORD_STATUS);
       }
       const users = data?.users ?? [];
       const found = users.find((u) => (u.email ?? '').toLowerCase() === email.toLowerCase());
@@ -84,7 +82,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!targetUser || !targetUser.hasEmailProvider) {
-      return ok(GENERIC_STATUS);
+      return ok(FORGOT_PASSWORD_STATUS);
     }
 
     const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
@@ -99,7 +97,7 @@ export async function POST(req: NextRequest) {
         message: linkError?.message,
         hasEmailOtp: Boolean(emailOtp),
       });
-      return ok(GENERIC_STATUS);
+      return ok(FORGOT_PASSWORD_STATUS);
     }
 
     const payload = buildForgotPasswordEmail({ email, code: emailOtp });
@@ -128,6 +126,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return ok(GENERIC_STATUS);
+    return ok(FORGOT_PASSWORD_STATUS);
   });
 }

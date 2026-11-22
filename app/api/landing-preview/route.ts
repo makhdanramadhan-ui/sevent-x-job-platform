@@ -11,6 +11,7 @@ import type {
   RecommendationJobInput,
   RecommendationProfileInput,
 } from '@/lib/recommendation-contract';
+import { isSessionInvalidated } from '@/lib/auth';
 import { createAdminClient, createBearerClient, createCookieClient } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
@@ -69,6 +70,7 @@ async function optionalAuth(req: NextRequest) {
     const supabase = createBearerClient(env, token);
     const { data, error } = await supabase.auth.getUser(token);
     if (error || !data.user) return null;
+    if (isSessionInvalidated(data.user, token)) return null;
     return { user: data.user };
   }
 
@@ -81,6 +83,8 @@ async function optionalAuth(req: NextRequest) {
   const supabase = await createCookieClient(env);
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) return null;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (isSessionInvalidated(data.user, session?.access_token ?? null)) return null;
   return { user: data.user };
 }
 

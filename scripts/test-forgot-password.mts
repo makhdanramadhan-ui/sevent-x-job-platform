@@ -2,14 +2,14 @@ import assert from 'node:assert/strict';
 import type { ApiError } from '../lib/http';
 import { validatePassword } from '../lib/password-policy';
 import { buildForgotPasswordEmail } from '../lib/email/forgot-password';
-import { FORGOT_PASSWORD_STATUS } from '../app/api/auth/forgot-password/route';
+import { FORGOT_PASSWORD_STATUS } from '../lib/forgot-password';
 import {
   parseResetCode,
   parseNewPassword,
   tooManyAttempts,
   RESET_ATTEMPT_MAX,
   RESET_ATTEMPT_WINDOW_SECONDS,
-} from '../app/api/auth/reset-password/route';
+} from '../lib/reset-password';
 
 function expectApiError(fn: () => unknown): ApiError {
   try {

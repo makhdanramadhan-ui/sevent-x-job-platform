@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
 import {
   ACCOUNT_SETTINGS_MAX_ATTEMPTS,
+  assertCanDeleteAccount,
   canDeleteAccount,
   constantTimeEqualHex,
   digestAccountCode,
@@ -91,5 +92,13 @@ assert.match(delMail.subject.toLowerCase(), /hapus akun/);
 assert.match(delMail.html, /11223344/);
 assert.match(delMail.html, /15 menit/);
 console.log('PASS account-settings: email templates include code, expiry, ignore hint');
+
+// Defensive behavior checks (no exploit tooling)
+assert.throws(() => assertCanDeleteAccount({ email_confirmed_at: null, email: 'u@x.com' } as any));
+assert.throws(() => assertCanDeleteAccount({ email_confirmed_at: '2026-01-01T00:00:00Z', email: '' } as any));
+assert.doesNotThrow(() => assertCanDeleteAccount({ email_confirmed_at: '2026-01-01T00:00:00Z', email: 'u@x.com' } as any));
+assert.equal(isSessionInvalidated(invalidatedUser, null), true); // missing iat is conservative reject
+assert.equal(mapChallengeConsumeError('invalid').code, 'invalid_code');
+console.log('PASS account-settings: defensive invalidation/delete guard checks');
 
 console.log('ALL ACCOUNT SETTINGS TESTS PASSED');
