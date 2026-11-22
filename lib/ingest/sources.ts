@@ -1,10 +1,14 @@
 import {
   buildIngestPayload,
   isPlaceholderLogoUrl,
+  isPublishedAtOlderThanDays,
+  MAX_JOB_AGE_DAYS,
   nowIso,
   stripHtml,
   type IngestPayload,
 } from './normalize';
+
+const LINKEDIN_TIME_POSTED_RANGE_30D = 'r2592000';
 
 export type SourceFetchResult = {
   source_name: string;
@@ -289,7 +293,12 @@ export async function fetchLinkedinGuestJobs(options: {
     if (!kw) continue;
     if (idx > 0 && delayMs > 0) await delay(delayMs);
 
-    const searchParams: Record<string, string> = { keywords: kw, location, start: '0' };
+    const searchParams: Record<string, string> = {
+      keywords: kw,
+      location,
+      start: '0',
+      f_TPR: LINKEDIN_TIME_POSTED_RANGE_30D,
+    };
     if (options.experienceLevel) searchParams.f_E = options.experienceLevel;
     if (options.jobType) searchParams.f_JT = options.jobType;
     const searchUrl = `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?${new URLSearchParams(
@@ -353,7 +362,16 @@ export async function fetchLinkedinGuestJobs(options: {
       };
     }
 
-    for (const card of cards.slice(0, limitPerKeyword)) {
+    const freshCards = cards.filter(
+      (card) =>
+        !isPublishedAtOlderThanDays(
+          card.published_at,
+          MAX_JOB_AGE_DAYS,
+          options.referenceDate ?? null,
+        ),
+    );
+
+    for (const card of freshCards.slice(0, limitPerKeyword)) {
       const jobId = (card.job_id ?? '').trim();
       if (!jobId || seenJobIds.has(jobId)) continue;
       seenJobIds.add(jobId);
@@ -435,9 +453,14 @@ export async function fetchHimalayasPublicApi(options: {
     const data = (await fetchJson(url)) as Record<string, unknown>;
     const jobsRaw = Array.isArray(data?.jobs) ? (data.jobs as unknown[]) : [];
     const payloads: IngestPayload[] = [];
-    for (const item of jobsRaw.slice(0, options.limit ?? 10)) {
+    const targetLimit = options.limit ?? 10;
+    for (const item of jobsRaw) {
+      if (payloads.length >= targetLimit) break;
       if (!item || typeof item !== 'object') continue;
       const rec = item as Record<string, unknown>;
+      if (isPublishedAtOlderThanDays(rec.pubDate, MAX_JOB_AGE_DAYS, options.referenceDate ?? null)) {
+        continue;
+      }
       const sourceUrl = String(rec.applicationLink || rec.guid || '').trim();
       const title = String(rec.title || '').trim();
       const company = String(rec.companyName || '').trim();
@@ -506,9 +529,14 @@ export async function fetchJobicyPublicApi(options: {
     const data = (await fetchJson(url)) as Record<string, unknown>;
     const jobsRaw = Array.isArray(data?.jobs) ? (data.jobs as unknown[]) : [];
     const payloads: IngestPayload[] = [];
-    for (const item of jobsRaw.slice(0, options.limit ?? 10)) {
+    const targetLimit = options.limit ?? 10;
+    for (const item of jobsRaw) {
+      if (payloads.length >= targetLimit) break;
       if (!item || typeof item !== 'object') continue;
       const rec = item as Record<string, unknown>;
+      if (isPublishedAtOlderThanDays(rec.pubDate, MAX_JOB_AGE_DAYS, options.referenceDate ?? null)) {
+        continue;
+      }
       const jobId = String(rec.id || '').trim();
       const title = String(rec.jobTitle || '').trim();
       const company = String(rec.companyName || '').trim();
@@ -571,9 +599,19 @@ export async function fetchRemotivePublicApi(options: {
     const data = (await fetchJson(url)) as Record<string, unknown>;
     const jobsRaw = Array.isArray(data?.jobs) ? (data.jobs as unknown[]) : [];
     const payloads: IngestPayload[] = [];
-    for (const item of jobsRaw.slice(0, limit)) {
+    for (const item of jobsRaw) {
+      if (payloads.length >= limit) break;
       if (!item || typeof item !== 'object') continue;
       const rec = item as Record<string, unknown>;
+      if (
+        isPublishedAtOlderThanDays(
+          rec.publication_date,
+          MAX_JOB_AGE_DAYS,
+          options.referenceDate ?? null,
+        )
+      ) {
+        continue;
+      }
       const jobId = String(rec.id || '').trim();
       const title = String(rec.title || '').trim();
       const company = String(rec.company_name || '').trim();

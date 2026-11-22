@@ -194,6 +194,7 @@ function parsePreferences(value: unknown): ProfilePreferences {
       work_modes: [],
       employment_types: [],
       email_match_alerts: true,
+      email_deadline_alerts: true,
     };
   }
   const entry = asObject(value, 'preferences');
@@ -207,6 +208,7 @@ function parsePreferences(value: unknown): ProfilePreferences {
       'work_modes',
       'employment_types',
       'email_match_alerts',
+      'email_deadline_alerts',
     ],
     'preferences',
   );
@@ -231,6 +233,10 @@ function parsePreferences(value: unknown): ProfilePreferences {
       entry.email_match_alerts === undefined || entry.email_match_alerts === null
         ? true
         : flag(entry.email_match_alerts, 'preferences.email_match_alerts'),
+    email_deadline_alerts:
+      entry.email_deadline_alerts === undefined || entry.email_deadline_alerts === null
+        ? true
+        : flag(entry.email_deadline_alerts, 'preferences.email_deadline_alerts'),
   };
 }
 

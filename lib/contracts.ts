@@ -114,6 +114,7 @@ export type ProfilePreferences = {
   work_modes: WorkMode[];
   employment_types: EmploymentType[];
   email_match_alerts?: boolean;
+  email_deadline_alerts?: boolean;
 };
 
 export type ProfileRecord = {

@@ -177,6 +177,8 @@ export async function sendMatchEmail(config: SmtpConfig, message: SendMailOption
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
+export const sendDeadlineEmail = sendMatchEmail;
+
 export function __resetEmailTransportForTests(): void {
   if (cachedTransport) {
     try {

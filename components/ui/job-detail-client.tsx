@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { startTransition, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   type ApiCallError,
   apiFetch,
@@ -360,10 +360,8 @@ function DetailCompanyLogo({
 export default function JobDetailClient() {
   const params = useParams<{ id: string }>();
   const jobId = typeof params?.id === 'string' ? params.id : '';
-  const initialDescBatch = 6;
 
   const [job, setJob] = useState<JobDetail | null>(null);
-  const [fullDetailRendered, setFullDetailRendered] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiCallError | null>(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
@@ -406,7 +404,6 @@ export default function JobDetailClient() {
 
     const jobRes = await consumePrefetchedJobDetail(jobId);
     if (jobRes.ok) {
-      setFullDetailRendered(false);
       setJob(jobRes.data);
     } else {
       setError(jobRes.error);
@@ -465,25 +462,6 @@ export default function JobDetailClient() {
         ? enhanceDescriptionBlocks(parseJobDescriptionBlocks(job.description))
         : [],
     [job?.description],
-  );
-
-  // Render 6 blok deskripsi pertama di frame pertama untuk mempercepat LCP, lalu sisa blok di frame kedua
-  useEffect(() => {
-    if (loading || !job || fullDetailRendered) return;
-    const rafId = window.requestAnimationFrame(() => {
-      startTransition(() => {
-        setFullDetailRendered(true);
-      });
-    });
-    return () => window.cancelAnimationFrame(rafId);
-  }, [fullDetailRendered, job, loading]);
-
-  const renderedBlocks = useMemo(
-    () =>
-      fullDetailRendered
-        ? descriptionBlocks
-        : descriptionBlocks.slice(0, initialDescBatch),
-    [descriptionBlocks, fullDetailRendered],
   );
 
   if (loading) {
@@ -563,7 +541,7 @@ export default function JobDetailClient() {
       ) : null}
 
       {/* Main Header Card */}
-      <section className="ledger-card">
+      <header className="ledger-card">
         <div
           style={{
             display: 'flex',
@@ -595,7 +573,10 @@ export default function JobDetailClient() {
           }}
         >
           <div style={{ minWidth: 0, flex: 1 }}>
-            <h1 className="page-title" style={{ marginBottom: 6 }}>
+            <h1
+              className="page-title"
+              style={{ fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', marginBottom: 6 }}
+            >
               {job.title}
             </h1>
             <p style={{ margin: 0, fontSize: '1.08rem', fontWeight: 600, color: 'var(--ink-secondary)' }}>
@@ -684,7 +665,7 @@ export default function JobDetailClient() {
             </div>
           </div>
         </div>
-      </section>
+      </header>
 
       {/* Skills & Description */}
       <div className="job-detail-layout">
@@ -692,10 +673,10 @@ export default function JobDetailClient() {
           <h2 id="heading-description" className="font-editorial" style={{ fontSize: '1.3rem', marginBottom: 14 }}>
             Deskripsi &amp; Kualifikasi Lowongan
           </h2>
-          {renderedBlocks.length > 0 ? (
+          {descriptionBlocks.length > 0 ? (
             <div className="job-desc-content">
-              {renderedBlocks.map((block, index) => {
-                const isLast = index === renderedBlocks.length - 1;
+              {descriptionBlocks.map((block, index) => {
+                const isLast = index === descriptionBlocks.length - 1;
                 if (block.type === 'heading') {
                   return (
                     <h3

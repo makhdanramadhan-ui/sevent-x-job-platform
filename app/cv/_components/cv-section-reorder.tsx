@@ -68,23 +68,6 @@ export function CvSectionReorder({
     }
   }
 
-  function moveSection(index: number, direction: 'up' | 'down') {
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= section_order.length) return;
-
-    const newOrder = [...section_order];
-    const [moved] = newOrder.splice(index, 1);
-    newOrder.splice(targetIndex, 0, moved);
-
-    onChange({
-      ...content,
-      section_order: newOrder,
-    });
-    if (onPresetChange) {
-      onPresetChange('v1-[#custom]');
-    }
-  }
-
   function toggleVisibility(secId: CvSectionId) {
     const isHidden = hidden_sections.includes(secId);
     let newHidden: CvSectionId[];
@@ -540,60 +523,6 @@ export function CvSectionReorder({
                             variant="outline"
                             size="sm"
                             className="cv-reorder-move-btn"
-                            disabled={index === 0}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              moveSection(index, 'up');
-                            }}
-                            aria-label={`Pindahkan ${label} ke atas`}
-                            title="Pindahkan ke atas"
-                          >
-                            <svg
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2.2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              aria-hidden="true"
-                            >
-                              <polyline points="18 15 12 9 6 15" />
-                            </svg>
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="cv-reorder-move-btn"
-                            disabled={index === section_order.length - 1}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              moveSection(index, 'down');
-                            }}
-                            aria-label={`Pindahkan ${label} ke bawah`}
-                            title="Pindahkan ke bawah"
-                          >
-                            <svg
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2.2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              aria-hidden="true"
-                            >
-                              <polyline points="6 9 12 15 18 9" />
-                            </svg>
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="cv-reorder-move-btn"
                             onClick={(e) => {
                               e.stopPropagation();
                               startRename(secId);
@@ -659,14 +588,50 @@ export function CvSectionReorder({
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="cv-reorder-toggle-btn"
+                          className="cv-reorder-move-btn"
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleVisibility(secId);
                           }}
                           aria-label={isHidden ? `Tampilkan ${label}` : `Sembunyikan ${label}`}
+                          title={isHidden ? 'Tampilkan bagian' : 'Sembunyikan bagian'}
+                          style={{
+                            color: isHidden ? 'var(--ink-muted)' : 'inherit',
+                          }}
                         >
-                          {isHidden ? 'Tampilkan' : 'Sembunyikan'}
+                          {isHidden ? (
+                            /* Mata tercoret — bagian disembunyikan */
+                            <svg
+                              width="15"
+                              height="15"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.1"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                              <line x1="1" y1="1" x2="23" y2="23"/>
+                            </svg>
+                          ) : (
+                            /* Mata terbuka — bagian tampil */
+                            <svg
+                              width="15"
+                              height="15"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.1"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                              <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                          )}
                         </Button>
                       </>
                     )}
