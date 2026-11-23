@@ -2,6 +2,7 @@ import type { SendMailOptions } from 'nodemailer';
 import { rankJobs } from '../recommendation';
 import { filterEligibleJobs, pickSource, type JobSourceRow } from '../recommendation/job-context';
 import { isProfileRecommendationReady } from '../recommendation/profile-readiness';
+import { filterRelevantJobs } from '../recommendation/relevance';
 import type {
   RecommendationItem,
   RecommendationJobInputWithContext,
@@ -143,9 +144,11 @@ export async function runMatchNotify(options: {
   const candidateJobIds = new Set<string>();
 
   for (const profile of readyProfiles) {
-    const { eligible } = filterEligibleJobs(jobs, profile.preferences);
+    const profileInput = toProfileInput(profile);
+    const relevance = filterRelevantJobs(jobs, profileInput);
+    const { eligible } = filterEligibleJobs(relevance.relevant, profile.preferences);
     const ranked = rankJobs({
-      profile: toProfileInput(profile),
+      profile: profileInput,
       jobs: eligible as unknown as RecommendationJobInputWithContext[],
     });
     const eligibleIds = new Set(eligible.map((job) => job.id));
