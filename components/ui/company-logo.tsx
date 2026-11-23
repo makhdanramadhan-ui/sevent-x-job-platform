@@ -4,9 +4,6 @@ import { useState } from 'react';
 import { proxiedLogoSrc } from '@/lib/logo-proxy';
 
 const MONOGRAM_TONES = [
-  { color: 'var(--p-action)', background: 'var(--p-accent-soft)', border: 'rgba(26, 75, 224, 0.24)' },
-  { color: 'var(--status-open)', background: 'var(--status-open-bg)', border: 'var(--status-open-border)' },
-  { color: 'var(--status-warning)', background: 'var(--status-warning-bg)', border: 'var(--status-warning-border)' },
   { color: 'var(--p-ink)', background: 'var(--p-surface)', border: 'var(--border-subtle)' },
 ] as const;
 

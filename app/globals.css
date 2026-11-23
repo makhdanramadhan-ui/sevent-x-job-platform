@@ -813,15 +813,15 @@ h4 {
 }
 
 .btn-danger {
-  background: var(--status-danger-bg);
-  color: var(--status-danger);
-  border-color: var(--status-danger-border);
+  background: var(--status-danger);
+  color: #ffffff;
+  border-color: transparent;
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: var(--status-danger);
+  background: #911c13;
   color: #ffffff;
-  border-color: var(--status-danger);
+  border-color: transparent;
 }
 
 .btn-ghost {
@@ -930,39 +930,48 @@ h4 {
 }
 
 .badge-open,
-.badge-matched {
-  background: #ecfdf5;
-  color: #047857;
-  border-color: rgba(16, 185, 129, 0.34);
+.badge-matched,
+.badge-warning,
+.badge-missing,
+.badge-closed,
+.badge-danger,
+.badge-accent {
+  background: var(--p-surface);
+  color: var(--p-ink);
+  border-color: var(--border-subtle);
 }
 
-.badge-open::before {
+.badge-open::before,
+.badge-matched::before,
+.badge-warning::before,
+.badge-missing::before,
+.badge-closed::before,
+.badge-danger::before,
+.badge-accent::before {
   content: '';
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #10b981;
   flex-shrink: 0;
 }
 
-.badge-warning,
-.badge-missing {
-  background: var(--status-warning-bg);
-  color: var(--status-warning);
-  border-color: var(--status-warning-border);
+.badge-open::before,
+.badge-matched::before {
+  background: #10b981;
 }
 
-.badge-closed,
-.badge-danger {
-  background: var(--status-danger-bg);
-  color: var(--status-danger);
-  border-color: var(--status-danger-border);
+.badge-warning::before,
+.badge-missing::before {
+  background: #d97706;
 }
 
-.badge-accent {
-  background: var(--p-accent-soft);
-  color: var(--p-accent);
-  border-color: rgba(26, 75, 224, 0.22);
+.badge-closed::before,
+.badge-danger::before {
+  background: #dc2626;
+}
+
+.badge-accent::before {
+  background: var(--p-action);
 }
 
 /* ============================================================
@@ -1937,10 +1946,9 @@ h4 {
 }
 
 .checkbox-pill:has(input:checked) {
-  background: var(--p-accent-soft);
-  border-color: rgba(26, 75, 224, 0.45);
-  color: var(--p-accent);
-  box-shadow: 0 1px 2px rgba(26, 75, 224, 0.08);
+  background: var(--p-bg);
+  border-color: var(--p-ink);
+  color: var(--p-ink);
 }
 
 .checkbox-pill input {
@@ -2018,7 +2026,7 @@ h4 {
   height: 40px;
   border-radius: 11px;
   background: rgba(26, 75, 224, 0.08);
-  border: 1px solid rgba(26, 75, 224, 0.16);
+  border: none;
   color: var(--p-action);
   display: inline-flex;
   align-items: center;
@@ -2989,8 +2997,8 @@ h4 {
 }
 
 .state-panel-error {
-  border-color: var(--status-danger-border);
-  background: var(--status-danger-bg);
+  border-color: var(--border-subtle);
+  background: var(--p-bg);
 }
 
 .state-panel-empty {
@@ -3011,21 +3019,24 @@ h4 {
 }
 
 .notice-success {
-  background: var(--status-open-bg);
-  border-color: var(--status-open-border);
-  color: var(--status-open);
+  background: var(--p-bg);
+  border-color: var(--border-subtle);
+  border-left: 3px solid var(--status-open);
+  color: var(--p-ink);
 }
 
 .notice-warning {
-  background: var(--status-warning-bg);
-  border-color: var(--status-warning-border);
-  color: var(--status-warning);
+  background: var(--p-bg);
+  border-color: var(--border-subtle);
+  border-left: 3px solid var(--status-warning);
+  color: var(--p-ink);
 }
 
 .notice-error {
-  background: var(--status-danger-bg);
-  border-color: var(--status-danger-border);
-  color: var(--status-danger);
+  background: var(--p-bg);
+  border-color: var(--border-subtle);
+  border-left: 3px solid var(--status-danger);
+  color: var(--p-ink);
 }
 
 .notice-info {
@@ -3101,25 +3112,25 @@ h4 {
 .notice-popup-icon-success {
   background: var(--status-open-bg);
   color: var(--status-open);
-  border: 1px solid var(--status-open-border);
+  border: none;
 }
 
 .notice-popup-icon-warning {
   background: var(--status-warning-bg);
   color: var(--status-warning);
-  border: 1px solid var(--status-warning-border);
+  border: none;
 }
 
 .notice-popup-icon-error {
   background: var(--status-danger-bg);
   color: var(--status-danger);
-  border: 1px solid var(--status-danger-border);
+  border: none;
 }
 
 .notice-popup-icon-info {
   background: var(--p-accent-soft);
   color: var(--p-accent);
-  border: 1px solid rgba(26, 75, 224, 0.18);
+  border: none;
 }
 
 .notice-popup-close {
@@ -4215,7 +4226,7 @@ h4 {
   border-radius: 12px;
   background: var(--status-warning-bg);
   color: var(--status-warning);
-  border: 1px solid var(--status-warning-border);
+  border: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4242,9 +4253,9 @@ h4 {
   gap: 6px;
   padding: 6px 12px;
   border-radius: 999px;
-  background: var(--status-warning-bg);
-  color: var(--status-warning);
-  border: 1px solid var(--status-warning-border);
+  background: var(--p-surface);
+  color: var(--p-ink);
+  border: 1px solid var(--border-subtle);
   font-size: 0.82rem;
   font-weight: 500;
 }
@@ -4353,9 +4364,9 @@ h4 {
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 600;
-  color: #166534;
-  background: rgba(22, 163, 74, 0.1);
-  border: 1px solid rgba(22, 163, 74, 0.22);
+  color: var(--p-ink, #111111);
+  background: var(--p-surface, #f5f6f8);
+  border: 1px solid var(--border-subtle, rgba(17, 17, 17, 0.1));
   flex-shrink: 0;
 }
 
@@ -4444,14 +4455,14 @@ h4 {
 
 .settings-tile__icon-btn--danger:hover {
   background: rgba(220, 38, 38, 0.08);
-  border-color: rgba(220, 38, 38, 0.22);
+  border-color: transparent;
   color: #991b1b;
 }
 
 .settings-danger-icon {
   background: rgba(220, 38, 38, 0.09);
   color: var(--status-closed, #dc2626);
-  border-color: rgba(220, 38, 38, 0.25);
+  border: none;
 }
 
 @media (max-width: 960px) {
