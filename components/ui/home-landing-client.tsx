@@ -763,11 +763,13 @@ export function LandingBentoCard2Panel() {
             style={{
               display: 'flex',
               justifyContent: 'space-between',
+              alignItems: 'center',
               gap: 8,
               padding: '8px 10px',
               borderRadius: 8,
-              background: 'var(--status-open-bg)',
-              color: 'var(--status-open)',
+              background: 'var(--p-surface)',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--p-ink)',
             }}
           >
             <span
@@ -780,17 +782,39 @@ export function LandingBentoCard2Panel() {
             >
               {selectedJob?.matched?.[0] ?? 'Isi profil untuk melihat kecocokan'}
             </span>
-            <strong>Cocok</strong>
+            <strong
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                flexShrink: 0,
+                color: 'var(--p-ink)',
+                fontWeight: 600,
+              }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: '#10b981',
+                  flexShrink: 0,
+                }}
+              />
+              Cocok
+            </strong>
           </div>
           <div
             style={{
               display: 'flex',
               justifyContent: 'space-between',
+              alignItems: 'center',
               gap: 8,
               padding: '8px 10px',
               borderRadius: 8,
-              background: 'var(--status-warning-bg)',
-              color: 'var(--status-warning)',
+              background: 'var(--p-surface)',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--p-ink)',
             }}
           >
             <span
@@ -803,7 +827,27 @@ export function LandingBentoCard2Panel() {
             >
               {selectedJob?.missing?.[0] ?? 'Belum ada data kekurangan'}
             </span>
-            <strong>Belum ada</strong>
+            <strong
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                flexShrink: 0,
+                color: 'var(--p-ink)',
+                fontWeight: 600,
+              }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: '#d97706',
+                  flexShrink: 0,
+                }}
+              />
+              Belum ada
+            </strong>
           </div>
         </div>
       </div>

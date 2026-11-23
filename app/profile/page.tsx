@@ -653,7 +653,7 @@ function ProfileInner({ session: initialSession }: { session: SessionInfo }) {
           {/* Danger Zone: DELETE /api/profile */}
           <section
             className="surface-card"
-            style={{ borderColor: 'var(--status-danger-border)', marginTop: 12 }}
+            style={{ marginTop: 12 }}
             aria-labelledby="danger-zone-heading"
           >
             <div

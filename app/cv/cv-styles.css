@@ -668,7 +668,7 @@
 
 .btn.cv-reorder-delete-btn:hover:not(:disabled) {
   color: var(--status-closed, #dc2626);
-  border-color: var(--status-closed, #dc2626);
+  border-color: transparent;
   background: var(--status-closed-bg, rgba(220, 38, 38, 0.08));
 }
 
@@ -727,13 +727,15 @@
 }
 
 .btn.cv-reorder-confirm-delete {
-  color: var(--status-closed, #dc2626);
-  border-color: var(--status-closed, #dc2626);
+  background: var(--status-closed, #dc2626);
+  color: #ffffff;
+  border-color: transparent;
 }
 
 .btn.cv-reorder-confirm-delete:hover:not(:disabled) {
-  background: var(--status-closed, #dc2626);
+  background: #b91c1c;
   color: #ffffff;
+  border-color: transparent;
 }
 
 .cv-import-dropzone {
