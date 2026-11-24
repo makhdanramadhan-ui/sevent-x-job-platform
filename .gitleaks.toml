@@ -1,0 +1,18 @@
+title = "RakitKarier Gitleaks Configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignore deterministic test fixtures and documentation examples"
+paths = [
+  '''^\.env\.example$''',
+  '''^scripts/test-.*\.mts$''',
+  '''^scrapers/tests/.*$''',
+  '''^scrapers/data/.*$''',
+]
+regexes = [
+  '''not-a-real-password''',
+  '''test-hmac-secret''',
+  '''placeholder-anon-key''',
+]

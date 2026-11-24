@@ -246,8 +246,9 @@ console.log('PASS smtp skip: no read, no send, no recorded notification');
 
 const token = signUnsubscribeToken(USER_ID, SECRET);
 assert.equal(verifyUnsubscribeToken(token, SECRET), USER_ID);
-const lastCharacter = token.at(-1) ?? 'A';
-const tamperedToken = `${token.slice(0, -1)}${lastCharacter === 'A' ? 'B' : 'A'}`;
+const dotIndex = token.indexOf('.');
+const firstSigChar = token.charAt(dotIndex + 1);
+const tamperedToken = `${token.slice(0, dotIndex + 1)}${firstSigChar === 'A' ? 'B' : 'A'}${token.slice(dotIndex + 2)}`;
 assert.equal(verifyUnsubscribeToken(tamperedToken, SECRET), null);
 assert.equal(verifyUnsubscribeToken(token, 'another-secret'), null);
 console.log('PASS unsubscribe token: valid accepted, tampered/wrong secret rejected');
