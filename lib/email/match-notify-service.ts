@@ -141,22 +141,13 @@ export type PostIngestNotifyOutcome = {
   error?: string;
 };
 
-/**
- * Memicu notifikasi kecocokan secara non-fatal setelah proses ingest selesai.
- * Hanya berjalan jika ada lowongan baru yang masuk (ingested > 0).
- */
-export async function triggerMatchNotifyAfterIngest(
+async function runSafeMatchNotify(
   admin: SupabaseClient,
   options: {
-    ingested: number;
     userIds?: string[];
     run?: (admin: SupabaseClient, opts: ExecuteMatchNotifyOptions) => Promise<MatchNotifyResult>;
   },
 ): Promise<PostIngestNotifyOutcome> {
-  if (options.ingested <= 0) {
-    return { triggered: false, sent: 0, candidates: 0, skipped: 'no_ingested_jobs' };
-  }
-
   const executor = options.run ?? executeMatchNotify;
   try {
     const result = await executor(admin, { userIds: options.userIds });
@@ -176,4 +167,40 @@ export async function triggerMatchNotifyAfterIngest(
       error: message,
     };
   }
+}
+
+/**
+ * Memicu notifikasi kecocokan secara non-fatal setelah proses ingest selesai.
+ * Hanya berjalan jika ada lowongan baru yang masuk (ingested > 0).
+ */
+export async function triggerMatchNotifyAfterIngest(
+  admin: SupabaseClient,
+  options: {
+    ingested: number;
+    userIds?: string[];
+    run?: (admin: SupabaseClient, opts: ExecuteMatchNotifyOptions) => Promise<MatchNotifyResult>;
+  },
+): Promise<PostIngestNotifyOutcome> {
+  if (options.ingested <= 0) {
+    return { triggered: false, sent: 0, candidates: 0, skipped: 'no_ingested_jobs' };
+  }
+  return runSafeMatchNotify(admin, options);
+}
+
+/**
+ * Memicu pengecekan dan pengiriman notifikasi kecocokan untuk satu pengguna secara non-fatal
+ * (misalnya setelah pengguna memperbarui profil atau keahlian, meski tidak ada ingest baru).
+ */
+export async function triggerMatchNotifyForUser(
+  admin: SupabaseClient,
+  userId: string,
+  options: {
+    run?: (admin: SupabaseClient, opts: ExecuteMatchNotifyOptions) => Promise<MatchNotifyResult>;
+  } = {},
+): Promise<PostIngestNotifyOutcome> {
+  const trimmed = userId.trim();
+  if (!trimmed) {
+    return { triggered: false, sent: 0, candidates: 0, skipped: 'missing_user_id' };
+  }
+  return runSafeMatchNotify(admin, { userIds: [trimmed], run: options.run });
 }

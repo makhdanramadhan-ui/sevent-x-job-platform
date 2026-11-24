@@ -5,7 +5,10 @@ import {
   selectDigestCandidates,
 } from '../lib/email/digest';
 import { buildDigestEmail } from '../lib/email/message';
-import { triggerMatchNotifyAfterIngest } from '../lib/email/match-notify-service';
+import {
+  triggerMatchNotifyAfterIngest,
+  triggerMatchNotifyForUser,
+} from '../lib/email/match-notify-service';
 import {
   runMatchNotify,
   type EmailJobRow,
@@ -362,5 +365,17 @@ assert.equal(nonFatalPostIngest.triggered, true);
 assert.equal(nonFatalPostIngest.sent, 0);
 assert.equal(nonFatalPostIngest.error, 'smtp_timeout');
 console.log('PASS post-ingest trigger: skip on 0, forward userIds, non-fatal on error');
+
+let directUserIds: string[] | undefined;
+const directUserNotify = await triggerMatchNotifyForUser(fakeAdmin, USER_ID, {
+  run: async (_admin, opts) => {
+    directUserIds = opts.userIds;
+    return sentResult;
+  },
+});
+assert.equal(directUserNotify.triggered, true);
+assert.equal(directUserNotify.sent, 1);
+assert.deepEqual(directUserIds, [USER_ID]);
+console.log('PASS per-user notify trigger: runs directly for userId');
 
 console.log('ALL MATCH EMAIL TESTS PASSED');

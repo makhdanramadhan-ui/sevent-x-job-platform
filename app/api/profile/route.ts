@@ -2,6 +2,7 @@ import { after, type NextRequest } from 'next/server';
 import { readAvatarPath, removeAllUserAvatarObjects, setAvatarPath } from '@/lib/avatar';
 import { requireAuth } from '@/lib/auth';
 import { throwDb } from '@/lib/db';
+import { triggerMatchNotifyForUser } from '@/lib/email/match-notify-service';
 import { readSupabaseAdminEnv } from '@/lib/env';
 import { ok, readJson, run } from '@/lib/http';
 import { triggerProfileIngest } from '@/lib/ingest';
@@ -47,9 +48,12 @@ export async function PUT(req: NextRequest) {
 
     if (adminEnv) {
       after(async () => {
+        const admin = createAdminClient(adminEnv);
         try {
-          const admin = createAdminClient(adminEnv);
           await triggerProfileIngest(admin, auth.user.id);
+        } catch {}
+        try {
+          await triggerMatchNotifyForUser(admin, auth.user.id);
         } catch {}
       });
     }
