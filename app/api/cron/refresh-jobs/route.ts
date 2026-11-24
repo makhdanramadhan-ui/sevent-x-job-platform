@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { triggerMatchNotifyAfterIngest } from '@/lib/email/match-notify-service';
 import { readSupabaseAdminEnv } from '@/lib/env';
 import { collectAllUserKeywords, runKeywordIngest } from '@/lib/ingest';
 import { createAdminClient } from '@/lib/supabase';
@@ -39,6 +40,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ data: { ok: true, keywords: 0, ingested: 0, by_source: {} } });
     }
     const summary = await runKeywordIngest(admin, keywords, { respectThrottle: true });
+    const matchNotify = await triggerMatchNotifyAfterIngest(admin, {
+      ingested: summary.ingested,
+    });
     return NextResponse.json({
       data: {
         ok: true,
@@ -56,6 +60,7 @@ export async function GET(req: NextRequest) {
           count: f.payloads.length,
           reason: f.reason,
         })),
+        match_notify: matchNotify,
       },
     });
   } catch (error) {

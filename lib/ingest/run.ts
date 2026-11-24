@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { canonicalizeCatalogValues, normalizeCatalogText } from '../catalog-core';
+import { triggerMatchNotifyAfterIngest } from '../email/match-notify-service';
 import { loadSkillCatalog } from '../skills';
 import { MAX_JOB_AGE_DAYS, type IngestPayload } from './normalize';
 import { enrichMissingCompanyLogos } from './logo-fallback';
@@ -242,6 +243,10 @@ export async function triggerProfileIngest(
       respectThrottle: false,
       userId,
       internshipKeywords,
+    });
+    await triggerMatchNotifyAfterIngest(admin, {
+      ingested: summary.ingested,
+      userIds: [userId],
     });
     return { started: true, reason: 'started', keywords, summary };
   } catch {

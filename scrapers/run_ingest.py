@@ -26,6 +26,8 @@ import os
 import re
 import sys
 import time
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -602,6 +604,53 @@ def run_detail_and_skill_backfill(
     }
 
 
+def _resolve_site_url() -> str:
+    explicit = (os.environ.get("NEXT_PUBLIC_SITE_URL") or os.environ.get("SITE_URL") or "").strip()
+    if explicit:
+        return explicit.rstrip("/")
+    vercel_url = (os.environ.get("VERCEL_URL") or "").strip()
+    if vercel_url:
+        cleaned = re.sub(r"^https?://", "", vercel_url).rstrip("/")
+        return f"https://{cleaned}"
+    return "https://rakitkarier.vercel.app"
+
+
+def trigger_match_notify_after_ingest(ingested_count: int) -> Dict[str, Any]:
+    """
+    Memicu endpoint /api/cron/match-notify secara non-fatal setelah scraper --live
+    berhasil memasukkan lowongan baru.
+    """
+    if ingested_count <= 0:
+        return {"triggered": False, "skipped": "no_ingested_jobs"}
+
+    cron_secret = (os.environ.get("CRON_SECRET") or "").strip()
+    if not cron_secret:
+        return {"triggered": False, "skipped": "cron_secret_not_configured"}
+
+    url = f"{_resolve_site_url()}/api/cron/match-notify"
+    req = urllib.request.Request(
+        url,
+        method="GET",
+        headers={
+            "Authorization": f"Bearer {cron_secret}",
+            "Accept": "application/json",
+            "User-Agent": "RakitKarier-Ingest/1.0",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+            try:
+                parsed = json.loads(body)
+            except json.JSONDecodeError:
+                parsed = {"raw": body[:300]}
+            return {"triggered": True, "status": resp.status, "response": parsed}
+    except urllib.error.HTTPError as exc:
+        return {"triggered": True, "status": exc.code, "error": f"HTTP {exc.code}"}
+    except Exception as exc:
+        return {"triggered": True, "error": str(exc)}
+
+
 def main(argv: List[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Pipeline akuisisi, normalisasi, deduplikasi, dan ingest lowongan kerja SEVENT X"
@@ -659,6 +708,12 @@ def main(argv: List[str] | None = None) -> int:
         action="store_true",
         default=False,
         help="Isi ulang deskripsi LinkedIn yang masih placeholder dan ekstrak ulang skills (maks 10) lewat RPC ingest_job",
+    )
+    parser.add_argument(
+        "--no-notify",
+        action="store_true",
+        default=False,
+        help="Jangan memicu /api/cron/match-notify setelah ingest --live selesai",
     )
     args = parser.parse_args(argv)
 
@@ -736,6 +791,8 @@ def main(argv: List[str] | None = None) -> int:
 
     report = execute_ingest_pipeline(results, client=client, dry_run=is_dry_run)
     report_dict = report.to_dict()
+    if not is_dry_run and not args.no_notify:
+        report_dict["match_notify"] = trigger_match_notify_after_ingest(len(report.ingested_records))
     formatted_json = json.dumps(report_dict, indent=2, ensure_ascii=False)
 
     if args.output:

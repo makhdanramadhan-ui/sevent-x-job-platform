@@ -5,6 +5,7 @@ import {
   selectDigestCandidates,
 } from '../lib/email/digest';
 import { buildDigestEmail } from '../lib/email/message';
+import { triggerMatchNotifyAfterIngest } from '../lib/email/match-notify-service';
 import {
   runMatchNotify,
   type EmailJobRow,
@@ -309,5 +310,57 @@ assert.equal(sentRun.state.records[0]?.[0]?.job_id, JOB_A);
 assert.match(sentRun.state.sends[0]?.subject ?? '', /^RakitKarier: 1 lowongan/);
 assert.match(sentRun.state.sends[0]?.html ?? '', /LinkedIn/);
 console.log('PASS runner: send then record notification');
+
+let postIngestCalls = 0;
+const fakeAdmin = {} as Parameters<typeof triggerMatchNotifyAfterIngest>[0];
+
+const skippedPostIngest = await triggerMatchNotifyAfterIngest(fakeAdmin, {
+  ingested: 0,
+  run: async () => {
+    postIngestCalls += 1;
+    return sentResult;
+  },
+});
+assert.equal(skippedPostIngest.triggered, false);
+assert.equal(skippedPostIngest.skipped, 'no_ingested_jobs');
+assert.equal(postIngestCalls, 0);
+
+let capturedUserIds: string[] | undefined;
+const triggeredPostIngest = await triggerMatchNotifyAfterIngest(fakeAdmin, {
+  ingested: 3,
+  userIds: [USER_ID],
+  run: async (_admin, opts) => {
+    postIngestCalls += 1;
+    capturedUserIds = opts.userIds;
+    return {
+      data: {
+        ok: true,
+        sent: 1,
+        candidates: 2,
+        opted_in_profiles: 1,
+        skipped_users: 0,
+        failed_sends: 0,
+        record_errors: 0,
+        capped: false,
+      },
+    };
+  },
+});
+assert.equal(triggeredPostIngest.triggered, true);
+assert.equal(triggeredPostIngest.sent, 1);
+assert.equal(triggeredPostIngest.candidates, 2);
+assert.equal(postIngestCalls, 1);
+assert.deepEqual(capturedUserIds, [USER_ID]);
+
+const nonFatalPostIngest = await triggerMatchNotifyAfterIngest(fakeAdmin, {
+  ingested: 1,
+  run: async () => {
+    throw new Error('smtp_timeout');
+  },
+});
+assert.equal(nonFatalPostIngest.triggered, true);
+assert.equal(nonFatalPostIngest.sent, 0);
+assert.equal(nonFatalPostIngest.error, 'smtp_timeout');
+console.log('PASS post-ingest trigger: skip on 0, forward userIds, non-fatal on error');
 
 console.log('ALL MATCH EMAIL TESTS PASSED');
