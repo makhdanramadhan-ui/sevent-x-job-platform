@@ -936,14 +936,9 @@ export default function RecommendationsPage() {
         tone="mist"
         imageSrc="/images/banner-recommendations-vector.svg"
         actions={
-          <>
-            <Link href="/profile" className="btn btn-outline btn-sm">
-              <ButtonText>Ubah Profil &amp; Preferensi</ButtonText>
-            </Link>
-            <Link href="/jobs" className="btn btn-secondary btn-sm">
-              <ButtonText>Cari Semua Lowongan</ButtonText>
-            </Link>
-          </>
+          <Link href="/jobs" className="btn btn-secondary btn-sm">
+            <ButtonText>Cari Semua Lowongan</ButtonText>
+          </Link>
         }
       />
 
