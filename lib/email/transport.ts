@@ -41,9 +41,9 @@ export function resolveSiteUrl(
   const explicit = env.NEXT_PUBLIC_SITE_URL?.trim() || env.SITE_URL?.trim();
   if (explicit) return explicit.replace(/\/+$/, '');
 
-  const vercelUrl = env.VERCEL_URL?.trim();
-  if (vercelUrl) {
-    return `https://${vercelUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '')}`;
+  const productionUrl = env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  if (productionUrl) {
+    return `https://${productionUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '')}`;
   }
 
   return 'https://rakitkarier.vercel.app';
