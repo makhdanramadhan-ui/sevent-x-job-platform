@@ -292,12 +292,14 @@ export function ProfileEditorForm({
   mode = 'full',
   submitLabel = 'Simpan Profil',
   warnOnUnsavedChanges = false,
+  returnTo = null,
   onSaved,
 }: {
   initialRecord: ProfileRecord | null;
   mode?: 'onboarding' | 'full';
   submitLabel?: string;
   warnOnUnsavedChanges?: boolean;
+  returnTo?: string | null;
   onSaved?: (saved: ProfileRecord) => void;
 }) {
   const router = useRouter();
@@ -551,7 +553,10 @@ export function ProfileEditorForm({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    await submitProfile();
+    const saved = await submitProfile();
+    if (saved && returnTo) {
+      router.push(returnTo);
+    }
   }
 
   async function handleSaveAndLeave() {
