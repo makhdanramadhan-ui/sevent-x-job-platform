@@ -937,7 +937,7 @@ export default function JobsFeedClient() {
               title="Lengkapi bidang dan keahlian di profil untuk melihat rekomendasi"
               description="Isi bidang/posisi yang diminati dan keahlian di profil agar kami dapat mencari lowongan yang sesuai untukmu."
               action={
-                <Link href="/profile" className="btn btn-primary btn-sm">
+                <Link href="/profile?next=/jobs" className="btn btn-primary btn-sm">
                   <ButtonText>Lengkapi Profil</ButtonText>
                 </Link>
               }
@@ -984,7 +984,7 @@ export default function JobsFeedClient() {
                     Kelola Lowongan Disembunyikan
                   </Button>
                 ) : (
-                  <Link href="/profile" className="btn btn-primary btn-sm">
+                  <Link href="/profile?next=/jobs" className="btn btn-primary btn-sm">
                     <ButtonText>Perbarui Profil</ButtonText>
                   </Link>
                 )

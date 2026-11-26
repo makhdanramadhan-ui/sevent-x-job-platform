@@ -148,7 +148,7 @@ export function JobMatchCard({ jobId }: { jobId: string }) {
             menghitung kecocokan lowongan ini.
           </p>
           <Link
-            href="/profile"
+            href={`/profile?next=${encodeURIComponent(`/jobs/${jobId}`)}`}
             prefetch={false}
             className="btn btn-primary btn-sm"
             style={{ width: '100%' }}
@@ -280,7 +280,7 @@ export function JobMatchCard({ jobId }: { jobId: string }) {
           ) : null}
 
           <Link
-            href="/profile"
+            href={`/profile?next=${encodeURIComponent(`/jobs/${jobId}`)}`}
             prefetch={false}
             className="btn btn-outline btn-sm"
             style={{ width: '100%' }}

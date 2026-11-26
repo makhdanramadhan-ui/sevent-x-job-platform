@@ -302,7 +302,7 @@ function RecommendationsInner() {
           title="Lengkapi negara & lokasi kerja preferensi untuk melihat rekomendasi"
           description="Isi bidang/posisi, keahlian, negara, dan lokasi kerja preferensi di profil agar kami dapat menampilkan rekomendasi lowongan yang sesuai."
           action={
-            <Link href="/profile" className="btn btn-primary btn-sm">
+            <Link href="/profile?next=/recommendations" className="btn btn-primary btn-sm">
               <ButtonText>Lengkapi Profil</ButtonText>
             </Link>
           }
@@ -317,7 +317,7 @@ function RecommendationsInner() {
                   Data profil yang digunakan untuk mencocokkan lowongan.
                 </p>
               </div>
-              <Link href="/profile" className="btn btn-outline btn-sm">
+              <Link href="/profile?next=/recommendations" className="btn btn-outline btn-sm">
                 <ButtonText>Perbarui Profil</ButtonText>
               </Link>
             </div>

@@ -433,7 +433,7 @@ export default function CvPage() {
         imageSrc="/images/banner-cv-vector.svg"
         actions={
           <>
-            <Link href="/profile" prefetch={false} className="btn btn-outline btn-sm">
+            <Link href="/profile?next=/cv" prefetch={false} className="btn btn-outline btn-sm">
               <ButtonText>Profil Akun</ButtonText>
             </Link>
             <Link href="/jobs" prefetch={false} className="btn btn-secondary btn-sm">

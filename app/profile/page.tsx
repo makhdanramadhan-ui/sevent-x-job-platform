@@ -395,6 +395,9 @@ function ProfileAvatarSection({ session }: { session: SessionInfo }) {
 function ProfileInner({ session: initialSession }: { session: SessionInfo }) {
   const searchParams = useSearchParams();
   const verified = searchParams.get('verified') === '1';
+  const rawNext = searchParams.get('next');
+  const returnTo =
+    rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : null;
   const [session, setSession] = useState(initialSession);
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
   const [formVersion, setFormVersion] = useState(0);
@@ -642,6 +645,7 @@ function ProfileInner({ session: initialSession }: { session: SessionInfo }) {
             key={formVersion}
             initialRecord={profile}
             mode="full"
+            returnTo={returnTo}
             submitLabel="Simpan Perubahan Profil"
             warnOnUnsavedChanges
             onSaved={(saved) => {

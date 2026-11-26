@@ -34,7 +34,7 @@ export default function JobsPage() {
               <ButtonText>Lowongan Tersimpan</ButtonText>
             </Link>
             <Link
-              href="/profile"
+              href="/profile?next=/jobs"
               prefetch={false}
               className="btn btn-outline btn-sm"
             >
