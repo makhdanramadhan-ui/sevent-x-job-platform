@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/api-client';
 import { ButtonText } from '@/components/ui/button-text';
 import { JobDetailAuthSection } from '@/components/ui/job-detail-auth-section';
+import { JobMatchCard } from '@/components/ui/job-match-card';
 import {
   CopySourceUrlButton,
   DeferredDescriptionBlocks,
@@ -535,8 +536,10 @@ export default async function JobDetailPage({
           )}
         </section>
 
-        {/* Sticky Right Sidebar: Original Sources, Skills & CV Studio */}
-        <aside className="job-detail-sidebar" aria-label="Informasi pelamaran dan keahlian">
+        {/* Sticky Right Sidebar: Match Score, Original Sources, Skills & CV Studio */}
+        <aside className="job-detail-sidebar" aria-label="Informasi kecocokan, pelamaran dan keahlian">
+          <JobMatchCard jobId={job.id} />
+
           <section className="ledger-card" aria-labelledby="heading-sources">
             <h2
               id="heading-sources"

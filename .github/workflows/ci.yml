@@ -38,6 +38,7 @@ jobs:
           npm run test:email-verify
           npm run test:account-settings
           npm run test:health
+          npm run test:job-match
 
       - name: Verify Next.js production build
         env:

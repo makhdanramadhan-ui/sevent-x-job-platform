@@ -17,7 +17,8 @@
     "test:forgot-password": "node --import tsx scripts/test-forgot-password.mts",
     "test:email-verify": "node --import tsx scripts/test-email-verify.mts && node --import tsx scripts/test-auth-email-guards.mts && node --import tsx scripts/test-resend-identical.mts && node --import tsx scripts/test-forgot-password.mts",
     "test:account-settings": "node --import tsx scripts/test-account-settings.mts",
-    "test:health": "node --import tsx scripts/test-health-check.mts"
+    "test:health": "node --import tsx scripts/test-health-check.mts",
+    "test:job-match": "node --import tsx scripts/test-job-match-api.mts"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
