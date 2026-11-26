@@ -128,7 +128,11 @@ function matchesPreferredLocation(
     if (p.country === '*') return false;
     if (p.country !== jobCountry) return false;
     if (p.type === 'country' || p.name === 'Seluruh Indonesia') return true;
-    return p.name === jobEntry.name || (Boolean(jobEntry.province) && p.name === jobEntry.province);
+    return (
+      p.name === jobEntry.name ||
+      (Boolean(jobEntry.province) && p.name === jobEntry.province) ||
+      (jobEntry.type === 'province' && Boolean(p.province) && jobEntry.name === p.province)
+    );
   });
 }
 
