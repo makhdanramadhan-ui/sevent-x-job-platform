@@ -33,6 +33,13 @@ export default function JobsPage() {
             >
               <ButtonText>Lowongan Tersimpan</ButtonText>
             </Link>
+            <Link
+              href="/profile"
+              prefetch={false}
+              className="btn btn-outline btn-sm"
+            >
+              <ButtonText>Perbarui Profil</ButtonText>
+            </Link>
           </>
         }
       />
