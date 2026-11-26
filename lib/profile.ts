@@ -1,4 +1,4 @@
-import { canonicalizeOrThrow } from './catalog';
+import { canonicalizeCatalogValuesWithCustom, canonicalizeOrThrow } from './catalog';
 import { findCountry } from './countries';
 import { findLocation, LOCATION_CANONICAL } from './locations';
 import { POSITION_CANONICAL } from './positions';
@@ -215,10 +215,9 @@ function parsePreferences(value: unknown): ProfilePreferences {
   const country = parseCountry(entry.country);
   return {
     country,
-    positions: canonicalizeOrThrow(
-      stringList(entry.positions, 'preferences.positions', 10),
+    positions: canonicalizeCatalogValuesWithCustom(
+      stringList(entry.positions, 'preferences.positions', 10, 80),
       POSITION_CANONICAL,
-      'preferences.positions',
     ),
     locations: parseLocations(entry.locations, country),
     levels: enumList(entry.levels, 'preferences.levels', EXPERIENCE_LEVELS, 10),

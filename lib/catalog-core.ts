@@ -33,7 +33,18 @@ function matchRank(entry: CatalogEntry, query: string): number | null {
     .filter((word) => word.length > 0);
   if (words.some((word) => word.startsWith(query))) return 2;
   if (entry.aliases.some((alias) => normalizeCatalogText(alias).startsWith(query))) return 3;
-  if (name.includes(query)) return 4;
+  if (
+    entry.aliases.some((alias) =>
+      alias
+        .split(/[\s/,&-]+/)
+        .map(normalizeCatalogText)
+        .some((word) => word.length > 0 && word.startsWith(query)),
+    )
+  ) {
+    return 4;
+  }
+  if (name.includes(query)) return 5;
+  if (entry.aliases.some((alias) => normalizeCatalogText(alias).includes(query))) return 6;
   return null;
 }
 
@@ -94,4 +105,23 @@ export function canonicalizeCatalogValues(
     if (!canonical.includes(resolved)) canonical.push(resolved);
   }
   return { values: canonical, invalid };
+}
+
+export function canonicalizeCatalogValuesWithCustom(
+  values: readonly string[],
+  index: ReadonlyMap<string, string>,
+): string[] {
+  const result: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of values) {
+    const cleaned = raw.replace(/\s+/g, ' ').trim();
+    if (!cleaned) continue;
+    const key = normalizeCatalogText(cleaned);
+    const resolved = (key ? index.get(key) : undefined) ?? cleaned;
+    const dedupeKey = normalizeCatalogText(resolved) || resolved.toLowerCase();
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+    result.push(resolved);
+  }
+  return result;
 }

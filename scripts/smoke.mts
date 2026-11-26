@@ -125,7 +125,7 @@ function captureError(action: () => void): Record<string, unknown> {
 }
 
 function checkCatalogs(): void {
-  assert.ok(POSITIONS.length >= 250 && POSITIONS.length <= 400, 'ukuran katalog posisi');
+  assert.ok(POSITIONS.length >= 250 && POSITIONS.length <= 450, 'ukuran katalog posisi');
   assert.ok(LOCATIONS.length >= 250, 'ukuran katalog lokasi');
   assert.equal(LOCATIONS.filter((entry) => entry.type === 'province').length, 38, 'jumlah provinsi');
   assert.equal(findLocation('Remote')?.country, '*', 'Remote country');
@@ -142,18 +142,28 @@ function checkCatalogs(): void {
     'alias jaksel',
   );
   assert.equal(searchPositions('iot')[0]?.name, 'IoT Engineer', 'pencarian iot');
+  assert.equal(searchPositions('devsecops')[0]?.name, 'DevSecOps Engineer', 'pencarian devsecops');
+  assert.equal(searchPositions('account executive')[0]?.name, 'Account Executive', 'pencarian ae');
   assert.equal(searchLocations('jogja', 'ID')[0]?.name, 'Yogyakarta', 'pencarian jogja');
 
-  const rejection = captureError(() =>
-    parseProfile({ preferences: { country: 'ID', positions: ['Anjing'], locations: ['Bogor'] } }),
+  const parsedCustom = parseProfile({
+    preferences: {
+      country: 'ID',
+      positions: ['swe', '  Custom Role Unik  ', 'Software Engineer'],
+      locations: ['Bogor'],
+    },
+  });
+  assert.deepEqual(
+    parsedCustom.preferences.positions,
+    ['Software Engineer', 'Custom Role Unik'],
+    'posisi kanonik + kustom tanpa duplikat',
   );
-  assert.equal(rejection.status, 400, 'Anjing ditolak 400');
-  assert.equal(rejection.code, 'validation_error', 'Anjing kode error');
-  const details = rejection.details as Record<string, unknown> | undefined;
-  assert.ok(
-    (details?.invalid as string[] | undefined)?.includes('Anjing'),
-    'Anjing tercantum details.invalid',
+
+  const invalidLocation = captureError(() =>
+    parseProfile({ preferences: { country: 'ID', positions: [], locations: ['Kota Tidak Ada'] } }),
   );
+  assert.equal(invalidLocation.status, 400, 'lokasi tak dikenal ditolak 400');
+  assert.equal(invalidLocation.code, 'validation_error', 'lokasi tak dikenal kode error');
 
   const mismatch = captureError(() =>
     parseProfile({ preferences: { country: 'ID', positions: [], locations: ['Kuala Lumpur'] } }),

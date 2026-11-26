@@ -24,6 +24,7 @@ export type CatalogComboboxInputProps = {
   hint?: string;
   country?: string;
   multiple?: boolean;
+  allowCustom?: boolean;
   maxItems?: number;
   maxLength?: number;
   labelForValue?: (value: string) => string;
@@ -53,6 +54,7 @@ export function CatalogComboboxInput({
   hint,
   country,
   multiple = true,
+  allowCustom = false,
   maxItems = 10,
   maxLength = 80,
   labelForValue,
@@ -135,11 +137,14 @@ export function CatalogComboboxInput({
     return () => window.clearTimeout(timer);
   }, [inputValue, type, country, disabled, multiple, values.length, maxItems]);
 
-  function selectSuggestion(index: number) {
-    const suggestion = suggestions[index];
-    if (!suggestion) return;
-    const value = type === 'countries' ? suggestion.id : suggestion.name;
+  function commitValue(rawValue: string) {
+    const value = rawValue.replace(/\s+/g, ' ').trim();
+    if (!value) return;
     setLocalError(null);
+    if (value.length > maxLength) {
+      setLocalError(`Maksimal ${maxLength} karakter.`);
+      return;
+    }
     if (multiple) {
       if (values.length >= maxItems) {
         setLocalError(`Maksimal ${maxItems} pilihan diperbolehkan.`);
@@ -157,6 +162,13 @@ export function CatalogComboboxInput({
     requestIdRef.current += 1;
     closeList();
     inputRef.current?.focus();
+  }
+
+  function selectSuggestion(index: number) {
+    const suggestion = suggestions[index];
+    if (!suggestion) return;
+    const value = type === 'countries' ? suggestion.id : suggestion.name;
+    commitValue(value);
   }
 
   function removeValue(index: number) {
@@ -201,6 +213,10 @@ export function CatalogComboboxInput({
       e.preventDefault();
       if (activeIndex >= 0 && suggestions[activeIndex]) {
         selectSuggestion(activeIndex);
+        return;
+      }
+      if (allowCustom && query.length > 0) {
+        commitValue(query);
         return;
       }
       if (loading || !hasFetched || query.length === 0) return;
@@ -319,9 +335,25 @@ export function CatalogComboboxInput({
                     </li>
                   ))
                 ) : query.length > 0 && hasFetched ? (
-                  <li id={statusId} className="skill-combobox-status" role="status" aria-live="polite">
-                    Tidak ditemukan — pilih dari daftar
-                  </li>
+                  allowCustom ? (
+                    <li
+                      id={statusId}
+                      role="option"
+                      aria-selected={false}
+                      className="skill-combobox-option"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        commitValue(query);
+                      }}
+                    >
+                      <span className="skill-combobox-option-name">Tambahkan &ldquo;{query}&rdquo;</span>
+                      <span className="skill-combobox-option-category">Kustom</span>
+                    </li>
+                  ) : (
+                    <li id={statusId} className="skill-combobox-status" role="status" aria-live="polite">
+                      Tidak ditemukan — pilih dari daftar
+                    </li>
+                  )
                 ) : null}
               </ul>
             </div>

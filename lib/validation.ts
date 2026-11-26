@@ -173,10 +173,15 @@ export function jsonObject(
   return parsed;
 }
 
-export function stringList(value: unknown, field: string, maxItems: number): string[] {
+export function stringList(
+  value: unknown,
+  field: string,
+  maxItems: number,
+  maxLength = 60,
+): string[] {
   if (value === undefined || value === null) return [];
   return arrayValue(value, field, maxItems).map((item, index) =>
-    text(item, `${field}[${index}]`, 1, 60),
+    text(item, `${field}[${index}]`, 1, maxLength),
   );
 }
 

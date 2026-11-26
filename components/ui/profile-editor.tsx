@@ -707,7 +707,8 @@ export function ProfileEditorForm({
                   preferences: { ...draft.preferences, positions },
                 })
               }
-              hint="Ketik untuk mencari, gunakan panah dan Enter untuk memilih dari daftar."
+              hint="Ketik untuk mencari posisi, lalu pilih saran atau tekan Enter untuk menambah posisi lain."
+              allowCustom
               maxItems={10}
               maxLength={80}
             />
