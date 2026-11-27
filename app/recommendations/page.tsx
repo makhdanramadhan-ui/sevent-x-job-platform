@@ -23,6 +23,7 @@ import { ButtonText } from '@/components/ui/button-text';
 import { EmptyState, ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
 import { Button, JobStatusBadge } from '@/components/ui/forms';
 import { PageBanner } from '@/components/ui/page-banner';
+import { PaginationBar } from '@/components/ui/pagination-bar';
 import { CompanyLogo } from '@/components/ui/company-logo';
 import { displaySourceName } from '@/lib/job-source';
 import type { EmptyHint } from '@/lib/recommendation/empty-hint';
@@ -881,41 +882,12 @@ function RecommendationsInner() {
                   })}
                   </div>
 
-                  {totalPages > 1 ? (
-                    <nav
-                      aria-label="Navigasi halaman rekomendasi"
-                      className="surface-card"
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        flexWrap: 'wrap',
-                        gap: 12,
-                        padding: '14px 18px',
-                      }}
-                    >
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={currentPage <= 1}
-                        onClick={() => handlePageChange(currentPage - 1)}
-                      >
-                        Sebelumnya
-                      </Button>
-                      <span style={{ fontSize: '0.875rem', color: 'var(--p-muted)', fontVariantNumeric: 'tabular-nums' }}>
-                        Halaman <strong style={{ color: 'var(--p-ink)', fontWeight: 600 }}>{currentPage}</strong> dari{' '}
-                        <strong style={{ color: 'var(--p-ink)', fontWeight: 600 }}>{totalPages}</strong>
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={currentPage >= totalPages}
-                        onClick={() => handlePageChange(currentPage + 1)}
-                      >
-                        Berikutnya
-                      </Button>
-                    </nav>
-                  ) : null}
+                  <PaginationBar
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    ariaLabel="Navigasi halaman rekomendasi"
+                  />
                 </div>
               )}
             </>
