@@ -24,6 +24,7 @@ import {
 import { ButtonText } from '@/components/ui/button-text';
 import { EmptyState, ErrorState, LoadingState, NoticeBanner } from '@/components/ui/feedback';
 import { Button, JobStatusBadge } from '@/components/ui/forms';
+import { PaginationBar } from '@/components/ui/pagination-bar';
 import {
   type BookmarkRecord,
   EMPLOYMENT_TYPES,
@@ -1116,41 +1117,12 @@ export default function JobsFeedClient() {
                 );
               })}
 
-              {data.pages > 1 ? (
-                <nav
-                  aria-label="Navigasi halaman lowongan"
-                  className="surface-card"
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: 12,
-                    padding: '14px 18px',
-                  }}
-                >
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page <= 1}
-                    onClick={() => handlePageChange(page - 1)}
-                  >
-                    Sebelumnya
-                  </Button>
-                  <span style={{ fontSize: '0.875rem', color: 'var(--p-muted)', fontVariantNumeric: 'tabular-nums' }}>
-                    Halaman <strong style={{ color: 'var(--p-ink)', fontWeight: 600 }}>{data.page}</strong> dari{' '}
-                    <strong style={{ color: 'var(--p-ink)', fontWeight: 600 }}>{data.pages}</strong>
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page >= data.pages}
-                    onClick={() => handlePageChange(page + 1)}
-                  >
-                    Berikutnya
-                  </Button>
-                </nav>
-              ) : null}
+              <PaginationBar
+                currentPage={data.page}
+                totalPages={data.pages}
+                onPageChange={handlePageChange}
+                ariaLabel="Navigasi halaman lowongan"
+              />
             </div>
           )}
         </section>
