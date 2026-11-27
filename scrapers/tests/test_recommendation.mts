@@ -734,5 +734,28 @@ function testIrrelevantMarketingJobRejected(): void {
   assert.equal(expDecision.relevant, true, 'Skill dari experiences/normalizeSkill harus lolos gerbang relevansi');
   assert.equal(expDecision.reason, 'skill_match');
   console.log('PASS 13: Gerbang relevansi mengenali skill dari pengalaman & normalizeSkill');
+
+  // ---------------------------------------------------------------------------
+  // 14. Lowongan Jabodetabek (Kota Tangerang) tetap masuk meski ada >= 6 lowongan Jakarta
+  // ---------------------------------------------------------------------------
+  const jktPrefs = { country: 'ID', locations: ['DKI Jakarta'], work_modes: [] };
+  const manyJakartaJobs = Array.from({ length: 7 }, (_, i) => ({
+    id: `jkt-${i + 1}`,
+    work_mode: 'onsite' as const,
+    location: 'Indonesia, Area DKI Jakarta',
+  }));
+  const tangerangDevOps = {
+    id: 'tng-devops',
+    work_mode: 'onsite' as const,
+    location: 'Indonesia, Kota Tangerang',
+  };
+  const jktSelection = selectLocationEligibleJobs(
+    [...manyJakartaJobs, tangerangDevOps],
+    jktPrefs,
+  );
+  assert.equal(jktSelection.counts.exact, 7);
+  assert.equal(jktSelection.counts.nearby, 1, 'Kota Tangerang tetap harus lolos sebagai nearby Jabodetabek');
+  assert.equal(jktSelection.tiers.get('tng-devops'), 'nearby');
+  console.log('PASS 14: Lowongan Jabodetabek (Kota Tangerang) tidak terbuang saat lowongan Jakarta >= 6');
 }
 main();

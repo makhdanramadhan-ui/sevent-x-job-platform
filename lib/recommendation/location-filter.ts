@@ -229,8 +229,10 @@ export type LocationSelection<T> = {
 };
 
 /**
- * Memilih lowongan yang lolos filter keras negara/lokasi. Lowongan di provinsi induk
- * atau Jabodetabek hanya dimasukkan jika kecocokan persis + remote masih sedikit.
+ * Memilih lowongan yang lolos filter keras negara/lokasi, ditambah lowongan
+ * di provinsi induk atau wilayah Jabodetabek (diberi tier 'nearby' agar tetap
+ * berada di bawah lokasi persis saat skornya setara, namun tidak membuang
+ * lowongan skor tinggi di kota penyangga seperti Kota Tangerang/BSD/Depok/Bekasi/Bogor).
  */
 export function selectLocationEligibleJobs<T extends { id: string } & JobLocationContext>(
   jobs: ReadonlyArray<T>,
@@ -253,15 +255,13 @@ export function selectLocationEligibleJobs<T extends { id: string } & JobLocatio
     }
   }
 
-  if (primary.length < NEARBY_FALLBACK_MIN_MATCHES) {
-    for (const job of leftovers) {
-      const nearby = findNearbyLocationMatch(job, rawPreferences);
-      if (!nearby.matched) continue;
-      primary.push(job);
-      tiers.set(job.id, 'nearby');
-      if (nearby.label) nearbyLabels.set(job.id, nearby.label);
-      diagnostics.nearby_fallback = (diagnostics.nearby_fallback ?? 0) + 1;
-    }
+  for (const job of leftovers) {
+    const nearby = findNearbyLocationMatch(job, rawPreferences);
+    if (!nearby.matched) continue;
+    primary.push(job);
+    tiers.set(job.id, 'nearby');
+    if (nearby.label) nearbyLabels.set(job.id, nearby.label);
+    diagnostics.nearby_fallback = (diagnostics.nearby_fallback ?? 0) + 1;
   }
 
   const counts: Record<LocationMatchTier, number> = { exact: 0, remote: 0, nearby: 0 };
