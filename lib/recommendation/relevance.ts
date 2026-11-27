@@ -1,7 +1,9 @@
-import { extractCanonicalSkillsFromText, extractRoleTokens } from './synonyms';
+import { extractCanonicalSkillsFromText, extractRoleTokens, normalizeSkill } from './synonyms';
 
 export type ProfileRelevanceContext = {
   skills?: ReadonlyArray<string> | null;
+  experiences?: ReadonlyArray<{ title?: string | null; description?: string | null }> | null;
+  projects?: ReadonlyArray<{ name?: string | null; description?: string | null }> | null;
   preferences?: { positions?: ReadonlyArray<string> | null } | null;
 };
 
@@ -44,7 +46,21 @@ export function isJobRelevantToProfile(
   const userSkills = new Set<string>();
   for (const skill of skills) {
     if (typeof skill !== 'string' || !skill.trim()) continue;
+    const normalized = normalizeSkill(skill);
+    if (normalized) userSkills.add(normalized);
     for (const canonical of canonicalSkills(skill)) userSkills.add(canonical);
+  }
+  for (const exp of profile?.experiences ?? []) {
+    if (!exp) continue;
+    for (const canonical of canonicalSkills(`${exp.title ?? ''} ${exp.description ?? ''}`)) {
+      userSkills.add(canonical);
+    }
+  }
+  for (const proj of profile?.projects ?? []) {
+    if (!proj) continue;
+    for (const canonical of canonicalSkills(`${proj.name ?? ''} ${proj.description ?? ''}`)) {
+      userSkills.add(canonical);
+    }
   }
 
   if (userGroups.size === 0 && userSkills.size === 0) {
@@ -56,7 +72,9 @@ export function isJobRelevantToProfile(
 
   const jobSkillSet = canonicalSkills(`${job.title ?? ''} ${job.description ?? ''}`);
   for (const skill of job.skills ?? []) {
-    if (typeof skill !== 'string') continue;
+    if (typeof skill !== 'string' || !skill.trim()) continue;
+    const normalized = normalizeSkill(skill);
+    if (normalized) jobSkillSet.add(normalized);
     for (const canonical of canonicalSkills(skill)) jobSkillSet.add(canonical);
   }
   const skillMatches = [...jobSkillSet].filter((canonical) => userSkills.has(canonical));

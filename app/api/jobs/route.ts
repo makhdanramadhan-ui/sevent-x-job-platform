@@ -120,7 +120,7 @@ export async function GET(req: NextRequest) {
         .select(JOB_COLUMNS)
         .order('last_fetched_at', { ascending: false, nullsFirst: false })
         .order('id', { ascending: true })
-        .limit(300);
+        .limit(500);
       if (jobsError) throwDb(jobsError);
 
       const relevance = filterRelevantJobs(jobs ?? [], profile as RecommendationProfileInput);

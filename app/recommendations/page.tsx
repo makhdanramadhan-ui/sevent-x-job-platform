@@ -107,6 +107,7 @@ function RecommendationsInner() {
   const [page, setPage] = useState(1);
   const listTopRef = useRef<HTMLDivElement | null>(null);
   const filterDropdownRef = useRef<HTMLDivElement | null>(null);
+  const lastFetchedAtRef = useRef<number>(0);
 
   useEffect(() => {
     if (!openDropdown) return;
@@ -183,10 +184,14 @@ function RecommendationsInner() {
     router.push(`/jobs/${jobId}`);
   }
 
-  const loadRecommendations = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setEndpointMissing(false);
+  const loadRecommendations = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+      setEndpointMissing(false);
+    }
+    lastFetchedAtRef.current = Date.now();
 
     const [profileRes, recRes] = await Promise.all([
       apiFetch<ProfileRecord | null>('/api/profile'),
@@ -200,23 +205,43 @@ function RecommendationsInner() {
 
     if (recRes.ok && isRecommendationOutput(recRes.data)) {
       setRecOutput(recRes.data);
-    } else if (!recRes.ok) {
-      if (recRes.error.status === 404 || recRes.error.status === 501) {
+      setError(null);
+      setEndpointMissing(false);
+    } else if (!silent) {
+      if (!recRes.ok) {
+        if (recRes.error.status === 404 || recRes.error.status === 501) {
+          setEndpointMissing(true);
+          setRecOutput(null);
+        } else {
+          setError(recRes.error);
+        }
+      } else {
         setEndpointMissing(true);
         setRecOutput(null);
-      } else {
-        setError(recRes.error);
       }
-    } else {
-      setEndpointMissing(true);
-      setRecOutput(null);
     }
 
-    setLoading(false);
+    if (!silent) {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     loadRecommendations();
+  }, [loadRecommendations]);
+
+  useEffect(() => {
+    function refreshIfStale() {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - lastFetchedAtRef.current < 15_000) return;
+      void loadRecommendations({ silent: true });
+    }
+    window.addEventListener('focus', refreshIfStale);
+    document.addEventListener('visibilitychange', refreshIfStale);
+    return () => {
+      window.removeEventListener('focus', refreshIfStale);
+      document.removeEventListener('visibilitychange', refreshIfStale);
+    };
   }, [loadRecommendations]);
 
   const activeFilterCount =
@@ -414,7 +439,7 @@ function RecommendationsInner() {
                   <Link href="/jobs" className="btn btn-primary btn-sm">
                     <ButtonText>Cari Lowongan Sekarang</ButtonText>
                   </Link>
-                  <Button variant="outline" size="sm" onClick={loadRecommendations}>
+                  <Button variant="outline" size="sm" onClick={() => void loadRecommendations()}>
                     Muat Ulang
                   </Button>
                 </>

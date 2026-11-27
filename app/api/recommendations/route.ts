@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
       .select(JOB_RECOMMENDATION_COLUMNS)
       .order('last_fetched_at', { ascending: false, nullsFirst: false })
       .order('id', { ascending: true })
-      .limit(200);
+      .limit(500);
     if (jobsResult.error) throwDb(jobsResult.error);
 
     const allJobs = (jobsResult.data as RecommendationJobInputWithContext[] | null) ?? [];
@@ -147,7 +147,7 @@ export async function GET(req: NextRequest) {
           })
         : null;
 
-    return ok({
+    const response = ok({
       contract_version: ranked.contract_version,
       items,
       profile_state: profileState,
@@ -157,5 +157,7 @@ export async function GET(req: NextRequest) {
       empty_hint: emptyHint,
       relevance_diagnostics: relevanceDiagnostics,
     });
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    return response;
   });
 }

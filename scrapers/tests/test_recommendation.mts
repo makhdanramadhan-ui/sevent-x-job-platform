@@ -696,5 +696,43 @@ function testIrrelevantMarketingJobRejected(): void {
   assert.equal(filtered.relevant[0].id, relevantJob.id);
   assert.equal(filtered.diagnostics.no_match, 1);
   console.log('PASS 12: Lowongan pemasaran ditolak oleh gerbang relevansi profil');
+
+  // ---------------------------------------------------------------------------
+  // 13. Gerbang relevansi juga membaca skill dari experiences/projects & normalizeSkill
+  // ---------------------------------------------------------------------------
+  const expProfile: RecommendationProfileInput = {
+    skills: ['Terraform'],
+    education: [],
+    experiences: [
+      {
+        title: 'Platform Engineer',
+        company: 'Contoh Corp',
+        location: 'Jakarta',
+        start_date: '2023-01',
+        end_date: null,
+        current: true,
+        description: 'Mengelola CI/CD pipeline dan container Docker di AWS.',
+      },
+    ],
+    projects: [],
+    preferences: {
+      positions: [],
+      locations: ['DKI Jakarta'],
+      levels: [],
+      work_modes: [],
+      employment_types: [],
+    },
+  };
+  const devSecOpsJob: RecommendationJobInputWithContext = {
+    ...marketingJob,
+    id: '40000000-0000-4000-8000-000000000003',
+    title: 'DevSecOps',
+    description: 'Build secure CI/CD pipelines with Docker and AWS.',
+    skills: ['Terraform'],
+  };
+  const expDecision = isJobRelevantToProfile(devSecOpsJob, expProfile);
+  assert.equal(expDecision.relevant, true, 'Skill dari experiences/normalizeSkill harus lolos gerbang relevansi');
+  assert.equal(expDecision.reason, 'skill_match');
+  console.log('PASS 13: Gerbang relevansi mengenali skill dari pengalaman & normalizeSkill');
 }
 main();
