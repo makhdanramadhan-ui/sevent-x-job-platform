@@ -10,7 +10,10 @@ export const maxDuration = 300;
 function isAuthorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret) return false;
-  return req.headers.get('authorization')?.trim() === `Bearer ${secret}`;
+  if (req.headers.get('authorization')?.trim() === `Bearer ${secret}`) return true;
+  const headerSecret = req.headers.get('x-cron-secret')?.trim();
+  if (headerSecret && headerSecret === secret) return true;
+  return false;
 }
 
 export async function GET(req: NextRequest) {

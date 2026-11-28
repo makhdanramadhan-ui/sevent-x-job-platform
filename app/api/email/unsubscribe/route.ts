@@ -29,12 +29,13 @@ function confirmationPage(): string {
 export async function GET(req: NextRequest) {
   const params = new URL(req.url).searchParams;
   try {
-    assertAllowedQuery(params, ['token']);
+    assertAllowedQuery(params, ['token', 'type']);
   } catch {
     return fail(400, 'validation_error', 'Tautan berhenti berlangganan tidak valid.');
   }
 
   const token = params.get('token') ?? '';
+  const type = params.get('type')?.trim().toLowerCase() ?? 'match';
   const secret = readUnsubscribeSecret();
   const userId = secret ? verifyUnsubscribeToken(token, secret) : null;
   if (!userId) {
@@ -59,10 +60,14 @@ export async function GET(req: NextRequest) {
       data?.preferences && typeof data.preferences === 'object'
         ? (data.preferences as Record<string, unknown>)
         : {};
+    const updatedPrefs =
+      type === 'deadline'
+        ? { ...preferences, email_deadline_alerts: false }
+        : { ...preferences, email_match_alerts: false };
     const { error: updateError } = await admin
       .from('profiles')
       .update({
-        preferences: { ...preferences, email_match_alerts: false },
+        preferences: updatedPrefs,
         updated_at: new Date().toISOString(),
       })
       .eq('user_id', userId);

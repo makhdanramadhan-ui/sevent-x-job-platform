@@ -1,4 +1,6 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { SendMailOptions } from 'nodemailer';
+import { throwDb } from '../db';
 import { pickSource, type JobSourceRow } from '../recommendation/job-context';
 import {
   buildDeadlineEmail,
@@ -6,8 +8,8 @@ import {
   isDeadlineAlertsEnabled,
   type DeadlineJobInfo,
 } from './deadline-message';
-import { resolveSiteUrl, type SmtpConfig } from './transport';
-import { buildUnsubscribeUrl } from './unsubscribe';
+import { readSmtpConfig, resolveSiteUrl, sendDeadlineEmail, type SmtpConfig } from './transport';
+import { buildUnsubscribeUrl, readUnsubscribeSecret } from './unsubscribe';
 
 export const MAX_DEADLINE_EMAILS_PER_RUN = 100;
 
@@ -354,4 +356,102 @@ export async function runDeadlineNotify(
       capped: sent >= MAX_DEADLINE_EMAILS_PER_RUN,
     },
   };
+}
+
+export async function executeDeadlineNotify(
+  admin: SupabaseClient,
+  options: { userId?: string } = {},
+): Promise<DeadlineNotifyResult> {
+  const smtpConfig = readSmtpConfig();
+  if (!smtpConfig) {
+    return skippedDeadlineNotifyResult('smtp_not_configured');
+  }
+
+  const unsubscribeSecret = readUnsubscribeSecret();
+  const filterUserId = options.userId?.trim() || null;
+
+  try {
+    return await runDeadlineNotify({
+      smtpConfig,
+      unsubscribeSecret,
+      siteUrl: resolveSiteUrl(),
+      deps: {
+        listBookmarks: async () => {
+          let query = admin
+            .from('bookmarks')
+            .select('user_id, job_id, jobs(id, title, company, location, work_mode, status, deadline)')
+            .order('created_at', { ascending: false })
+            .limit(1000);
+          if (filterUserId) {
+            query = query.eq('user_id', filterUserId);
+          }
+          const { data, error } = await query;
+          if (error) throwDb(error);
+          return (data ?? []) as unknown as EmailBookmarkRow[];
+        },
+        listProfiles: async (userIds) => {
+          if (userIds.length === 0) return [];
+          const { data, error } = await admin
+            .from('profiles')
+            .select('user_id, preferences')
+            .in('user_id', userIds);
+          if (error) throwDb(error);
+          return (data ?? []) as EmailProfilePreferenceRow[];
+        },
+        listSentReminders: async (pairs) => {
+          if (pairs.length === 0) return new Set<string>();
+          const userIds = Array.from(new Set(pairs.map((p) => p.user_id)));
+          const jobIds = Array.from(new Set(pairs.map((p) => p.job_id)));
+          const { data, error } = await admin
+            .from('bookmark_deadline_notifications')
+            .select('user_id, job_id, reminder_day')
+            .in('user_id', userIds)
+            .in('job_id', jobIds);
+          if (error) {
+            if (isMissingDeadlineNotificationsTable(error)) {
+              throw new DeadlineNotificationsTableUnavailableError();
+            }
+            throwDb(error);
+          }
+          return new Set(
+            (data ?? []).map((row) => `${row.user_id}|${row.job_id}|${row.reminder_day}`),
+          );
+        },
+        listSources: async (jobIds) => {
+          if (jobIds.length === 0) return [];
+          const { data, error } = await admin
+            .from('job_sources')
+            .select('job_id, source_name, source_url, fetched_at')
+            .in('job_id', jobIds);
+          if (error) throwDb(error);
+          return (data ?? []) as JobSourceRow[];
+        },
+        getEmail: async (userId) => {
+          const { data, error } = await admin.auth.admin.getUserById(userId);
+          if (error) throwDb(error);
+          return data.user.email ?? null;
+        },
+        send: async (message) => {
+          await sendDeadlineEmail(smtpConfig, message);
+        },
+        recordSent: async (rows: SentDeadlineNotificationRow[]) => {
+          if (rows.length === 0) return;
+          const { error } = await admin
+            .from('bookmark_deadline_notifications')
+            .upsert(rows, { onConflict: 'user_id,job_id,reminder_day', ignoreDuplicates: true });
+          if (error) {
+            if (isMissingDeadlineNotificationsTable(error)) {
+              throw new DeadlineNotificationsTableUnavailableError();
+            }
+            throwDb(error);
+          }
+        },
+      },
+    });
+  } catch (error) {
+    if (error instanceof DeadlineNotificationsTableUnavailableError) {
+      return skippedDeadlineNotifyResult('notifications_table_missing');
+    }
+    throw error;
+  }
 }

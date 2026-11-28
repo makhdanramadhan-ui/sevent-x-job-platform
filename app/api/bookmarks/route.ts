@@ -1,7 +1,10 @@
-import type { NextRequest } from 'next/server';
+import { after, type NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { throwDb } from '@/lib/db';
+import { executeDeadlineNotify } from '@/lib/email/deadline-runner';
+import { readSupabaseAdminEnv } from '@/lib/env';
 import { ApiError, asObject, ok, readJson, rejectUnknownKeys, run } from '@/lib/http';
+import { createAdminClient } from '@/lib/supabase';
 import { uuidValue } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
@@ -37,6 +40,18 @@ export async function POST(req: NextRequest) {
       }
       throwDb(error);
     }
+
+    const adminEnv = readSupabaseAdminEnv();
+    if (adminEnv) {
+      const userId = auth.user.id;
+      after(async () => {
+        const admin = createAdminClient(adminEnv);
+        try {
+          await executeDeadlineNotify(admin, { userId });
+        } catch {}
+      });
+    }
+
     return ok({ job_id: jobId, saved: true }, 201);
   });
 }

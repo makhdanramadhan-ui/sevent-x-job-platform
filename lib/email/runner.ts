@@ -146,11 +146,18 @@ export async function runMatchNotify(options: {
   for (const profile of readyProfiles) {
     const profileInput = toProfileInput(profile);
     const relevance = filterRelevantJobs(jobs, profileInput);
-    const { eligible } = filterEligibleJobs(relevance.relevant, profile.preferences);
-    const ranked = rankJobs({
-      profile: profileInput,
-      jobs: eligible as unknown as RecommendationJobInputWithContext[],
-    });
+    const selection = filterEligibleJobs(relevance.relevant, profile.preferences);
+    const { eligible } = selection;
+    const ranked = rankJobs(
+      {
+        profile: profileInput,
+        jobs: eligible as unknown as RecommendationJobInputWithContext[],
+      },
+      {
+        locationTiers: selection.tiers,
+        nearbyLabels: selection.nearbyLabels,
+      },
+    );
     const eligibleIds = new Set(eligible.map((job) => job.id));
     const items = ranked.items.filter(
       (item) =>
