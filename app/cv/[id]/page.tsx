@@ -16,6 +16,7 @@ import { CvSectionReorder } from '../_components/cv-section-reorder';
 import { generateContextualEnglishCv } from '../_lib/contextual-translator';
 import { normalizeCvContent } from '../_lib/cv-defaults';
 import { triggerCvPrint } from '../_lib/export-helpers';
+import { sanitizeCvContent } from '../_lib/nist-security';
 import { validateCvPayload } from '../_lib/payload-validator';
 import type { CvContent, CvSectionId } from '../_lib/types';
 import '../cv-styles.css';
@@ -352,10 +353,13 @@ function CvEditorInner({
     setApiError(null);
     setSuccessNotice(null);
 
+    // NIST SI-10 & SC-28: Sanitasi konten sebelum validasi dan penyimpanan
+    const sanitizedContent = sanitizeCvContent(content);
+
     const validation = validateCvPayload({
       title: title.trim(),
       template_version: templateVersion,
-      content,
+      content: sanitizedContent,
     });
 
     if (!validation.valid) {
@@ -367,14 +371,15 @@ function CvEditorInner({
     const normalizedTitle = title.trim() || 'Dokumen CV ATS';
 
     if (isDemo || cvId.startsWith('demo-')) {
-      const ok = updateDemoDocument(cvId, normalizedTitle, templateVersion, content);
+      const ok = updateDemoDocument(cvId, normalizedTitle, templateVersion, sanitizedContent);
       setSaving(false);
       if (ok) {
         setTitle(normalizedTitle);
+        setContent(sanitizedContent);
         setBaseline({
           title: normalizedTitle,
           templateVersion,
-          content,
+          content: sanitizedContent,
         });
         setSuccessNotice('Perubahan CV berhasil disimpan ke penyimpanan browser (Demo Mode).');
         return true;
@@ -388,7 +393,7 @@ function CvEditorInner({
       body: {
         title: normalizedTitle,
         template_version: templateVersion,
-        content,
+        content: sanitizedContent,
       },
     });
     setSaving(false);

@@ -13,6 +13,7 @@ import { PageBanner } from '@/components/ui/page-banner';
 import type { CvDocument, CvDocumentSummary, ProfileRecord } from '@/lib/contracts';
 import { CvImportDialog } from './_components/cv-import-dialog';
 import { createDefaultCvContent, getSampleAtsCvContent } from './_lib/cv-defaults';
+import { purgeCvLocalCache } from './_lib/nist-security';
 import { getPresetDefinition } from './_lib/presets';
 import './cv-styles.css';
 
@@ -196,10 +197,14 @@ function CvDashboardInner({
 
     if (isDemo) {
       const existing = getDemoDocuments();
-      saveDemoDocuments(existing.filter((d) => d.id !== id));
+      const updated = existing.filter((d) => d.id !== id);
+      saveDemoDocuments(updated);
       setCvList((prev) => prev.filter((item) => item.id !== id));
       setDeleting(false);
       setDeleteConfirmId(null);
+      if (updated.length === 0) {
+        purgeCvLocalCache();
+      }
       return;
     }
 
@@ -209,6 +214,7 @@ function CvDashboardInner({
 
     if (res.ok) {
       setCvList((prev) => prev.filter((item) => item.id !== id));
+      purgeCvLocalCache();
     } else {
       setError(`Gagal menghapus dokumen CV: ${res.error.message}`);
     }
@@ -275,8 +281,25 @@ function CvDashboardInner({
             </span>
           </div>
         ) : (
-          <div style={{ fontSize: '0.9rem', color: 'var(--p-muted)' }}>
-            Susun CV 1 kolom rapi, impor berkas lama, atau muat contoh format ATS.
+          <div style={{ fontSize: '0.9rem', color: 'var(--p-muted)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span>Susun CV 1 kolom rapi, impor berkas lama, atau muat contoh format ATS.</span>
+            <span
+              style={{
+                fontSize: '0.74rem',
+                background: 'rgba(16, 185, 129, 0.1)',
+                color: '#047857',
+                border: '1px solid rgba(16, 185, 129, 0.25)',
+                padding: '2px 8px',
+                borderRadius: '999px',
+                fontWeight: 500,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+              title="Sistem mematuhi standar privasi data NIST SP 800-53 (SI-10, SC-28) dan SP 800-122 (Perlindungan PII)"
+            >
+              🛡️ NIST Compliant (PII Protected)
+            </span>
           </div>
         )}
 

@@ -7,6 +7,7 @@ import {
   isCustomSectionId,
 } from '../_lib/types';
 import { formatCvPeriod } from '../_lib/export-helpers';
+import { sanitizeSafeUrl } from '../_lib/nist-security';
 import '../cv-styles.css';
 
 function renderStructuredBody(text: string) {
@@ -120,17 +121,23 @@ export function CvPreview({
                       {profile.email}
                     </a>
                   ) : null,
-                  ...profile.links.map((link, idx) => (
-                    <a
-                      key={`link-${idx}`}
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="cv-ats-link"
-                    >
-                      {link.label || link.url}
-                    </a>
-                  )),
+                  ...profile.links.map((link, idx) => {
+                    const safeUrl = sanitizeSafeUrl(link.url);
+                    if (!safeUrl) {
+                      return <span key={`link-${idx}`}>{link.label || link.url}</span>;
+                    }
+                    return (
+                      <a
+                        key={`link-${idx}`}
+                        href={safeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="cv-ats-link"
+                      >
+                        {link.label || link.url}
+                      </a>
+                    );
+                  }),
                 ]
                   .filter(Boolean)
                   .map((item, idx, arr) => (
@@ -367,9 +374,9 @@ export function CvPreview({
                               <strong className="cv-ats-project-title">{proj.name}</strong>
                               {dateStr ? ` (${dateStr})` : ''}
                               {firstLine ? `: ${firstLine}` : ''}
-                              {proj.url ? (
+                              {proj.url && sanitizeSafeUrl(proj.url) ? (
                                 <a
-                                  href={proj.url}
+                                  href={sanitizeSafeUrl(proj.url)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="cv-ats-project-link"

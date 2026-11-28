@@ -9,6 +9,7 @@ import type { CvDocument, ProfileRecord } from '@/lib/contracts';
 import type { ProfileInput } from '@/lib/profile';
 import type { MappedCvResult } from '../_lib/cv-mapper';
 import { generateContextualEnglishCv } from '../_lib/contextual-translator';
+import { sanitizeCvContent } from '../_lib/nist-security';
 import { validateCvPayload } from '../_lib/payload-validator';
 import { detectActivePreset } from '../_lib/presets';
 import type { CvContent } from '../_lib/types';
@@ -50,11 +51,12 @@ export function CvImportReview({
   async function handleConfirmImport() {
     setErrorMsg(null);
 
-    const activePreset = detectActivePreset(null, content.section_order);
+    const sanitizedContent = sanitizeCvContent(content);
+    const activePreset = detectActivePreset(null, sanitizedContent.section_order);
     const payloadValidation = validateCvPayload({
       title: cvTitle,
       template_version: activePreset,
-      content,
+      content: sanitizedContent,
     });
     if (!payloadValidation.valid) {
       setErrorMsg(payloadValidation.error ?? 'Ukuran dokumen melebihi batas.');
@@ -66,24 +68,24 @@ export function CvImportReview({
     try {
       if (syncToProfile) {
         const profilePayload: ProfileInput = sanitizeProfilePayload({
-          full_name: content.profile.full_name || currentProfile?.full_name || null,
-          headline: content.profile.headline || currentProfile?.headline || null,
-          phone: content.profile.phone || currentProfile?.phone || null,
-          location: content.profile.location || currentProfile?.location || null,
-          links: content.profile.links.length > 0 ? content.profile.links : currentProfile?.links || [],
-          skills: content.skills.length > 0 ? content.skills : currentProfile?.skills || [],
+          full_name: sanitizedContent.profile.full_name || currentProfile?.full_name || null,
+          headline: sanitizedContent.profile.headline || currentProfile?.headline || null,
+          phone: sanitizedContent.profile.phone || currentProfile?.phone || null,
+          location: sanitizedContent.profile.location || currentProfile?.location || null,
+          links: sanitizedContent.profile.links.length > 0 ? sanitizedContent.profile.links : currentProfile?.links || [],
+          skills: sanitizedContent.skills.length > 0 ? sanitizedContent.skills : currentProfile?.skills || [],
           education:
-            content.education.length > 0 ? content.education : currentProfile?.education || [],
+            sanitizedContent.education.length > 0 ? sanitizedContent.education : currentProfile?.education || [],
           experiences:
-            content.experiences.length > 0 ? content.experiences : currentProfile?.experiences || [],
-          projects: content.projects.length > 0 ? content.projects : currentProfile?.projects || [],
+            sanitizedContent.experiences.length > 0 ? sanitizedContent.experiences : currentProfile?.experiences || [],
+          projects: sanitizedContent.projects.length > 0 ? sanitizedContent.projects : currentProfile?.projects || [],
           organizations:
-            content.organizations.length > 0
-              ? content.organizations
+            sanitizedContent.organizations.length > 0
+              ? sanitizedContent.organizations
               : currentProfile?.organizations || [],
           achievements:
-            content.achievements.length > 0
-              ? content.achievements
+            sanitizedContent.achievements.length > 0
+              ? sanitizedContent.achievements
               : currentProfile?.achievements || [],
           preferences: currentProfile?.preferences || {
             positions: [],
@@ -105,7 +107,7 @@ export function CvImportReview({
         body: {
           title: cvTitle.trim() || 'Dokumen CV Baru (ATS)',
           template_version: activePreset,
-          content,
+          content: sanitizedContent,
         },
       });
 
@@ -119,7 +121,7 @@ export function CvImportReview({
           id: demoId,
           title: cvTitle.trim() || 'Dokumen CV Baru (Hasil Impor)',
           template_version: activePreset,
-          content,
+          content: sanitizedContent,
           created_at: now,
           updated_at: now,
         };

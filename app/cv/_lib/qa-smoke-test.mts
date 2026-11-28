@@ -14,6 +14,13 @@ import {
 import { validateImportFile } from './file-validator';
 import { mapRawTextToCv } from './cv-mapper';
 import { getSampleAtsCvContent } from './cv-defaults';
+import {
+  sanitizeCvText,
+  sanitizeSafeUrl,
+  maskPii,
+  sanitizeCvContent,
+  checkNistCompliance,
+} from './nist-security';
 import type { CvContent } from './types';
 
 console.log('====================================================');
@@ -258,6 +265,52 @@ Public Speaking, English, Teamwork, Finance, Adaptability, Content writer, Basic
       assert.equal(enEdu?.field, 'Government Administration');
     },
   );
+
+  // 15. NIST SI-10 & SC-28: Sanitasi input, pencegahan XSS dan pemblokiran protokol berbahaya
+  test('NIST SI-10 & SC-28: Sanitasi input, pencegahan XSS dan pemblokiran protokol berbahaya', () => {
+    // A. Pembersihan script injection dalam teks
+    const dirtyText = '<script>alert("xss")</script>John Doe <iframe src="evil.com"></iframe>onload="hack()"';
+    const cleanText = sanitizeCvText(dirtyText);
+    assert.equal(cleanText.includes('<script>'), false);
+    assert.equal(cleanText.includes('<iframe>'), false);
+    assert.equal(cleanText.includes('onload='), false);
+    assert.equal(cleanText.includes('John Doe'), true);
+
+    // B. Pemblokiran skema URL berbahaya
+    assert.equal(sanitizeSafeUrl('javascript:alert(1)'), '');
+    assert.equal(sanitizeSafeUrl('vbscript:msgbox(1)'), '');
+    assert.equal(sanitizeSafeUrl('data:text/html,<script>alert(1)</script>'), '');
+    assert.equal(sanitizeSafeUrl('https://linkedin.com/in/safe'), 'https://linkedin.com/in/safe');
+    assert.equal(sanitizeSafeUrl('github.com/developer'), 'https://github.com/developer');
+    assert.equal(sanitizeSafeUrl('mailto:user@example.com'), 'mailto:user@example.com');
+  });
+
+  // 16. NIST SP 800-122: Perlindungan PII, masking data sensitif untuk log dan audit
+  test('NIST SP 800-122: Perlindungan PII dan masking data sensitif untuk log/audit', () => {
+    const maskedEmail = maskPii('fauzannafisjiyadakbar@gmail.com', 'email');
+    assert.equal(maskedEmail.startsWith('fa***r@gmail.com'), true);
+    assert.equal(maskedEmail.includes('fauzannafisjiyadakbar'), false);
+
+    const maskedPhone = maskPii('085795220399', 'phone');
+    assert.equal(maskedPhone, '0857****99');
+    assert.equal(maskedPhone.includes('952203'), false);
+  });
+
+  // 17. NIST Payload Validator: Menolak payload yang memuat injeksi skrip berbahaya
+  test('NIST Payload Validator: Menolak payload yang memuat injeksi skrip berbahaya', () => {
+    const sample = getSampleAtsCvContent();
+    sample.summary = 'Professional summary with <script>evil()</script>';
+    
+    const result = validateCvPayload({
+      title: 'Hacked CV',
+      template_version: 'v1-default',
+      content: sample,
+    });
+
+    assert.equal(result.valid, false, 'Payload dengan script tag harus ditolak');
+    assert.equal(result.nistCompliant, false);
+    assert.ok(result.error?.includes('NIST'), 'Error message harus menyebutkan kepatuhan NIST');
+  });
 
   console.log(`\n====================================================`);
   console.log(`  HASIL: ${passedTests}/${totalTests} PENGUJIAN BERHASIL (100% PASS)`);
