@@ -75,7 +75,7 @@ export async function executeMatchNotify(
             .eq('status', 'open')
             .order('last_fetched_at', { ascending: false, nullsFirst: false })
             .order('id', { ascending: true })
-            .limit(200);
+            .limit(500);
           if (error) throwDb(error);
           return (data ?? []) as EmailJobRow[];
         },

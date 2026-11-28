@@ -41,9 +41,11 @@ export function resolveIngestLocationPolicy(
     }
   }
 
-  const chosen = [...locations].find((name) => findLocation(name)?.country !== '*');
-  if (chosen) return { location: chosen, includeRemoteSources };
+  const nonGlobalLocations = [...locations].filter((name) => findLocation(name)?.country !== '*');
   const countryName = countryCode ? findCountry(countryCode)?.name : null;
+  if (nonGlobalLocations.length === 1) {
+    return { location: nonGlobalLocations[0], includeRemoteSources };
+  }
   return { location: countryName ?? 'Indonesia', includeRemoteSources };
 }
 
@@ -103,19 +105,34 @@ export async function collectIngestLocationPolicy(
   return resolveIngestLocationPolicy(rows.map((row) => row.preferences));
 }
 
+function interleaveKeywordLists(lists: ReadonlyArray<ReadonlyArray<string>>): string[] {
+  const result: string[] = [];
+  const maxLen = lists.reduce((max, list) => Math.max(max, list.length), 0);
+  for (let i = 0; i < maxLen; i += 1) {
+    for (const list of lists) {
+      if (i < list.length) {
+        result.push(list[i]);
+      }
+    }
+  }
+  return result;
+}
+
 export async function collectAllUserKeywords(admin: SupabaseClient): Promise<string[]> {
   const { data, error } = await admin
     .from('profiles')
-    .select('skills, preferences');
+    .select('skills, preferences')
+    .order('updated_at', { ascending: false, nullsFirst: false });
   if (error) {
     throw new Error(error.message);
   }
   const rows = (data ?? []) as ProfileRow[];
-  const seen = new Set<string>();
-  const keywords: string[] = [];
+  const positionLists: string[][] = [];
+  const skillLists: string[][] = [];
+
   for (const row of rows) {
-    const extracted = extractProfileKeywords({
-      skills: Array.isArray(row.skills) ? row.skills : [],
+    const posExtracted = extractProfileKeywords({
+      skills: [],
       preferences: {
         positions: Array.isArray(row.preferences?.positions) ? row.preferences.positions : [],
         locations: [],
@@ -124,12 +141,35 @@ export async function collectAllUserKeywords(admin: SupabaseClient): Promise<str
         employment_types: [],
       },
     } as any);
-    for (const kw of extracted.keywords) {
-      const key = kw.toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      keywords.push(kw);
+    if (posExtracted.keywords.length > 0) {
+      positionLists.push(posExtracted.keywords);
     }
+
+    const skillExtracted = extractProfileKeywords({
+      skills: Array.isArray(row.skills) ? row.skills : [],
+      preferences: {
+        positions: [],
+        locations: [],
+        levels: [],
+        work_modes: [],
+        employment_types: [],
+      },
+    } as any);
+    if (skillExtracted.keywords.length > 0) {
+      skillLists.push(skillExtracted.keywords);
+    }
+  }
+
+  const seen = new Set<string>();
+  const keywords: string[] = [];
+  for (const kw of [
+    ...interleaveKeywordLists(positionLists),
+    ...interleaveKeywordLists(skillLists),
+  ]) {
+    const key = kw.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    keywords.push(kw);
   }
   return keywords;
 }

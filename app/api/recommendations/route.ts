@@ -1,4 +1,4 @@
-import type { NextRequest } from 'next/server';
+import { after, type NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import {
   EMPLOYMENT_TYPES,
@@ -9,6 +9,9 @@ import {
   type WorkMode,
 } from '@/lib/contracts';
 import { throwDb } from '@/lib/db';
+import { MATCH_EMAIL_THRESHOLD } from '@/lib/email/digest';
+import { triggerMatchNotifyForUser } from '@/lib/email/match-notify-service';
+import { readSupabaseAdminEnv } from '@/lib/env';
 import { ok, run } from '@/lib/http';
 import { rankJobs } from '@/lib/recommendation';
 import { buildEmptyHint } from '@/lib/recommendation/empty-hint';
@@ -21,6 +24,7 @@ import type {
   RecommendationJobInputWithContext,
   RecommendationProfileInput,
 } from '@/lib/recommendation-contract';
+import { createAdminClient } from '@/lib/supabase';
 import { assertAllowedQuery, intValue, oneOf } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
@@ -121,6 +125,24 @@ export async function GET(req: NextRequest) {
     }
 
     const items = await attachJobContext(auth.supabase, topItems, sourceRows, jobCards);
+
+    const hasHighMatchOpenJob = topItems.some(
+      (item) =>
+        item.score >= MATCH_EMAIL_THRESHOLD &&
+        cardsById.get(item.job_id)?.status === 'open',
+    );
+    if (hasHighMatchOpenJob) {
+      const adminEnv = readSupabaseAdminEnv();
+      if (adminEnv) {
+        const userId = auth.user.id;
+        after(async () => {
+          const admin = createAdminClient(adminEnv);
+          try {
+            await triggerMatchNotifyForUser(admin, userId);
+          } catch {}
+        });
+      }
+    }
 
     let profileState: 'ready' | 'ingest_pending' = 'ready';
     if (topItems.length === 0) {

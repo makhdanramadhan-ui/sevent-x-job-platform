@@ -50,9 +50,12 @@ export async function claimKeywordThrottle(
 export async function filterThrottledKeywords(
   admin: SupabaseClient,
   keywords: string[],
+  maxCount = Infinity,
 ): Promise<string[]> {
   const allowed: string[] = [];
+  if (maxCount <= 0) return allowed;
   for (const keyword of keywords) {
+    if (allowed.length >= maxCount) break;
     try {
       if (await claimKeywordThrottle(admin, keyword)) {
         allowed.push(keyword);

@@ -70,11 +70,17 @@ export async function runKeywordIngest(
         .map((k) => k.replace(/\s+/g, ' ').trim())
         .filter((k) => k.length > 0),
     ),
-  ).slice(0, 20);
+  ).slice(0, 40);
 
-  let keywordsToFetch = uniqueKeywords.slice(0, MAX_LINKEDIN_KEYWORDS_PER_RUN);
+  let keywordsToFetch: string[];
   if (options.respectThrottle !== false) {
-    keywordsToFetch = await filterThrottledKeywords(admin, keywordsToFetch);
+    keywordsToFetch = await filterThrottledKeywords(
+      admin,
+      uniqueKeywords,
+      MAX_LINKEDIN_KEYWORDS_PER_RUN,
+    );
+  } else {
+    keywordsToFetch = uniqueKeywords.slice(0, MAX_LINKEDIN_KEYWORDS_PER_RUN);
   }
 
   const summary: IngestRunSummary = {
